@@ -101,12 +101,15 @@ class HeuristicMiner(Miner):
             nets[process] = cnet
         return nets
 
-    def calculate_possible_binds(self):
+    def calculate_possible_binds(self, *args):
+        pass
+
+    def calculate_frequencies(self, *args):
         pass
 
     def mine(self, log, frequency_threshold=None, dependency_threshold=None):
-        dgraph = self.mine(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
-        cnet = self.mine_cnet(dgraph, log)
+        dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
+        cnet = self.mine_cnets(dgraph, log)
         return cnet
 
     def mine_from_csv_file(self, filename, frequency_threshold=None, dependency_threshold=None):
