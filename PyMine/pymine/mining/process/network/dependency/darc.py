@@ -1,6 +1,6 @@
 __author__ = 'paolo'
 
-from datascience.mining.process.network.arc import Arc as Arc
+from pymine.mining.process.network.arc import Arc as Arc
 
 class DArc(Arc):
 

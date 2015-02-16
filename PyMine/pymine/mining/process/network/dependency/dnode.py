@@ -1,6 +1,6 @@
 __author__ = 'paolo'
 
-from datascience.mining.process.network.node import Node as Node
+from pymine.mining.process.network.node import Node as Node
 
 class DNode(Node):
 
