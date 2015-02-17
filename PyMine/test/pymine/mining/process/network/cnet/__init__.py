@@ -3,7 +3,7 @@ from pymine.mining.process.network.cnet.cnet import CNet2
 from pymine.mining.process.network.cnet.cnode import CNode
 from pymine.mining.process.network.cnet.carc import CArc
 import logging
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 class CNetTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class CNetTest(unittest.TestCase):
         self.cnet.add_output_bindings(self.a, {self.d})
 
         self.cnet.add_input_bindings(self.b, {self.a})
-        self.cnet.add_output_bindings(self.b, {self.e})
+        self.cnet.add_output_bindings(self.b, {self.e, self.b})
 
         self.cnet.add_input_bindings(self.c, {self.a})
         self.cnet.add_output_bindings(self.c, {self.e})
@@ -37,6 +37,10 @@ class CNetTest(unittest.TestCase):
 
     def test_replay(self):
         self.assertTrue(self.cnet.replay_case([self.a, self.d, self.e])[0])
+
+    def test_replay_loop(self):
+        self.assertTrue(self.cnet.replay_case([self.a, self.b, self.c, self.b, self.e])[0])
+        self.assertTrue(self.cnet.replay_case([self.a, self.c, self.b,  self.e])[0])
 
     def test_replay_concurrency(self):
         self.assertTrue(self.cnet.replay_case([self.a, self.b, self.c,  self.e])[0])
