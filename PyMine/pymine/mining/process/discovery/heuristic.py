@@ -95,17 +95,28 @@ class HeuristicMiner(Miner):
             pinfo = log_info.processes_info[process]
             cnet = CNet()
             for activity in depnet.nodes:
-                possible_binds = self.calculate_possible_binds(depnet.nodes[activity], pinfo.average_case_size)
-                frequencies = self.calculate_frequencies(possible_binds, log)
-                node = CNode()
+                input_binds, output_binds = self.calculate_possible_binds(depnet.nodes[activity], log, pinfo.average_case_size)
+                #frequencies = self.calculate_frequencies(possible_binds, log)
+                node = CNode(id=activity, name=activity)
+                node.input_bindings = input_binds
+                node.output_bindings = output_binds
+                cnet.nodes[activity] = node
+            for connection in depnet.arcs:
+                arc = CArc(id=connection, name=connection, input_node=depnet.arcs[connection].input_node,
+                           output_node=depnet.arcs[connection].output_node, frequency=depnet.arcs[connection].frequency)
+                cnet.arcs[connection] = arc
             nets[process] = cnet
         return nets
 
-    def calculate_possible_binds(self, *args):
-        pass
+    def calculate_possible_binds(self, activity_node, log, window_size):
+        input_binds = []
+        output_binds = []
+        return input_binds, output_binds
 
+    '''
     def calculate_frequencies(self, *args):
         pass
+    '''
 
     def mine(self, log, frequency_threshold=None, dependency_threshold=None):
         dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
