@@ -7,6 +7,8 @@ class CNode(DNode):
     def __init__(self, id=None, name=None, input_arcs=None, output_arcs=None, frequency=None):
         super(CNode, self).__init__(id=id, name=name, input_arcs=input_arcs, output_arcs=output_arcs)
         self.frequency = frequency
+        self.input_bindings = []
+        self.output_bindings = []
 
     def __str__(self):
         doc = "name="+self.name+" " \
