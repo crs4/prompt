@@ -9,8 +9,8 @@ class BaseElement(object):
 class Arc(BaseElement):
     def __init__(self, label, input_node, output_node, frequency=None):
         super(Arc, self).__init__(label)
-        self.input_node = input_node
-        self.output_node = output_node
+        self.input_node = output_node
+        self.output_node = input_node
         self.frequency = frequency
         self.net = self.input_node.net
 
@@ -26,9 +26,12 @@ class Node(BaseElement):
         super(Node, self).__init__(label)
         self.label = label
         self.net = net
-        self.input_arcs = set()
-        self.output_arcs = set()
+        self.input_arcs = []
+        self.output_arcs = []
         self.frequency = frequency
+
+    def __str__(self):
+        return self.label
 
     def is_last(self):
         return len(self.output_arcs) == 0
@@ -86,10 +89,10 @@ class Network(BaseElement):
         return Arc(label, node_a, node_b)
 
     def add_arc(self, node_a, node_b, label):
-        arc = self._create_arc( node_a, node_b, label)
+        arc = self._create_arc(node_a, node_b, label)
         self._arcs.append(arc)
-        node_a.output_arcs.add(arc)
-        node_b.input_arcs.add(arc)
+        node_a.output_arcs.append(arc)
+        node_b.input_arcs.append(arc)
         return arc
 
     # def remove_arc(self, arc):
