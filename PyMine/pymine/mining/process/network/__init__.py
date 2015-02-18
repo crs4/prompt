@@ -87,6 +87,7 @@ class Network(BaseElement):
 
     def add_arc(self, node_a, node_b, label):
         arc = self._create_arc( node_a, node_b, label)
+        self._arcs.append(arc)
         node_a.output_arcs.add(arc)
         node_b.input_arcs.add(arc)
         return arc
