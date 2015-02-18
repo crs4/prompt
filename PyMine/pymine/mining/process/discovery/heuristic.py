@@ -95,8 +95,7 @@ class HeuristicMiner(Miner):
             pinfo = log_info.processes_info[process]
             cnet = CNet()
             for activity in depnet.nodes:
-                input_binds, output_binds = self.calculate_possible_binds(depnet.nodes[activity], log, pinfo.average_case_size)
-                #frequencies = self.calculate_frequencies(possible_binds, log)
+                input_binds, output_binds = self.calculate_possible_binds(process, depnet.nodes[activity], log, pinfo.average_case_size)
                 node = CNode(id=activity, name=activity)
                 node.input_bindings = input_binds
                 node.output_bindings = output_binds
@@ -108,22 +107,54 @@ class HeuristicMiner(Miner):
             nets[process] = cnet
         return nets
 
-    def calculate_possible_binds(self, activity_node, log, window_size):
-        input_binds = []
-        output_binds = []
+    def calculate_possible_binds(self, process_id, activity_node, log, window_size):
+        input_binds = {}
+        output_binds = {}
+        # select the proper process
+        if process_id in log.processes:
+            input_arcs = activity_node.input_arcs
+            output_arcs = activity_node.output_arcs
+            # for each case in the process log check the activity position
+            for case in log.processes[process_id].cases:
+                candidate_input_binds = set()
+                candidate_output_binds = set()
+                found = False
+                counter = 0
+                for event in log.cases[case].events:
+                    activity = log.activities[log.activity_instances[log.events[event].activity_instance_id].activity_id]
+                    if not found:
+                        if activity.name == activity_node.name:
+                            found = True
+                            counter = 0
+                        else:
+                            arc_name = activity.name+"->"+activity_node.name
+                            if (arc_name in input_arcs) and (counter < window_size):
+                                candidate_input_binds.add(activity.name)
+                            counter += 1
+                    else:
+                        arc_name = activity_node.name+"->"+activity.name
+                        if (arc_name in output_arcs) and (counter < window_size):
+                            candidate_output_binds.add(activity.name)
+                        counter += 1
+                #for candidate in candidate_input_binds:
+                    for candidate in candidate_input_binds:
+                        if candidate in input_binds:
+                            input_binds[candidate] += 1
+                        else:
+                            input_binds[candidate] = 1
+                    for candidate in candidate_output_binds:
+                        if candidate in output_binds:
+                            output_binds[candidate] += 1
+                        else:
+                            output_binds[candidate] = 1
         return input_binds, output_binds
 
-    '''
-    def calculate_frequencies(self, *args):
-        pass
-    '''
-
-    def mine(self, log, frequency_threshold=None, dependency_threshold=None):
+    def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
         dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
-        cnet = self.mine_cnets(dgraph, log)
-        return cnet
+        cnets = self.mine_cnets(dgraph, log)
+        return cnets
 
-    def mine_from_csv_file(self, filename, frequency_threshold=None, dependency_threshold=None):
+    def mine_from_csv_file(self, filename, frequency_threshold=0, dependency_threshold=0.0):
         log_file = CsvLogFactory(input_filename=filename)
         log = log_file.create_log()
         return self.mine(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
