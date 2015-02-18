@@ -57,7 +57,7 @@ class Network(BaseElement):
     def add_nodes(self, *labels):
         nodes = self._create_nodes(*labels)
         self._nodes.extend(nodes)
-        return nodes if len(nodes) else nodes[0]
+        return nodes if len(nodes) > 1 else nodes[0]
 
     def get_initial_node(self):
         for node in self.nodes:
