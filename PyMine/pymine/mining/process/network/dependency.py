@@ -4,15 +4,13 @@ from pymine.mining.process.network import Network, Arc
 class DArc(Arc):
 
     def __init__(self, label, input_node, output_node, frequency=None, dependency=None):
-        super(Arc, self).__init__(self, label, input_node, output_node, frequency=None)
+        super(DArc, self).__init__(label, input_node, output_node, frequency=None)
         self.dependency = None
 
     def __str__(self):
-        doc = "name="+self.name+" " \
-            "input_node="+str(self.input_node)+" " \
-            "output_node="+str(self.output_node)+" " \
-            "frequency="+str(self.frequency)+ " " \
-            "dependency="+str(self.dependency)
+        doc = super(DArc, self).__str__()
+        if self.dependency is not None:
+            doc += " dep: %s" % self.dependency
         return doc
 
 

@@ -15,10 +15,9 @@ class Arc(BaseElement):
         self.net = self.input_node.net
 
     def __str__(self):
-        doc = "label="+self.label+" " \
-            "input_node="+str(self.input_node)+" " \
-            "output_node="+str(self.output_node)+" " \
-            "frequency="+str(self.frequency)
+        doc = "name %s %s -> %s" % (self.label, self.input_node, self.output_node)
+        if self.frequency is not None:
+            doc += " freq: %s" % self.frequency
         return doc
 
 
