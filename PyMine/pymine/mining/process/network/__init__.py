@@ -55,7 +55,7 @@ class Network(BaseElement):
         return self._arcs
 
     def add_nodes(self, *labels):
-        nodes = [Node(label, self) for label in labels]
+        nodes = self._create_nodes(*labels)
         self._nodes.extend(nodes)
         return nodes if len(nodes) else nodes[0]
 
@@ -78,6 +78,9 @@ class Network(BaseElement):
         for arc in self.arcs:
             if arc.label == label:
                 return arc
+
+    def _create_nodes(self, *labels):
+        return [Node(label, self) for label in labels]
 
     def _create_arc(self, node_a, node_b, label):
         return Arc(label, node_a, node_b)
