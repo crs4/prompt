@@ -45,6 +45,14 @@ class Node(BaseElement):
     def is_first(self):
         return len(self.input_arcs) == 0
 
+    @property
+    def output_nodes(self):
+        return [arc.input_node for arc in self.output_arcs]
+
+    @property
+    def input_nodes(self):
+        return [arc.output_node for arc in self.input_arcs]
+
 
 class Network(LabeledObject):
     def __init__(self, label=None):
@@ -63,7 +71,7 @@ class Network(LabeledObject):
     def arcs(self):
         return self._arcs
 
-    def _create_node(self, label, frequency=None, attrs={}, **kwargs):
+    def _create_node(self, label, frequency=None, attrs={}):
         return Node(label, self, frequency, attrs)
 
     def add_node(self, label, frequency=None, attrs={}):
