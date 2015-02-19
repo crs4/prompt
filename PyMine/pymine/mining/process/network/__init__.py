@@ -14,8 +14,8 @@ class BaseElement(LabeledObject):
 
 
 class Arc(BaseElement):
-    def __init__(self, label, input_node, output_node, frequency=None, attrs={}):
-        super(Arc, self).__init__(label)
+    def __init__(self, input_node, output_node, label=None, frequency=None, attrs={}):
+        super(Arc, self).__init__(label, frequency, attrs)
         self.input_node = output_node
         self.output_node = input_node
 
@@ -63,7 +63,7 @@ class Network(LabeledObject):
     def arcs(self):
         return self._arcs
 
-    def _create_node(self, label, frequency=None, attrs={}):
+    def _create_node(self, label, frequency=None, attrs={}, **kwargs):
         return Node(label, self, frequency, attrs)
 
     def add_node(self, label, frequency=None, attrs={}):
@@ -98,12 +98,15 @@ class Network(LabeledObject):
             if arc.label == label:
                 return arc
 
-    def _create_arc(self, node_a, node_b, label):
-        return Arc(label, node_a, node_b)
+    def _create_arc(self, node_a, node_b, label=None, frequency=None, attrs={}, **kwargs):
+        return Arc(node_a, node_b, label, frequency, attrs)
 
-    def add_arc(self, node_a, node_b, label=None):
-        arc = self._create_arc(node_a, node_b, label)
+    def _add_arc(self, arc, node_a, node_b):
         self._arcs.append(arc)
         node_a.output_arcs.append(arc)
         node_b.input_arcs.append(arc)
         return arc
+
+    def add_arc(self, node_a, node_b, label=None, frequency=None, attrs={}):
+        arc = self._create_arc(node_a, node_b, label, frequency, attrs)
+        return self._add_arc(arc, node_a, node_b)
