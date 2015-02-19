@@ -1,34 +1,40 @@
 import uuid
 
 
-class BaseElement(object):
+class LabeledObject(object):
     def __init__(self, label=None):
         self.label = label or uuid.uuid4()
 
 
+class BaseElement(LabeledObject):
+    def __init__(self, label=None, frequency=None, attrs={}):
+        super(BaseElement, self).__init__(label)
+        self.frequency = frequency
+        self.attrs = attrs
+
+
 class Arc(BaseElement):
-    def __init__(self, label, input_node, output_node, frequency=None):
+    def __init__(self, label, input_node, output_node, frequency=None, attrs={}):
         super(Arc, self).__init__(label)
         self.input_node = output_node
         self.output_node = input_node
-        self.frequency = frequency
+
         self.net = self.input_node.net
 
     def __str__(self):
-        doc = "name %s %s -> %s" % (self.label, self.input_node, self.output_node)
+        doc = "label %s %s -> %s" % (self.label, self.input_node, self.output_node)
         if self.frequency is not None:
             doc += " freq: %s" % self.frequency
         return doc
 
 
 class Node(BaseElement):
-    def __init__(self, label, net, frequency=None):
-        super(Node, self).__init__(label)
+    def __init__(self, label, net, frequency=None, attrs={}):
+        super(Node, self).__init__(label, frequency, attrs)
         self.label = label
         self.net = net
         self.input_arcs = []
         self.output_arcs = []
-        self.frequency = frequency
 
     def __str__(self):
         return self.label
@@ -40,7 +46,7 @@ class Node(BaseElement):
         return len(self.input_arcs) == 0
 
 
-class Network(BaseElement):
+class Network(LabeledObject):
     def __init__(self, label=None):
         super(Network, self).__init__(label)
         self._nodes = []
@@ -57,20 +63,30 @@ class Network(BaseElement):
     def arcs(self):
         return self._arcs
 
-    def add_nodes(self, *labels):
-        nodes = self._create_nodes(*labels)
-        self._nodes.extend(nodes)
-        return nodes if len(nodes) > 1 else nodes[0]
+    def _create_node(self, label, frequency=None, attrs={}):
+        return Node(label, self, frequency, attrs)
 
-    def get_initial_node(self):
+    def add_node(self, label, frequency=None, attrs={}):
+        node = self._create_node(label, frequency, attrs)
+        self._nodes.append(node)
+        return node
+
+    def add_nodes(self, *labels):
+        return [self.add_node(label) for label in labels]
+
+    def get_initial_nodes(self):
+        nodes = []
         for node in self.nodes:
             if node.is_first():
-                return node
+                nodes.append(node)
+        return nodes
 
-    def get_final_node(self):
+    def get_final_nodes(self):
+        nodes = []
         for node in self.nodes:
             if node.is_last():
-                return node
+                nodes.append(node)
+        return nodes
 
     def get_node_by_label(self, label):
         for node in self.nodes:
@@ -82,20 +98,12 @@ class Network(BaseElement):
             if arc.label == label:
                 return arc
 
-    def _create_nodes(self, *labels):
-        return [Node(label, self) for label in labels]
-
     def _create_arc(self, node_a, node_b, label):
         return Arc(label, node_a, node_b)
 
-    def add_arc(self, node_a, node_b, label):
+    def add_arc(self, node_a, node_b, label=None):
         arc = self._create_arc(node_a, node_b, label)
         self._arcs.append(arc)
         node_a.output_arcs.append(arc)
         node_b.input_arcs.append(arc)
         return arc
-
-    # def remove_arc(self, arc):
-    #     node_a.output_arcs.add(arc)
-    #     node_b.input_arcs.add(arc)
-    #     self._arcs.add(arc)
