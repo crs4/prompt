@@ -49,12 +49,6 @@ class CNet(Network):
     def bindings(self):
         return self._bindings
 
-    def replay_case(self, case):
-        pass
-
-    def replay_log(self, log):
-        pass
-
     def _add_binding(self, binding):
         self._bindings.append(binding)
         return binding
@@ -80,6 +74,37 @@ class CNet(Network):
     def _create_node(self, label, frequency=None, attrs={}):
         return CNode(label, self, frequency, attrs)
 
+    def replay_sequence(self, sequence):
+        current_node = None
+        initial_node = self.get_initial_nodes()[0]
+        obligations = [initial_node]
+        available_nodes = [initial_node]
+
+        for event in sequence:
+            logging.debug('event %s, current_node %s,  obligations %s ,available_nodes %s', event, current_node,
+                          obligations, available_nodes)
+
+            event_cnode = self.get_node_by_label(event)
+            if event_cnode in available_nodes:
+                logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
+                obligations.remove(event_cnode)
+                bindings = current_node.output_bindings if current_node else []
+                for binding in bindings:
+                    #removing xor obligations
+                    if event_cnode not in binding.node_set:
+                        for el in binding.node_set:
+                            obligations.remove(el)
+                for binding in event_cnode.output_bindings:
+                    obligations.extend([el for el in binding.node_set])
+
+                #updating variables
+                available_nodes = list(obligations)
+
+                current_node = event_cnode
+                logging.debug('obligations %s', obligations)
+        logging.debug('obligations %s', obligations)
+        return len(obligations) == 0, obligations
+    
     def get_json(self):
         json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],

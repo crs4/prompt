@@ -74,6 +74,9 @@ class Node(BaseElement):
     def __str__(self):
         return str(self.label)
 
+    def __repr__(self):
+        return self.label
+
     def is_last(self):
         return len(self.output_arcs) == 0
 

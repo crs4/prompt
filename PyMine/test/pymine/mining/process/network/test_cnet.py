@@ -1,5 +1,28 @@
 import unittest
 from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, OutputBinding
+import logging
+logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+
+
+def _create_cnet():
+    cnet = CNet()
+    a, b, c, d, e = cnet.add_nodes('a', 'b', 'c', 'd', 'e')
+
+    cnet.add_output_binding(a, {b, c})
+    cnet.add_output_binding(a, {d})
+
+    cnet.add_input_binding(b, {a})
+    cnet.add_output_binding(b, {e})
+
+    cnet.add_input_binding(c, {a})
+    cnet.add_output_binding(c, {e})
+
+    cnet.add_input_binding(d, {a})
+    cnet.add_output_binding(d, {e})
+
+    cnet.add_input_binding(e, {b, c})
+    cnet.add_input_binding(e, {d})
+    return cnet, a, b, c, d, e
 
 
 class CNetTestCase(unittest.TestCase):
@@ -45,5 +68,20 @@ class CNetTestCase(unittest.TestCase):
         self.assertTrue(binding_b_c.node == a)
         self.assertTrue(binding_b_c.node_set == {b, c})
         self.assertTrue(binding_b.frequency == 1)
+
+    def test_replay(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        self.assertTrue(cnet.replay_sequence(['a', 'd', 'e'])[0])
+
+    def test_replay_concurrency(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        self.assertTrue(cnet.replay_sequence(['a', 'b', 'c',  'e'])[0])
+        self.assertTrue(cnet.replay_sequence(['a', 'c', 'b',  'e'])[0])
+
+    def test_replay_failing(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        replay_result = cnet.replay_sequence(['a', 'd', 'd'])
+        self.assertFalse(replay_result[0])
+        self.assertEqual(set(replay_result[1]), {e})
 
 
