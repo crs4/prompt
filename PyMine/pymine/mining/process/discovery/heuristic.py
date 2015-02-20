@@ -1,6 +1,6 @@
 __author__ = 'paolo'
 
-from pymine.mining.process.discovery.miner import Miner as Miner
+from pymine.mining.process.discovery import Miner as Miner
 from pymine.mining.process.network.dependency.dgraph import DependencyGraph as DependencyGraph
 from pymine.mining.process.network.dependency.dnode import DNode as DNode
 from pymine.mining.process.network.dependency.darc import DArc as DArc

@@ -29,7 +29,7 @@ class DependencyTestCase(unittest.TestCase):
         net = DependencyGraph()
         a, b = net.add_nodes('a', 'b')
         freq = 1
-        dep = 1,
+        dep = 1.0
         attrs = {'test': True}
         arc = net.add_arc(a, b, 'arc', freq, dep, attrs)
 

@@ -1,36 +1,31 @@
 __author__ = 'paolo'
 
-from hashlib import md5
-
 class Log(object):
 
-    def __init__(self):
-        self.processes = {}
-        self.cases = {}
-        self.events = {}
-        self.activities = {}
-        self.activity_instances = {}
-        self.attributes = {}
+    def __init__(self, processes=[]):
+        self.processes = processes
 
     def __eq__(self, other):
         if type(self) == type(other):
-            return self.__hash__() == other.__hash__()
+            try:
+                for counter in xrange(len(self.processes)):
+                    assert self.processes[counter] == other.processes[counter]
+            except AssertionError, e:
+                return False
+            return True
         else:
             return False
 
-    def __hash__(self):
-        log = [self.processes,
-               self.cases,
-               self.events,
-               self.activities,
-               self.activity_instances,
-               self.attributes]
-        return md5(str(log)).hexdigest()
 
-    def __str__(self):
-        return str({'processes' : self.processes,
-                    'cases' : self.cases,
-                    'events' : self.events,
-                    'activities' : self.activities,
-                    'activity_instances': self.activity_instances,
-                    'attributes' : self.attributes})
+class LogInfo(object):
+
+    def __init__(self, log=None, processes_info={}):
+        self.log = log
+        self.processes_info = processes_info
+
+    def get_process_size(self):
+        return len(self.log.processes)
+
+    def get_process_info(self, process_id):
+        if process_id in self.processes_info:
+            return self.processes_info[process_id]
