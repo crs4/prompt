@@ -1,5 +1,5 @@
 import unittest
-from pymine.mining.process.network.bpmn.bpmn import BPMNDiagram, Activity, Transaction
+from pymine.mining.process.network.bpmn import BPMNDiagram, Activity, Transaction
 
 class TestBPMNDiagram(unittest.TestCase):
 
@@ -8,60 +8,58 @@ class TestBPMNDiagram(unittest.TestCase):
         # start -> a1 -> a2 ->end
         #   |             |
         #   |_____________|
-        start = Activity(id='start')
-        start.is_start = True
-        self.start = start
-        a1 = Activity(id='a1')
-        self.a1 = a1
-        a2 = Activity(id='a2')
+
+        self.bpmn_diagram = BPMNDiagram(label='test')
+        start = self.bpmn_diagram.add_node('start')
+        self.initial = start
+        a1 = self.bpmn_diagram.add_node('a1')
+        a2 = self.bpmn_diagram.add_node('a2')
         self.a2 = a2
-        end = Activity(id='end')
-        end.is_end = True
-        self.end = end
-        t_start_a1 = Transaction(id = 't_start_a1', from_act=start, to_act=a2)
-        t_a1_a2 = Transaction(id = 'a1_a2', from_act=a1, to_act=a2)
-        t_start_a2 = Transaction(id = 'start_a2', from_act = start, to_act = a2)
-        t_a2_end = Transaction(id = 'a2_end', from_act = a2, to_act = end)
-        self.bpmn_diagram = BPMNDiagram(process_id = 'test', process_activities=[start, a1, a2, end], process_transactions=[ \
-                                   t_start_a1, t_a1_a2, t_start_a2, t_a2_end])
-        self.end = end
+        end = self.bpmn_diagram.add_node('end')
+        self.final = end
+        self.bpmn_diagram.add_arc(start, a1, 't_start_a1')
+        self.bpmn_diagram.add_arc(a1, a2, 'a1_a2')
+        self.bpmn_diagram.add_arc(start, a2, 'start_a2')
+        self.bpmn_diagram.add_arc(a2, end, 'a2_end')
 
     def tearDown(self):
         pass
 
     def test_add_activity(self):
-        test_diagram = self.bpmn_diagram
-        test_act = Activity(id='test')
-        test_diagram.add_activity(test_act)
-        self.assertIn(test_act, test_diagram.process_activities)
+        test_act = self.bpmn_diagram.add_node('test')
+        self.assertTrue(test_act.net, self.bpmn_diagram)
 
-    def test_get_start_activity(self):
-        s = self.bpmn_diagram.get_start_activity()
-        self.assertEqual(s.id, 'AC_start')
+    def test_get_single_start_activity(self):
+        s = self.bpmn_diagram.get_initial_nodes()
+        self.assertEqual([self.initial], s)
 
-    def test_get_end_activity(self):
-        e = self.bpmn_diagram.get_end_activities()
-        self.assertEqual(e, [self.end])
+    def test_get_single_end_activity(self):
+        e = self.bpmn_diagram.get_final_nodes()
+        self.assertEqual([self.final], e)
+
+    def test_get_multiple_end_activity(self):
+        end_2 = self.bpmn_diagram.add_node('multiple_end')
+        self.bpmn_diagram.add_arc(self.a2, end_2, 'end_arc_2')
+        self.assertEqual([self.final, end_2], self.bpmn_diagram.get_final_nodes())
 
     def test_add_transaction(self):
-        test_diagram = self.bpmn_diagram
-        new_tr = Transaction(id='a1_end',from_act=self.a1, to_act = self.end)
-        test_diagram.add_transaction(new_tr)
-        self.assertIn(new_tr, test_diagram.process_transactions)
+        end_2 = self.bpmn_diagram.add_node('multiple_end')
+        new_tr = self.bpmn_diagram.add_arc(self.a2, end_2, 'end_arc_2')
+        self.assertTrue(new_tr.net, self.bpmn_diagram)
 
     def test_get_activity_by_id(self):
-        get_a2 = self.bpmn_diagram.get_activity_by_id('a2')
-        self.assertEqual(get_a2, self.a2)
+         get_a2 = self.bpmn_diagram.get_node_by_label('a2')
+         self.assertEqual(get_a2, self.a2)
 
-    def test_add_activity_same_id(self):
-        self.assertRaises(Exception, self.bpmn_diagram.add_activity, Activity(id='a2'))
-
-    def test_add_transaction_same_id(self):
-        t = Transaction(id='t_start_a1')
-        self.assertRaises(Exception, self.bpmn_diagram.add_transaction, t)
-
-    def test_add_yet_present_transaction(self):
-        self.assertRaises(Exception, self.bpmn_diagram.add_transaction, Transaction(self.start, self.a1))
+    # def test_add_activity_same_id(self):
+    #     self.assertRaises(Exception, self.bpmn_diagram.add_activity, Activity(id='a2'))
+    #
+    # def test_add_transaction_same_id(self):
+    #     t = Transaction(id='t_start_a1')
+    #     self.assertRaises(Exception, self.bpmn_diagram.add_transaction, t)
+    #
+    # def test_add_yet_present_transaction(self):
+    #     self.assertRaises(Exception, self.bpmn_diagram.add_transaction, Transaction(self.start, self.a1))
 
 
 # # def suite():
