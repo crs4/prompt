@@ -19,8 +19,8 @@ import xml.sax
 import xml.sax.xmlreader
 import xml.sax.handler
 
-import teng.process_manager.xpdl.process
-from teng.process_manager.xpdl.process import ActivityDefinition
+import pymine.mining.process.network.bpmn.parser.process as p
+from pymine.mining.process.network.bpmn.parser.process import ActivityDefinition
 from zope.wfmc.interfaces import IExtendedAttributesContainer, SYNCHRONOUS
 
 xpdlns10 = "http://www.wfmc.org/2002/XPDL1.0"
@@ -77,13 +77,13 @@ class XPDLHandler(xml.sax.handler.ContentHandler):
     end_handlers = {}
     text = u''
 
-    ProcessDefinitionFactory = teng.process_manager.xpdl.process.ProcessDefinition
-    ParticipantFactory = teng.process_manager.xpdl.process.Participant
-    DataFieldFactory = teng.process_manager.xpdl.process.DataField
-    ApplicationFactory = teng.process_manager.xpdl.process.Application
-    ActivityDefinitionFactory = teng.process_manager.xpdl.process.ActivityDefinition
-    TransitionDefinitionFactory = teng.process_manager.xpdl.process.TransitionDefinition
-    TextCondition = teng.process_manager.xpdl.process.TextCondition
+    ProcessDefinitionFactory = p.ProcessDefinition
+    ParticipantFactory = p.Participant
+    DataFieldFactory = p.DataField
+    ApplicationFactory = p.Application
+    ActivityDefinitionFactory = p.ActivityDefinition
+    TransitionDefinitionFactory = p.TransitionDefinition
+    TextCondition = p.TextCondition
 
     def __init__(self, package):
         self.package = package
@@ -159,9 +159,9 @@ class XPDLHandler(xml.sax.handler.ContentHandler):
     start_handlers[(xpdlns21, 'WorkflowProcess')] = WorkflowProcess
 
     paramter_types = {
-        'IN': teng.process_manager.xpdl.process.InputParameter,
-        'OUT': teng.process_manager.xpdl.process.OutputParameter,
-        'INOUT': teng.process_manager.xpdl.process.InputOutputParameter,
+        'IN': p.InputParameter,
+        'OUT': p.OutputParameter,
+        'INOUT': p.InputOutputParameter,
         }
 
 

@@ -1,4 +1,4 @@
-from pymine.mining.process.network.bpmn.bpmn import BPMNDiagram, Activity, Transaction
+from pymine.mining.process.network.bpmn import BPMNDiagram, Activity, Transaction, ParallelGateway, ExclusiveGateway
 from pymine.mining.process.network.bpmn.parser import xpdl
 from pymine.mining.process.network.bpmn.parser.process import TextCondition
 
@@ -32,40 +32,41 @@ class XPDLParser():
             The BPMNDiagram Process representation
         """
         try:
-            bpmn_diagram = BPMNDiagram(process_id = process.id)
+            bpmn_diagram = BPMNDiagram(label = process.id)
 
-            bpmn_diagram.id = process.id
+            #bpmn_diagram.id = process.id
 
             for activity_id, activity in process.activities.iteritems():
-                print activity
-                act = Activity()
-                act.id = activity_id
+                type = 'activity'
+                #check if the activity is a routing one
+                for transition in activity.outgoing:
+                    if isinstance(transition.condition, TextCondition):
+                        type = 'exclusive_gateway'
+                act = bpmn_diagram.add_node(activity_id, node_type=type)
                 act_def_attributes = activity.attributes  #iterate activity attributes
                 for item in act_def_attributes.items():
-                    if item[0] == 'event':  #the attribute is of event type: so an event object has to be created
+                    if item[0] == 'event' and type == 'activity':  #the attribute is of event type: so an event object has to be created
                         act.event = item[1]
                 #check if the activity is a start or a end one
-                if len(activity.incoming) == 0:
-                    act.is_start == True
-                if len(activity.outgoing) == 0:
-                    act.is_end == True
+                # if len(activity.incoming) == 0:
+                #     act.is_start == True
+                # if len(activity.outgoing) == 0:
+                #     act.is_end == True
 
                 #check activity type: Task(Activity) or Routing
-                for o in activity.outgoing:
-                    if isinstance(o.condition, TextCondition):
-                        act.type = 'route'
-                    else:
-                        act.type = 'activity'
+                # for o in activity.outgoing:
+                #     if isinstance(o.condition, TextCondition):
+                #         act.type = 'route'
+                #     else:
+                #         act.type = 'activity'
 
-                bpmn_diagram.add_activity(act)
+                #bpmn_diagram.add_activity(act)
 
             for transition in process.transitions:
-                tr = Transaction()
-                tr.from_act = bpmn_diagram.get_activity_by_id(transition.from_)
-                tr.to_act = bpmn_diagram.get_activity_by_id(transition.to)
-                bpmn_diagram.add_transaction(tr)
+                from_act = bpmn_diagram.get_node_by_label(transition.from_)
+                to_act = bpmn_diagram.get_node_by_label(transition.to)
+                bpmn_diagram.add_arc(from_act, to_act, transition.id)
 
-            print 'returning......'
             return bpmn_diagram
 
         except Exception, e :
