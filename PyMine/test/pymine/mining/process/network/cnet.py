@@ -33,7 +33,7 @@ class CNetTestCase(unittest.TestCase):
         binding_b_c = net.add_output_binding(a, {b, c})
         binding_b = net.add_output_binding(a, {b}, 1)
         binding_d_b = net.add_input_binding(d, {b})
-        binding_d_c = net.add_input_binding(d, {d})
+        binding_d_c = net.add_input_binding(d, {c})
 
         self.assertTrue(a.output_bindings == [binding_b_c, binding_b])
         self.assertTrue(d.input_bindings == [binding_d_b, binding_d_c])
