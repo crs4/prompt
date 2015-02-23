@@ -1,7 +1,7 @@
 import csv, sys
 from pymine.mining.process.eventlog.log import Log, LogInfo
 from pymine.mining.process.eventlog import *
-
+import datetime
 
 class LogInfoFactory(object):
 
@@ -24,11 +24,11 @@ class LogInfoFactory(object):
 
 class LogFactory(object):
 
-    def __init__(self, processes=[]):
-        self.processes = processes
+    def __init__(self):
+        self.cases = []
 
     def create_log(self):
-        return Log(self.processes)
+        return Log(self.cases)
 
     def create_loginfo(self):
         log_info = LogInfo()
@@ -44,12 +44,16 @@ class LogFactory(object):
             log_info.processes_info[process.id] = process_info
         return log_info
 
+
 class CsvLogFactory(LogFactory):
+
+    TIME_FORMAT = '%Y-%m-%d %H:%M:%S%f'
 
     def __init__(self, input_filename=None):
         super(CsvLogFactory, self).__init__()
         self.indexes = {}
-        self.cases = {}
+        self.cases = []
+        self._cases = {}
         self.activities = {}
         if input_filename:
             self.parse_csv_file(input_filename=input_filename)
@@ -69,54 +73,42 @@ class CsvLogFactory(LogFactory):
         timestamp = row[self.indexes['timestamp']]
         activity_id = row[self.indexes['activity']]
         resource = row[self.indexes['resource']]
-        index = 0
         if case_id and activity_id:
-            if case_id not in self.cases:
-                case = Case(_id=case_id, process=process)
-                self.cases[case_id] = case
-                process.cases.append(case)
-            else:
-                case = self.cases[case_id]
+            if case_id not in self._cases:
 
-            event = Event()
-            case.events.append(event)
+                case = Case(_id=case_id, process=process)
+                self._cases[case_id] = case
+
+                self.cases.append(case)
+            else:
+                case = self._cases[case_id]
 
             if activity_id not in self.activities:
-                activity = Activity(name=activity_id)
+                activity = process.add_activity(activity_id)
                 self.activities[activity_id] = activity
                 process.activities.append(activity)
             else:
                 activity = self.activities[activity_id]
 
-            activity_instance = ActivityInstance(activity=activity, events=[event])
-            case.activity_instances.append(activity_instance)
-            event.activity_instance = activity_instance
+            activity_instance = case.add_activity_instance(activity)
 
             if timestamp:
-                tstamp = Attribute(value=timestamp, name="timestamp")
-                tstamp.event = event
-                event.timestamp = tstamp
+                timestamp = datetime.datetime.strptime(timestamp, self.TIME_FORMAT)
 
-            if resource:
-                resources = resource.split('|')
-                for res in resources:
-                    rs = Attribute(value=res, name="resource")
-                    rs.event = event
-                    event.resources.append(rs)
+            resources = resource.split('|') if resource else None
 
-            for attribute in self.indexes:
-                if index != self.indexes['case_id'] and \
-                                index != self.indexes['timestamp'] and \
-                                index != self.indexes['activity'] and \
-                                index != self.indexes['resource']:
-                    attribute_instance = Attribute(name=attribute, value=row[self.indexes[attribute]], event=event)
-                    event.attributes.append(attribute_instance)
+            attributes = []
+            for attribute, index in self.indexes.items():
+                if attribute not in ('case_id', 'timestamp', 'activity', 'resource'):
+                    attribute_instance = Attribute(name=attribute, value=row[index])
+                    attributes.append(attribute_instance)
+
+            activity_instance.add_event(timestamp=timestamp, resources=resources, attributes=attributes)
 
     def parse_csv_file(self, input_filename):
         with open(input_filename, 'rbU') as csvfile:
             # Check if first line has the parameters definition
             process = Process()
-            self.processes.append(process)
             first_line = csvfile.readline()
             dialect = csv.Sniffer().sniff(first_line)
             self.parse_indexes(first_line, dialect)

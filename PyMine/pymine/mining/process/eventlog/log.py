@@ -1,9 +1,20 @@
-__author__ = 'paolo'
-
 class Log(object):
 
-    def __init__(self, processes=[]):
-        self.processes = processes
+    def __init__(self, cases=None):
+        self._processes = set()
+        self.cases = []
+        if cases is not None:
+            for case in cases:
+                self.add_case(case)
+
+    def add_case(self, case):
+        self.cases.append(case)
+        case.log = self
+        self._processes.add(case.process)
+
+    @property
+    def processes(self):
+        return list(self._processes)
 
     def __eq__(self, other):
         if type(self) == type(other):
