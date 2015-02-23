@@ -83,7 +83,8 @@ class TestFactory(unittest.TestCase):
         event8.timestamp = dt.strptime("2014-12-25 00:00:08", CsvLogFactory.TIME_FORMAT)
         event8.resources.append("R1")
         log = Log()
-        log.processes.append(process)
+        log.add_case(case1)
+        log.add_case(case2)
         return log
 
     def test_create_log(self):
