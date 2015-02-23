@@ -46,26 +46,26 @@ class Process(IdObject):
 class ProcessInfo(object):
 
     def __init__(self, process=None, activities_number=0, cases_number=0, average_case_size=0, events_number=0,
-                 activity_frequencies=[], event_frequencies=[]):
+                 activity_frequencies=None, event_frequencies=None):
         self.process = process
         self.activities_number = activities_number
         self.cases_number = cases_number
         self.average_case_size = average_case_size
         self.events_number = events_number
-        self.activity_frequencies = activity_frequencies
-        self.event_frequencies = event_frequencies
+        self.activity_frequencies = activity_frequencies or []
+        self.event_frequencies = event_frequencies or []
 
 
 class Activity(IdObject):
 
-    def __init__(self, _id=None, name=None, activity_instances=[], process=None):
+    def __init__(self, _id=None, name=None, activity_instances=None, process=None):
         """
 
         :return:
         """
         super(Activity, self).__init__(_id)
         self.name = name
-        self.activity_instances = activity_instances
+        self.activity_instances = activity_instances or []
         self.process = process
 
     def __eq__(self, other):
@@ -83,18 +83,18 @@ class Activity(IdObject):
 
 class Case(IdObject):
 
-    def __init__(self, _id=None, process=None, activity_instances=[], events=[]):
+    def __init__(self, _id=None, process=None, activity_instances=None, events=None):
         super(Case, self).__init__(_id)
         self.process = process
-        self.activity_instances = activity_instances
-        self.events = events
+        self.activity_instances = activity_instances or []
+        self.events = events or []
 
     def add_activity_instance(self, activity, _id=None):
         actvivity_instance = ActivityInstance(_id=_id, case=self, activity=activity)
         self.activity_instances.append(actvivity_instance)
         return actvivity_instance
 
-    def add_event(self, activity_instance, _id=None, timestamp=None, resources=[], attributes=[]):
+    def add_event(self, activity_instance, _id=None, timestamp=None, resources=None, attributes=None):
         event = Event(_id=_id, case=self, activity_instance=activity_instance,
                       timestamp=timestamp, resources=resources, attributes=attributes)
         activity_instance.events.append(event)
@@ -117,11 +117,11 @@ class Case(IdObject):
 
 class ActivityInstance(IdObject):
 
-    def __init__(self, _id=None, case=None, activity=None, events=[]):
+    def __init__(self, _id=None, case=None, activity=None, events=None):
         super(ActivityInstance, self).__init__(_id)
         self.case = case
         self.activity = activity
-        self.events = events
+        self.events = events or None
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -137,7 +137,7 @@ class ActivityInstance(IdObject):
 
 class Event(IdObject):
 
-    def __init__(self, _id=None, case=None, activity_instance=None, timestamp=None, resources=[],  attributes=[]):
+    def __init__(self, _id=None, case=None, activity_instance=None, timestamp=None, resources=None,  attributes=None):
         """
 
         :return:
@@ -145,9 +145,9 @@ class Event(IdObject):
         super(Event, self).__init__(_id)
         self.case = case
         self.activity_instance = activity_instance
-        self.attributes = attributes
+        self.attributes = attributes or []
         self.timestamp = timestamp
-        self.resources = resources
+        self.resources = resources or []
 
     def add_attribute(self, name, value):
         atr = Attribute(name=name, value=value, event=self)
