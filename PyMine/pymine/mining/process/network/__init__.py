@@ -12,6 +12,17 @@ class BaseElement(LabeledObject):
         self.frequency = frequency
         self.attrs = attrs
 
+    def __eq__(self, other):
+        if type(self) == type(other):
+            try:
+                assert self.attrs == other.attrs
+                assert self.label == other.label
+                assert self.frequency == other.frequency
+            except AssertionError, e:
+                return False
+            return True
+        else:
+            return False
 
 class Arc(BaseElement):
     def __init__(self, input_node, output_node, label=None, frequency=None, attrs={}):
@@ -20,6 +31,20 @@ class Arc(BaseElement):
         self.output_node = input_node
 
         self.net = self.input_node.net
+
+    def __eq__(self, other):
+        if type(self) == type(other):
+            try:
+                assert self.input_node == other.input_node
+                assert self.output_node == other.output_node
+                assert self.label == other.label
+                assert self.frequency == other.frequency
+                assert self.attrs == other.attrs
+            except AssertionError, e:
+                return False
+            return True
+        else:
+            return False
 
     def __str__(self):
         doc = "label %s %s -> %s" % (self.label, self.input_node, self.output_node)
@@ -35,6 +60,21 @@ class Node(BaseElement):
         self.net = net
         self.input_arcs = []
         self.output_arcs = []
+
+    def __eq__(self, other):
+        if type(self) == type(other):
+            try:
+                assert self.label == other.label
+                assert self.net == other.net
+                assert self.frequency == other.frequency
+                assert self.attrs == other.attrs
+                assert self.input_arcs == other.input_arcs
+                assert self.output_arcs == other.output_arcs
+            except AssertionError, e:
+                return False
+            return True
+        else:
+            return False
 
     def __str__(self):
         return self.label
@@ -118,3 +158,15 @@ class Network(LabeledObject):
     def add_arc(self, node_a, node_b, label=None, frequency=None, attrs={}):
         arc = self._create_arc(node_a, node_b, label, frequency, attrs)
         return self._add_arc(arc, node_a, node_b)
+
+    def __eq__(self, other):
+        if type(self) == type(other):
+            try:
+                assert self.label == other.label
+                assert self._nodes == other._nodes
+                assert self._arcs == other._arcs
+            except AssertionError, e:
+                return False
+            return True
+        else:
+            return False

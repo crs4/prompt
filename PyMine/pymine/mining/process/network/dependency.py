@@ -1,4 +1,4 @@
-from pymine.mining.process.network import Network, Arc
+from pymine.mining.process.network import Network, Arc, Node
 
 
 class DArc(Arc):
@@ -12,6 +12,21 @@ class DArc(Arc):
         if self.dependency is not None:
             doc += " dep: %s" % self.dependency
         return doc
+
+    def __eq__(self, other):
+        if type(self) == type(other):
+            try:
+                assert self.input_node == other.input_node
+                assert self.output_node == other.output_node
+                assert self.label == other.label
+                assert self.frequency == other.frequency
+                assert self.dependency == other.dependency
+                assert self.attrs == other.attrs
+            except AssertionError, e:
+                return False
+            return True
+        else:
+            return False
 
 
 class DependencyGraph(Network):
