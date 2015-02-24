@@ -3,8 +3,8 @@ import logging
 
 
 class IdObject(object):
-    def __init__(self, _id = None):
-        self.id = id or uuid.uuid4()
+    def __init__(self, _id=None):
+        self.id = _id or uuid.uuid4()
 
 
 class Process(IdObject):
