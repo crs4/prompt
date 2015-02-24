@@ -79,12 +79,17 @@ class CNet(Network):
         initial_node = self.get_initial_nodes()[0]
         obligations = [initial_node]
         available_nodes = [initial_node]
+        unknown_events = []
 
         for event in sequence:
             logging.debug('event %s, current_node %s,  obligations %s ,available_nodes %s', event, current_node,
                           obligations, available_nodes)
 
             event_cnode = self.get_node_by_label(event)
+            if event_cnode is None:
+                unknown_events.append(event)
+                continue
+
             if event_cnode in available_nodes:
                 logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
                 obligations.remove(event_cnode)
@@ -103,7 +108,7 @@ class CNet(Network):
                 current_node = event_cnode
                 logging.debug('obligations %s', obligations)
         logging.debug('obligations %s', obligations)
-        return len(obligations) == 0, obligations
+        return len(obligations + unknown_events) == 0, obligations, unknown_events        return len(obligations) == 0, obligations
     
     def get_json(self):
         json = [{'label': str(self.label),
