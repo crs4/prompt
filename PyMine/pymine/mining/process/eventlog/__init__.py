@@ -31,6 +31,9 @@ class Process(IdObject):
     #     return False
 
     def add_activity(self, name, _id=None):
+        if name in self._activities:
+            return self._activities[name]
+        
         activity = Activity(_id=_id, name=name, process=self)
         activity.process = self
         self._activities[name] = activity
