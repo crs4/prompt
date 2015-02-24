@@ -2,7 +2,7 @@ import unittest
 import os
 import logging
 from datetime import datetime as dt
-from pymine.mining.process.eventlog.factory import CsvLogFactory
+from pymine.mining.process.eventlog.factory import CsvLogFactory, DictLogFactory
 from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import *
 logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
@@ -149,6 +149,35 @@ class TestFactory(unittest.TestCase):
         log_info = log_factory.create_loginfo()
         self.assertEqual(test_log,file_log)
     '''
+
+    def test_dict_factory(self):
+
+        test_dict = {
+            'test': [['A', 'B'], ['A']]
+        }
+        f = DictLogFactory(test_dict)
+        log = f.create_log()
+        self.assertEqual(len(log.cases), 2)
+        self.assertEqual(log.cases[0].process.id, test_dict.keys()[0])
+        self.assertEqual(log.cases[1].process.id, test_dict.keys()[0])
+
+        self.assertEqual([e.activity_name for e in log.cases[0].events], test_dict.values()[0][0])
+        self.assertEqual([e.activity_name for e in log.cases[1].events], test_dict.values()[0][1])
+
+        process = log.cases[1].process
+        self.assertEqual(set([a.name for a in process.activities]), {'A', 'B'})
+        self.assertEqual(len(process.get_activity_by_name('A').activity_instances), 2)
+        self.assertEqual(len(process.get_activity_by_name('B').activity_instances), 1)
+
+        self.assertEqual(len(process.get_activity_by_name('A').activity_instances[0].events), 1)
+        self.assertEqual(len(process.get_activity_by_name('A').activity_instances[1].events), 1)
+
+        self.assertEqual(len(process.get_activity_by_name('B').activity_instances[0].events), 1)
+
+
+
+
+
 
 def suite():
     suite = unittest.TestSuite()
