@@ -18,7 +18,7 @@ class OutputBinding(Binding):
 
 
 class CNode(Node):
-    def __init__(self, label, net, frequency=None, attrs={}):
+    def __init__(self, label, net, frequency=None, attrs=None):
         super(CNode, self).__init__(label, net, frequency, attrs)
         self.input_bindings = []
         self.output_bindings = []

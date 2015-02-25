@@ -7,10 +7,10 @@ class LabeledObject(object):
 
 
 class BaseElement(LabeledObject):
-    def __init__(self, label=None, frequency=None, attrs={}):
+    def __init__(self, label=None, frequency=None, attrs=None):
         super(BaseElement, self).__init__(label)
         self.frequency = frequency
-        self.attrs = attrs
+        self.attrs = attrs or {}
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -25,12 +25,12 @@ class BaseElement(LabeledObject):
             return False
 
 class Arc(BaseElement):
-    def __init__(self, input_node, output_node, label=None, frequency=None, attrs={}):
+    def __init__(self, input_node, output_node, label=None, frequency=None, attrs=None):
         super(Arc, self).__init__(label, frequency, attrs)
-        self.input_node = output_node
-        self.output_node = input_node
+        self.input_node = input_node
+        self.output_node = output_node
 
-        self.net = self.input_node.net
+        #self.net = self.input_node.net
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -54,7 +54,7 @@ class Arc(BaseElement):
 
 
 class Node(BaseElement):
-    def __init__(self, label, net, frequency=None, attrs={}):
+    def __init__(self, label, net, frequency=None, attrs=None):
         super(Node, self).__init__(label, frequency, attrs)
         self.label = label
         self.net = net
@@ -77,7 +77,7 @@ class Node(BaseElement):
             return False
 
     def __str__(self):
-        return self.label
+        return str(self.label)
 
     def is_last(self):
         return len(self.output_arcs) == 0

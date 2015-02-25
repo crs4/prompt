@@ -19,6 +19,7 @@ class LogInfoFactory(object):
             for case in process.cases:
                 events_number += len(case.events)
             process_info.events_number = events_number
+            process_info.average_case_size = float(events_number/len(process.cases))
             loginfo.processes_info[process.id] = process_info
         return loginfo
 
@@ -41,6 +42,7 @@ class LogFactory(object):
             for case in process.cases:
                 events_number += len(case.events)
             process_info.events_number = events_number
+            process_info.average_case_size = float(events_number/len(process.cases))
             log_info.processes_info[process.id] = process_info
         return log_info
 

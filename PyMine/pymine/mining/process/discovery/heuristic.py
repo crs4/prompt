@@ -16,9 +16,9 @@ class HeuristicMiner(Miner):
 
     def calculate_arcs_dependency(self, net):
         for arc in net.arcs:
+            a = float(arc.frequency)
             if arc.input_node != arc.output_node:
-                reversed_arc = arc.output_node.label+"->"+arc.input_node.label
-                a = float(arc.frequency)
+                reversed_arc = arc.input_node.label+"->"+arc.output_node.label
                 r_arc = net.get_arc_by_label(reversed_arc)
                 if r_arc:
                     b = float(r_arc.frequency)
@@ -26,8 +26,8 @@ class HeuristicMiner(Miner):
                 else:
                     arc.dependency = abs(a/(a+1.0))
             else:
-                a = float(arc.frequency)
-                arc.dependency = abs(a/(a+1.0))
+                dep = abs(a/(a+1.0))
+                arc.dependency = dep
 
     def prune_by_frequency(self, net, threshold):
         arcs_to_prune = []
@@ -57,9 +57,6 @@ class HeuristicMiner(Miner):
                 net.add_node(label=activity.name)
 
             for case in process.cases:
-                print("CASE: "+str(case))
-                print("CASE.EVENTS: "+str(case.events))
-                print("CASE.ACTIVITY_INSTANCES: "+str(case.activity_instances))
                 for e_index in xrange(0, len(case.events)-1):
                     start_event = case.events[e_index]
                     start_activity_instance = start_event.activity_instance
@@ -89,67 +86,73 @@ class HeuristicMiner(Miner):
             graphs.append(net)
         return graphs
 
-    def mine_cnets(self, depnet, log):
+    def mine_cnets(self, log, frequency_threshold=0, dependency_threshold=0.0):
         log_info_factory = LogInfoFactory(log=log)
         log_info = log_info_factory.create_loginfo()
-        nets = {}
-        for process in log_info.processes_info:
-            pinfo = log_info.processes_info[process]
-            cnet = CNet()
-            for activity in depnet.nodes:
-                input_binds, output_binds = self.calculate_possible_binds(process, depnet.nodes[activity], log, pinfo.average_case_size)
-                node = CNode(id=activity, name=activity)
-                node.input_bindings = input_binds
-                node.output_bindings = output_binds
-                cnet.nodes[activity] = node
-            for connection in depnet.arcs:
-                arc = CArc(id=connection, name=connection, input_node=depnet.arcs[connection].input_node,
-                           output_node=depnet.arcs[connection].output_node, frequency=depnet.arcs[connection].frequency)
-                cnet.arcs[connection] = arc
-            nets[process] = cnet
+        dependency_graphs = self.mine_dependency_graphs(log, frequency_threshold, dependency_threshold)
+        nets = []
+        for process_info in log_info.processes_info:
+            dep_net = dependency_graphs.pop()
+            p_info = log_info.processes_info[process_info]
+            c_net = CNet()
+            for activity in dep_net.nodes:
+                c_net.add_node(label=activity.label)
+            for connection in dep_net.arcs:
+                c_net.add_arc(c_net.get_node_by_label(connection.input_node.label),
+                              c_net.get_node_by_label(connection.output_node.label),
+                              label=connection.label,
+                              frequency=connection.frequency)
+            self.calculate_possible_binds(c_net, p_info.process, p_info.average_case_size)
+            nets.append(c_net)
         return nets
 
-    def calculate_possible_binds(self, process_id, activity_node, log, window_size):
-        input_binds = {}
-        output_binds = {}
-        # select the proper process
-        if process_id in log.processes:
-            input_arcs = activity_node.input_arcs
-            output_arcs = activity_node.output_arcs
-            # for each case in the process log check the activity position
-            for case in log.processes[process_id].cases:
+    def calculate_possible_binds(self, c_net, process, window_size):
+        # for each case in the process log check the activity position
+        for node in c_net.nodes:
+            input_binds = {}
+            output_binds = {}
+            for case in process.cases:
                 candidate_input_binds = set()
                 candidate_output_binds = set()
                 found = False
                 counter = 0
-                for event in log.cases[case].events:
-                    activity = log.activities[log.activity_instances[log.events[event].activity_instance_id].activity_id]
-                    if not found:
-                        if activity.name == activity_node.name:
-                            found = True
-                            counter = 0
+                for event in case.events:
+                    activity = event.activity_instance.activity
+                    try:
+                        if not found:
+                            if activity.name == node.label:
+                                found = True
+                                counter = 0
+                            else:
+                                arc_name = activity.name+"->"+node.label
+                                arc = c_net.get_arc_by_label(arc_name)
+                                if (arc in node.input_arcs) and (counter < window_size):
+                                    candidate_input_binds.add(c_net.get_node_by_label(activity.name))
+                                counter += 1
                         else:
-                            arc_name = activity.name+"->"+activity_node.name
-                            if (arc_name in input_arcs) and (counter < window_size):
-                                candidate_input_binds.add(activity.name)
-                            counter += 1
-                    else:
-                        arc_name = activity_node.name+"->"+activity.name
-                        if (arc_name in output_arcs) and (counter < window_size):
-                            candidate_output_binds.add(activity.name)
-                        counter += 1
-                #for candidate in candidate_input_binds:
-                    for candidate in candidate_input_binds:
-                        if candidate in input_binds:
-                            input_binds[candidate] += 1
-                        else:
-                            input_binds[candidate] = 1
-                    for candidate in candidate_output_binds:
-                        if candidate in output_binds:
-                            output_binds[candidate] += 1
-                        else:
-                            output_binds[candidate] = 1
-        return input_binds, output_binds
+                            arc_name = node.label+"->"+activity.name
+                            arc = c_net.get_arc_by_label(arc_name)
+                            if (arc in node.output_arcs) and (counter < window_size):
+                                candidate_output_binds.add(c_net.get_node_by_label(activity.name))
+                                counter += 1
+                            #for candidate in candidate_input_binds:
+                        for candidate in candidate_input_binds:
+                            if candidate in input_binds:
+                                input_binds[candidate] += 1
+                            else:
+                                input_binds[candidate] = 1
+                        for candidate in candidate_output_binds:
+                            if candidate in output_binds:
+                                output_binds[candidate] += 1
+                            else:
+                                output_binds[candidate] = 1
+                    except Exception, e:
+                        print("Cannot compute bindins: "+str(e.message))
+            print("INPUTBINDS: "+str(input_binds))
+            for binds in input_binds:
+                c_net.add_input_binding(node, {binds}, input_binds[binds])
+            for binds in output_binds:
+                c_net.add_output_binding(node, {binds}, output_binds[binds])
 
     def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
         dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)

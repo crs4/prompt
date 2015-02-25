@@ -46,11 +46,10 @@ class Process(IdObject):
     def activities(self):
         return self._activities.values()
 
-    # def add_case(self, case_id):
-    #     case = Case(_id=case_id)
-    #     case.process = self
-    #     self.cases.append(case)
-    #     return case
+    def add_case(self, case_id):
+        case = Case(self, _id=case_id)
+        self.cases.append(case)
+        return case
 
 
 class ProcessInfo(object):
