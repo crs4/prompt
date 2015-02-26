@@ -1,5 +1,5 @@
 from pymine.mining.process.network import Node, Network, LabeledObject
-
+import logging
 
 class Binding(LabeledObject):
     def __init__(self, node, node_set, frequency=None, label=None):
@@ -30,6 +30,9 @@ class CNode(Node):
         self.input_bindings = []
         self.output_bindings = []
 
+    @property
+    def obligations(self):
+        return self.output_nodes
     def get_json(self):
         json = [{'label': str(self.label),
                  'input_arcs': [arc.label for arc in self.input_arcs],
@@ -39,6 +42,7 @@ class CNode(Node):
                  'input_bindings': [binding.label for binding in self.input_bindings],
                  'output_bindings': [binding.label for binding in self.output_bindings]}]
         return json
+
 
 class CNet(Network):
     def __init__(self, label=None):
@@ -75,40 +79,56 @@ class CNet(Network):
         return CNode(label, self, frequency, attrs)
 
     def replay_sequence(self, sequence):
+        def remove_binding(binding):
+            for el in binding.node_set:
+                try:
+                    obligations.remove(el)
+                except KeyError:
+                    pass
+
+
+
+
         current_node = None
         initial_node = self.get_initial_nodes()[0]
-        obligations = [initial_node]
-        available_nodes = [initial_node]
+        obligations = {initial_node}
         unknown_events = []
 
         for event in sequence:
-            logging.debug('event %s, current_node %s,  obligations %s ,available_nodes %s', event, current_node,
-                          obligations, available_nodes)
+            logging.debug('event %s, current_node %s,  obligations %s', event, current_node, obligations)
 
             event_cnode = self.get_node_by_label(event)
             if event_cnode is None:
                 unknown_events.append(event)
                 continue
 
-            if event_cnode in available_nodes:
+            if event_cnode in obligations:
                 logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
-                obligations.remove(event_cnode)
                 bindings = current_node.output_bindings if current_node else []
-                for binding in bindings:
-                    #removing xor obligations
-                    if event_cnode not in binding.node_set:
-                        for el in binding.node_set:
-                            obligations.remove(el)
-                for binding in event_cnode.output_bindings:
-                    obligations.extend([el for el in binding.node_set])
+                obligations.remove(event_cnode)
 
-                #updating variables
-                available_nodes = list(obligations)
+
+                binding_completed = None
+                for binding in bindings:
+                    if event_cnode in binding.node_set:
+                        if binding.node_set & obligations == set():
+                            binding_completed = binding
+                            logging.debug('binding %s  %s', binding, binding_completed)
+
+                    else:
+                        remove_binding(binding)
+
+                if binding_completed:
+                    for binding in bindings:
+                        remove_binding(binding)
+
+                for binding in event_cnode.output_bindings:
+                    obligations |= set([el for el in binding.node_set])
 
                 current_node = event_cnode
                 logging.debug('obligations %s', obligations)
         logging.debug('obligations %s', obligations)
-        return len(obligations + unknown_events) == 0, obligations, unknown_events        return len(obligations) == 0, obligations
+        return len(obligations | set(unknown_events)) == 0, obligations, unknown_events
     
     def get_json(self):
         json = [{'label': str(self.label),
