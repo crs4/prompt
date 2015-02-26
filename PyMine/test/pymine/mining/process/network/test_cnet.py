@@ -73,7 +73,7 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         self.assertTrue(cnet.replay_sequence(['a', 'd', 'e'])[0])
 
-    def test_replay_2(self):
+    def test_replay_two_bindings_with_same_node(self):
         cnet = CNet()
         a, b, c, d = cnet.add_nodes('a', 'b', 'c', 'd')
 
@@ -90,8 +90,30 @@ class CNetTestCase(unittest.TestCase):
         cnet.add_input_binding(d, {b, c})
 
         replay = cnet.replay_sequence(['a', 'b', 'd'])
-        print replay
         self.assertTrue(replay[0])
+
+    def test_replay_two_bindings_with_same_node_2(self):
+        cnet = CNet()
+        a, b, c, d, e = cnet.add_nodes('a', 'b', 'c', 'd', 'e')
+
+        cnet.add_output_binding(a, {b, c})
+        cnet.add_output_binding(a, {b, d})
+
+        cnet.add_input_binding(b, {a})
+        cnet.add_output_binding(b, {e})
+
+        cnet.add_input_binding(c, {a})
+        cnet.add_output_binding(c, {e})
+
+        cnet.add_input_binding(d, {a})
+        cnet.add_output_binding(d, {e})
+
+        cnet.add_input_binding(e, {b, c})
+        cnet.add_input_binding(e, {b, d})
+
+        self.assertTrue(cnet.replay_sequence(['a', 'b', 'd', 'e'])[0])
+
+
 
     def test_replay_concurrency(self):
         cnet, a, b, c, d, e = _create_cnet()

@@ -17,11 +17,13 @@ class Binding(LabeledObject):
         return json
 
 class InputBinding(Binding):
-    pass
+    def __str__(self):
+        return str([n.label for n in self.node_set]) + "->" + self.node.label
 
 
 class OutputBinding(Binding):
-    pass
+    def __str__(self):
+        return self.node.label + "->" + str([n.label for n in self.node_set])
 
 
 class CNode(Node):
@@ -86,13 +88,11 @@ class CNet(Network):
                 except KeyError:
                     pass
 
-
-
-
         current_node = None
         initial_node = self.get_initial_nodes()[0]
         obligations = {initial_node}
         unknown_events = []
+        bindings = []
 
         for event in sequence:
             logging.debug('event %s, current_node %s,  obligations %s', event, current_node, obligations)
@@ -104,18 +104,18 @@ class CNet(Network):
 
             if event_cnode in obligations:
                 logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
-                bindings = current_node.output_bindings if current_node else []
+                bindings += current_node.output_bindings if current_node else []
                 obligations.remove(event_cnode)
-
 
                 binding_completed = None
                 for binding in bindings:
                     if event_cnode in binding.node_set:
                         if binding.node_set & obligations == set():
                             binding_completed = binding
-                            logging.debug('binding %s  %s', binding, binding_completed)
+                            logging.debug('*****binding completed %s', binding)
 
                     else:
+                        # removing xor
                         remove_binding(binding)
 
                 if binding_completed:
