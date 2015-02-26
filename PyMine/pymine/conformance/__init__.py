@@ -24,6 +24,7 @@ class FitnessResult(object):
         result, obligations, unknown = replay_results
         if result:
             self.correct_cases.append(case)
+
         else:
             self.failed_cases.append(case)
 
@@ -33,7 +34,3 @@ class FitnessResult(object):
             n_correct_cases = float(len(self.correct_cases))
             n_failed_cases = float(len(self.failed_cases))
             return n_correct_cases/(n_correct_cases + n_failed_cases)
-
-
-
-
