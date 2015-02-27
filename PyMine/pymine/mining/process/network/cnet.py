@@ -15,6 +15,12 @@ class Binding(LabeledObject):
                  'node_set': [node.label for node in self.node_set],
                  'frequency': self.frequency}]
         return json
+    def __repr__(self):
+        return str(self)
+
+    def node_set_labels(self):
+        return set(n.label for n in self.node_set)
+
 
 class InputBinding(Binding):
     def __str__(self):
@@ -32,6 +38,23 @@ class CNode(Node):
         self.input_bindings = []
         self.output_bindings = []
 
+    def _get_bindings_with(self, node_set, exactly, type_):
+        bindings = self.input_bindings if type_ == 'input' else self.output_bindings
+        if exactly:
+            for binding in bindings:
+                if binding.node_set == node_set:
+                    return binding
+
+        else:
+            return [binding for binding in bindings if node_set <= binding.node_set]
+
+    def get_input_bindings_with(self, node_set, exactly=False):
+        return self._get_bindings_with(node_set, exactly, 'input')
+
+    def get_output_bindings_with(self, node_set, exactly=False):
+        return self._get_bindings_with(node_set, exactly, 'output')
+
+
     @property
     def obligations(self):
         return self.output_nodes
@@ -48,16 +71,18 @@ class CNode(Node):
 
 class _XorBindings(object):
     def __init__(self, bindings, final_node):
-        self.bindings = []
+        self.bindings = {}
         self.nodes = set()
+        self.completed_binding = None
         for binding in bindings:
             self.nodes |= binding.node_set
             tmp_bindings = set(binding.node_set)
-            tmp_bindings.add(final_node)
-            self.bindings.append(tmp_bindings)
+            if not final_node in tmp_bindings:
+                tmp_bindings.add(final_node)
+            self.bindings[binding] = tmp_bindings
 
     def has_node(self, node):
-        for binding in self.bindings:
+        for binding in self.bindings.values():
             if node in binding:
                 return True
         return False
@@ -65,10 +90,13 @@ class _XorBindings(object):
     def remove_node(self, node):
         logging.debug('self.has_node(%s) %s', node,  self.has_node(node))
         if self.has_node(node):
-            for binding in self.bindings:
+            for orig_binding, binding in self.bindings.items():
                 if node in binding:
                     binding.remove(node)
                     if not binding:
+                        orig_binding.frequency += 1
+                        self.completed_binding = orig_binding
+                        logging.debug('self.completed_binding %s', self.completed_binding)
                         self.bindings = []
                         break
 
@@ -83,6 +111,13 @@ class CNet(Network):
     def __init__(self, label=None):
         super(CNet,  self).__init__(label)
         self._bindings = []
+        self._clean = True
+
+    def reset(self):
+        for node in self.nodes:
+            node.frequency = 0
+        for binding in self.bindings:
+            binding.frequency = 0
 
     @property
     def bindings(self):
@@ -114,21 +149,24 @@ class CNet(Network):
         return CNode(label, self, frequency, attrs)
 
     def replay_sequence(self, sequence):
+        if self._clean:
+            self.reset()
+            self._clean = False
 
-        current_node = None
         initial_node = self.get_initial_nodes()[0]
         obligations = {initial_node}
         unexpected_events = []
         bindings = []
 
-        for event in sequence:
-            logging.debug('event %s, current_node %s,  obligations %s', event, current_node, obligations)
+        for index, event in enumerate(sequence):
+            logging.debug('event %s, obligations %s', event, obligations)
 
             event_cnode = self.get_node_by_label(event)
             if event_cnode is None:
                 unexpected_events.append(event)
                 continue
 
+            event_cnode.frequency += 1
             if event_cnode in obligations:
                 logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
                 obligations.remove(event_cnode)
@@ -136,7 +174,9 @@ class CNet(Network):
                     bindings.append(_XorBindings(event_cnode.output_bindings, self.get_final_nodes()[0]))
 
                 logging.debug('bindings %s', bindings)
+                bindings_to_remove = []
                 for binding in bindings:
+                    logging.debug('binding %s', binding)
                     binding.remove_node(event_cnode)
                     if binding.is_completed():
                         for node in binding.nodes:
@@ -144,12 +184,26 @@ class CNet(Network):
                                 obligations.remove(node)
                             except KeyError:
                                 pass
-                        bindings.remove(binding)
+                        bindings_to_remove.append(binding)
+
+                for binding in bindings_to_remove:
+                    bindings.remove(binding)
 
                 for binding in event_cnode.output_bindings:
                     obligations |= set([el for el in binding.node_set])
 
-                current_node = event_cnode
+                # incrementing input_binding_frequency
+                # incrementing input_binding_frequency
+                if event_cnode.input_bindings:
+                    previous_events = set(sequence[0:index])
+                    max_arg = [b.node_set_labels() & previous_events for b in event_cnode.input_bindings]
+                    logging.debug('max_arg %s', max_arg)
+                    if max_arg:
+                        best_binding = max(max_arg)
+                        if best_binding:
+                            event_cnode.get_input_bindings_with(
+                                set([self.get_node_by_label(l) for l in best_binding]))[0].frequency += 1
+
                 logging.debug('obligations %s', obligations)
             else:
                 unexpected_events.append(event)
