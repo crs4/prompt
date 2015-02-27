@@ -97,11 +97,10 @@ class _XorBindings(object):
                         orig_binding.frequency += 1
                         self.completed_binding = orig_binding
                         logging.debug('self.completed_binding %s', self.completed_binding)
-                        self.bindings = []
                         break
 
     def is_completed(self):
-        return len(self.bindings) == 0
+        return self.completed_binding is not None
 
     def __repr__(self):
         return str(self.bindings)
