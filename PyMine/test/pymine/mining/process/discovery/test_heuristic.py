@@ -14,8 +14,6 @@ class TestHeuristicMiner(unittest.TestCase):
 
     def create_log_from_test_data(self):
         process = Process(_id="p1")
-        #case1 = Case(process, "c1")
-        #case2 = Case(process, "c2")
         case1 = process.add_case("c1")
         case2 = process.add_case("c2")
         activity_a = process.add_activity(name="A")
@@ -104,21 +102,8 @@ class TestHeuristicMiner(unittest.TestCase):
         hm = HeuristicMiner()
         dgraph = self.create_dependency_graph()
         mined_graph = hm.mine_dependency_graphs(log, 0, 0.0)[0]
-        print("==== test_mine_dependency_graph ===")
-        print("===================================")
-        print("======= Calculated ================")
-        for node in dgraph.nodes:
-            print "Node: "+str(node)
-        for arc in dgraph.arcs:
-            print "Arc: "+str(arc)
-        print("===================================")
-        print("======= Mined =====================")
-        for node in mined_graph.nodes:
-            print "Node: "+str(node)
-        for arc in mined_graph.arcs:
-            print "Arc: "+str(arc)
-        #self.assertEqual(dgraph, mined_graph)
-        self.assertTrue(True)
+        self.assertEqual(dgraph, mined_graph)
+        #self.assertTrue(True)
 
     def test_mine_cnets(self):
         log = self.create_log_from_test_data()
