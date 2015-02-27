@@ -90,14 +90,24 @@ class _XorBindings(object):
     def remove_node(self, node):
         logging.debug('self.has_node(%s) %s', node,  self.has_node(node))
         if self.has_node(node):
+            bindings_completed = []
             for orig_binding, binding in self.bindings.items():
                 if node in binding:
                     binding.remove(node)
                     if not binding:
-                        orig_binding.frequency += 1
-                        self.completed_binding = orig_binding
-                        logging.debug('self.completed_binding %s', self.completed_binding)
-                        break
+                        bindings_completed.append(orig_binding)
+                        # orig_binding.frequency += 1
+                        # self.completed_binding = orig_binding
+                        # logging.debug('self.completed_binding %s', self.completed_binding)
+                        # break
+            if bindings_completed:
+                # if more than one binding is completed, let's choose the largest one
+                # {b,c} when bindings_completed == [{b}, {b,c}] for example
+                max_one = max(bindings_completed, key=lambda b: len(b.node_set))
+                max_one.frequency += 1
+                self.completed_binding = max_one
+                logging.debug('self.completed_binding %s', self.completed_binding)
+
 
     def is_completed(self):
         return self.completed_binding is not None
@@ -154,15 +164,16 @@ class CNet(Network):
 
         initial_node = self.get_initial_nodes()[0]
         obligations = {initial_node}
-        unexpected_events = []
+        unexpected_events = set()
         bindings = []
 
         for index, event in enumerate(sequence):
+            logging.debug('-------------------------------')
             logging.debug('event %s, obligations %s', event, obligations)
 
             event_cnode = self.get_node_by_label(event)
             if event_cnode is None:
-                unexpected_events.append(event)
+                unexpected_events.add(event)
                 continue
 
             event_cnode.frequency += 1
@@ -174,24 +185,35 @@ class CNet(Network):
 
                 logging.debug('bindings %s', bindings)
                 bindings_to_remove = []
-                for binding in bindings:
-                    logging.debug('binding %s', binding)
-                    binding.remove_node(event_cnode)
-                    if binding.is_completed():
-                        for node in binding.nodes:
+                for xor_binding in bindings:
+                    logging.debug('xor_binding %s', xor_binding)
+                    xor_binding.remove_node(event_cnode)
+                    if xor_binding.is_completed():
+                        logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
+
+                        nodes_to_remove = set()
+                        for b in xor_binding.bindings:
+                            if b != xor_binding.completed_binding:
+                                nodes_to_remove |= b.node_set
+
+                        # in case two bindings share one or more nodes
+                        nodes_to_remove = nodes_to_remove - xor_binding.completed_binding.node_set
+                        logging.debug("nodes to remove from obligations %s ", nodes_to_remove)
+                        for node in nodes_to_remove:
                             try:
-                                obligations.remove(node)
+                                if node != event_cnode:
+                                    obligations.remove(node)
                             except KeyError:
-                                pass
-                        bindings_to_remove.append(binding)
+                                unexpected_events.add(node.label)
 
-                for binding in bindings_to_remove:
-                    bindings.remove(binding)
+                        bindings_to_remove.append(xor_binding)
 
-                for binding in event_cnode.output_bindings:
-                    obligations |= set([el for el in binding.node_set])
+                for xor_binding in bindings_to_remove:
+                    bindings.remove(xor_binding)
 
-                # incrementing input_binding_frequency
+                for xor_binding in event_cnode.output_bindings:
+                    obligations |= set([el for el in xor_binding.node_set])
+
                 # incrementing input_binding_frequency
                 if event_cnode.input_bindings:
                     previous_events = set(sequence[0:index])
@@ -205,11 +227,10 @@ class CNet(Network):
 
                 logging.debug('obligations %s', obligations)
             else:
-                unexpected_events.append(event)
+                unexpected_events.add(event)
         logging.debug('obligations %s', obligations)
         logging.debug('unexpected_events %s', unexpected_events)
-        return len(obligations | set(unexpected_events)) == 0, obligations, unexpected_events 
-    
+        return len(obligations | set(unexpected_events)) == 0, obligations, unexpected_events    
     def get_json(self):
         json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],
