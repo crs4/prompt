@@ -13,28 +13,20 @@ class DArc(Arc):
             doc += " dep: %s" % self.dependency
         return doc
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            try:
-                assert self.input_node == other.input_node
-                assert self.output_node == other.output_node
-                assert self.label == other.label
-                assert self.frequency == other.frequency
-                assert self.dependency == other.dependency
-                assert self.attrs == other.attrs
-            except AssertionError, e:
-                return False
-            return True
-        else:
-            return False
-
+    def get_json(self):
+        json = [{'label': self.label,
+                 'input_node': self.input_node.label,
+                 'output_node': self.output_node.label,
+                 'frequency': self.frequency,
+                 'dependency': self.dependency,
+                 'attributes': self.attrs}]
+        return json
 
 class DependencyGraph(Network):
     def __init__(self, label=None):
         super(DependencyGraph, self).__init__(label)
 
-'''
+
     def add_arc(self, node_a, node_b, label=None, frequency=None, dependency=None, attrs={}):
         arc = DArc(node_a, node_b, label, frequency, dependency, attrs)
         return self._add_arc(arc, node_a, node_b)
-'''

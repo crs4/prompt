@@ -5,6 +5,18 @@ class LabeledObject(object):
     def __init__(self, label=None):
         self.label = label or uuid.uuid4()
 
+    def get_json(self):
+        return [{'label': self.label}]
+
+    def __eq__(self, other):
+        if type(self) == type(other):
+            try:
+                assert self.get_json() == other.get_json()
+            except AssertionError, e:
+                return False
+            return True
+        else:
+            return False
 
 class BaseElement(LabeledObject):
     def __init__(self, label=None, frequency=None, attrs=None):
@@ -12,17 +24,11 @@ class BaseElement(LabeledObject):
         self.frequency = frequency
         self.attrs = attrs or {}
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            try:
-                assert self.attrs == other.attrs
-                assert self.label == other.label
-                assert self.frequency == other.frequency
-            except AssertionError, e:
-                return False
-            return True
-        else:
-            return False
+    def get_json(self):
+        json = [{'label': self.label,
+                 'frequency': self.frequency,
+                 'attributes': self.attrs}]
+        return json
 
 class Arc(BaseElement):
     def __init__(self, input_node, output_node, label=None, frequency=None, attrs=None):
@@ -32,19 +38,13 @@ class Arc(BaseElement):
 
         #self.net = self.input_node.net
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            try:
-                assert self.input_node == other.input_node
-                assert self.output_node == other.output_node
-                assert self.label == other.label
-                assert self.frequency == other.frequency
-                assert self.attrs == other.attrs
-            except AssertionError, e:
-                return False
-            return True
-        else:
-            return False
+    def get_json(self):
+        json = [{'label': self.label,
+                 'input_node': self.input_node.label,
+                 'output_node': self.output_node.label,
+                 'frequency': self.frequency,
+                 'attributes': self.attrs}]
+        return json
 
     def __str__(self):
         doc = "label %s %s -> %s" % (self.label, self.input_node, self.output_node)
@@ -61,20 +61,13 @@ class Node(BaseElement):
         self.input_arcs = []
         self.output_arcs = []
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            try:
-                assert self.label == other.label
-                assert self.net == other.net
-                assert self.frequency == other.frequency
-                assert self.attrs == other.attrs
-                assert self.input_arcs == other.input_arcs
-                assert self.output_arcs == other.output_arcs
-            except AssertionError, e:
-                return False
-            return True
-        else:
-            return False
+    def get_json(self):
+        json = [{'label': self.label,
+                 'input_arcs': [arc.label for arc in self.input_arcs],
+                 'output_arcs': [arc.label for arc in self.output_arcs],
+                 'frequency': self.frequency,
+                 'attributes': self.attrs}]
+        return json
 
     def __str__(self):
         return str(self.label)
@@ -159,14 +152,8 @@ class Network(LabeledObject):
         arc = self._create_arc(node_a, node_b, label, frequency, attrs)
         return self._add_arc(arc, node_a, node_b)
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            try:
-                assert self.label == other.label
-                assert self._nodes == other._nodes
-                assert self._arcs == other._arcs
-            except AssertionError, e:
-                return False
-            return True
-        else:
-            return False
+    def get_json(self):
+        json = [{'label': self.label,
+                 'nodes': [node.get_json() for node in self.nodes],
+                 'arcs': [arc.get_json() for arc in self.arcs]}]
+        return json

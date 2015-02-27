@@ -9,6 +9,8 @@ class DependencyTestCase(unittest.TestCase):
         a, b = net.add_nodes('a', 'b')
         arc = net.add_arc(a, b, 'arc')
 
+        print net.get_json()
+
         self.assertTrue(net.arcs == [arc])
         self.assertTrue(arc.label == 'arc')
         self.assertTrue(isinstance(arc, DArc))
@@ -19,8 +21,8 @@ class DependencyTestCase(unittest.TestCase):
         self.assertTrue(len(b.output_arcs) == 0)
         self.assertTrue(set(b.input_arcs) == {arc})
 
-        self.assertTrue(arc.input_node == b)
-        self.assertTrue(arc.output_node == a)
+        self.assertTrue(arc.input_node == a)
+        self.assertTrue(arc.output_node == b)
 
         self.assertTrue(net.get_initial_nodes() == [a])
         self.assertTrue(net.get_final_nodes() == [b])

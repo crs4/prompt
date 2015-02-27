@@ -8,6 +8,12 @@ class Binding(object):
         self.frequency = frequency
         self.net = self.node.net
 
+    def get_json(self):
+        json = [{'label': self.label,
+                 'node': self.node,
+                 'node_set': [node.label for node in self.node_set],
+                 'frequency': self.frequency}]
+        return json
 
 class InputBinding(Binding):
     pass
@@ -63,3 +69,10 @@ class CNet(Network):
 
     def _create_node(self, label, frequency=None, attrs={}):
         return CNode(label, self, frequency, attrs)
+
+    def get_json(self):
+        json = [{'label': self.label,
+                 'nodes': [node.get_json() for node in self.nodes],
+                 'arcs': [arc.get_json() for arc in self.arcs],
+                 'bindings': [binding.get_json() for binding in self.bindings]}]
+        return json
