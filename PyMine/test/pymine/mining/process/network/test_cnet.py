@@ -89,8 +89,9 @@ class CNetTestCase(unittest.TestCase):
         cnet.add_input_binding(d, {b})
         cnet.add_input_binding(d, {b, c})
 
-        replay = cnet.replay_sequence(['a', 'b', 'd'])
-        self.assertTrue(replay[0])
+        self.assertTrue(cnet.replay_sequence(['a', 'b', 'd'])[0])
+        self.assertTrue(cnet.replay_sequence(['a', 'b', 'c', 'd'])[0])
+        self.assertTrue(cnet.replay_sequence(['a', 'c', 'b', 'd'])[0])
 
     def test_replay_two_bindings_with_same_node_2(self):
         cnet = CNet()
@@ -124,7 +125,7 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['a', 'd', 'd'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(set(replay_result[1]), {e})
+        self.assertEqual(set(replay_result[1]), {c, b, e})
 
     def test_replay_failing_unknown_events(self):
         cnet, a, b, c, d, e = _create_cnet()

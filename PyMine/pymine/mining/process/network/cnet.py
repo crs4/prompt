@@ -46,6 +46,39 @@ class CNode(Node):
         return json
 
 
+class _XorBindings(object):
+    def __init__(self, bindings, final_node):
+        self.bindings = []
+        self.nodes = set()
+        for binding in bindings:
+            self.nodes |= binding.node_set
+            tmp_bindings = set(binding.node_set)
+            tmp_bindings.add(final_node)
+            self.bindings.append(tmp_bindings)
+
+    def has_node(self, node):
+        for binding in self.bindings:
+            if node in binding:
+                return True
+        return False
+
+    def remove_node(self, node):
+        logging.debug('self.has_node(%s) %s', node,  self.has_node(node))
+        if self.has_node(node):
+            for binding in self.bindings:
+                if node in binding:
+                    binding.remove(node)
+                    if not binding:
+                        self.bindings = []
+                        break
+
+    def is_completed(self):
+        return len(self.bindings) == 0
+
+    def __repr__(self):
+        return str(self.bindings)
+
+
 class CNet(Network):
     def __init__(self, label=None):
         super(CNet,  self).__init__(label)
@@ -81,17 +114,11 @@ class CNet(Network):
         return CNode(label, self, frequency, attrs)
 
     def replay_sequence(self, sequence):
-        def remove_binding(binding):
-            for el in binding.node_set:
-                try:
-                    obligations.remove(el)
-                except KeyError:
-                    pass
 
         current_node = None
         initial_node = self.get_initial_nodes()[0]
         obligations = {initial_node}
-        unknown_events = []
+        unexpected_events = []
         bindings = []
 
         for event in sequence:
@@ -99,36 +126,36 @@ class CNet(Network):
 
             event_cnode = self.get_node_by_label(event)
             if event_cnode is None:
-                unknown_events.append(event)
+                unexpected_events.append(event)
                 continue
 
             if event_cnode in obligations:
                 logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
-                bindings += current_node.output_bindings if current_node else []
                 obligations.remove(event_cnode)
+                if event_cnode.output_bindings:
+                    bindings.append(_XorBindings(event_cnode.output_bindings, self.get_final_nodes()[0]))
 
-                binding_completed = None
+                logging.debug('bindings %s', bindings)
                 for binding in bindings:
-                    if event_cnode in binding.node_set:
-                        if binding.node_set & obligations == set():
-                            binding_completed = binding
-                            logging.debug('*****binding completed %s', binding)
-
-                    else:
-                        # removing xor
-                        remove_binding(binding)
-
-                if binding_completed:
-                    for binding in bindings:
-                        remove_binding(binding)
+                    binding.remove_node(event_cnode)
+                    if binding.is_completed():
+                        for node in binding.nodes:
+                            try:
+                                obligations.remove(node)
+                            except KeyError:
+                                pass
+                        bindings.remove(binding)
 
                 for binding in event_cnode.output_bindings:
                     obligations |= set([el for el in binding.node_set])
 
                 current_node = event_cnode
                 logging.debug('obligations %s', obligations)
+            else:
+                unexpected_events.append(event)
         logging.debug('obligations %s', obligations)
-        return len(obligations | set(unknown_events)) == 0, obligations, unknown_events
+        logging.debug('unexpected_events %s', unexpected_events)
+        return len(obligations | set(unexpected_events)) == 0, obligations, unexpected_events 
     
     def get_json(self):
         json = [{'label': str(self.label),
