@@ -166,8 +166,13 @@ class CNet(Network):
         return self._bindings
 
     def _add_binding(self, binding):
+        self._init()
         self._bindings.append(binding)
         return binding
+
+    def add_node(self, label, frequency=None, attrs=None):
+        self._init()
+        return super(CNet, self).add_node(label, frequency, attrs)
 
     def add_input_binding(self, node, node_set, frequency=None):
         for n in node_set:

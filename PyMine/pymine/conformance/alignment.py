@@ -106,7 +106,6 @@ def compute_optimal_alignment(case, net, cost_function=None):
         else:
             g.add_edge(previous_move, end, {'cost': 0})
 
-    net._init()
     add_move(0, net.available_nodes, start)
     optimal_cost, optimal_path = nx.bidirectional_dijkstra(g, start, end, 'cost')
     optimal_path = optimal_path[1: -1]
