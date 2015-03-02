@@ -1,6 +1,8 @@
-import networkx as nx
+from pymine.mining.process.network.graph import graph_factory
 import logging
 
+
+GRAPH_IMPL = 'nx'
 
 class Alignment(object):
     def __init__(self, log_moves, net_moves, cost):
@@ -44,7 +46,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
     cost_function = cost_function or \
         (lambda log_move, model_move: 0 if (log_move == model_move) and (log_move.value is not None) else 1)
 
-    g = nx.DiGraph()
+    g = graph_factory(GRAPH_IMPL)
     start = FakeMove('start')
     end = FakeMove('end')
 
@@ -107,7 +109,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
             g.add_edge(previous_move, end, {'cost': 0})
 
     add_move(0, net.available_nodes, start)
-    optimal_cost, optimal_path = nx.bidirectional_dijkstra(g, start, end, 'cost')
+    optimal_cost, optimal_path = g.shortest_path(start, end, 'cost')
     optimal_path = optimal_path[1: -1]
     log_moves = [m for i, m in enumerate(optimal_path) if not i % 2]
     net_moves = [m for i, m in enumerate(optimal_path) if i % 2]
