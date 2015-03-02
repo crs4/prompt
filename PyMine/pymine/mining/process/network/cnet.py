@@ -70,15 +70,14 @@ class CNode(Node):
 
 
 class _XorBindings(object):
-    def __init__(self, bindings, final_node):
+    def __init__(self, bindings, net):
         self.bindings = {}
         self.nodes = set()
+        self.net = net
         self.completed_binding = None
         for binding in bindings:
             self.nodes |= binding.node_set
             tmp_bindings = set(binding.node_set)
-            if not final_node in tmp_bindings:
-                tmp_bindings.add(final_node)
             self.bindings[binding] = tmp_bindings
 
     def has_node(self, node):
@@ -87,27 +86,36 @@ class _XorBindings(object):
                 return True
         return False
 
-    def remove_node(self, node):
-        logging.debug('self.has_node(%s) %s', node,  self.has_node(node))
-        if self.has_node(node):
-            bindings_completed = []
-            for orig_binding, binding in self.bindings.items():
-                if node in binding:
-                    binding.remove(node)
-                    if not binding:
-                        bindings_completed.append(orig_binding)
-                        # orig_binding.frequency += 1
-                        # self.completed_binding = orig_binding
-                        # logging.debug('self.completed_binding %s', self.completed_binding)
-                        # break
-            if bindings_completed:
-                # if more than one binding is completed, let's choose the largest one
-                # {b,c} when bindings_completed == [{b}, {b,c}] for example
-                max_one = max(bindings_completed, key=lambda b: len(b.node_set))
-                max_one.frequency += 1
-                self.completed_binding = max_one
-                logging.debug('self.completed_binding %s', self.completed_binding)
+    def remove_node(self, node, input_binding_completed):
+        logging.debug('node %s', node)
 
+        bindings_completed = []
+        bindings_with_node_not_completed_yet = []
+        for orig_binding, binding in self.bindings.items():
+            logging.debug('orig_binding %s binding %s', orig_binding, binding)
+            if node in binding:
+                binding.remove(node)
+                logging.debug('binding %s', binding)
+                if binding:
+                    bindings_with_node_not_completed_yet.append(node)
+
+        logging.debug('bindings_with_node_not_completed_yet %s', bindings_with_node_not_completed_yet)
+        for orig_binding, binding in self.bindings.items():
+            logging.debug('orig_binding.node_set %s', orig_binding.node_set)
+            logging.debug('input_binding_completed %s', input_binding_completed)
+
+            if not binding:
+                if input_binding_completed == orig_binding.node_set or node == self.net.get_final_nodes()[0] \
+                        or not bindings_with_node_not_completed_yet:
+                    bindings_completed.append(orig_binding)
+
+        if bindings_completed:
+            # if more than one binding is completed, let's choose the largest one
+            # {b,c} when bindings_completed == [{b}, {b,c}] for example
+            max_one = max(bindings_completed, key=lambda b: len(b.node_set))
+            max_one.frequency += 1
+            self.completed_binding = max_one
+            logging.debug('******self.completed_binding %s', self.completed_binding)
 
     def is_completed(self):
         return self.completed_binding is not None
@@ -181,13 +189,26 @@ class CNet(Network):
                 logging.debug('event_cnode %s. obligations %s', event_cnode, obligations)
                 obligations.remove(event_cnode)
                 if event_cnode.output_bindings:
-                    bindings.append(_XorBindings(event_cnode.output_bindings, self.get_final_nodes()[0]))
+                    bindings.append(_XorBindings(event_cnode.output_bindings, self))
+
+                # incrementing input_binding_frequency
+                input_binding_completed = None
+                if event_cnode.input_bindings:
+                    previous_events = set(sequence[0:index])
+                    max_arg = [b.node_set_labels() & previous_events for b in event_cnode.input_bindings]
+                    logging.debug('max_arg %s', max_arg)
+                    if max_arg:
+                        input_binding_completed = max(max_arg)
+                        if input_binding_completed:
+                            input_binding_completed = set([self.get_node_by_label(l) for l in input_binding_completed])
+                            event_cnode.get_input_bindings_with(input_binding_completed)[0].frequency += 1
 
                 logging.debug('bindings %s', bindings)
+                logging.debug('input_binding_completed %s', input_binding_completed)
                 bindings_to_remove = []
                 for xor_binding in bindings:
                     logging.debug('xor_binding %s', xor_binding)
-                    xor_binding.remove_node(event_cnode)
+                    xor_binding.remove_node(event_cnode, input_binding_completed)
                     if xor_binding.is_completed():
                         logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
 
@@ -214,16 +235,7 @@ class CNet(Network):
                 for xor_binding in event_cnode.output_bindings:
                     obligations |= set([el for el in xor_binding.node_set])
 
-                # incrementing input_binding_frequency
-                if event_cnode.input_bindings:
-                    previous_events = set(sequence[0:index])
-                    max_arg = [b.node_set_labels() & previous_events for b in event_cnode.input_bindings]
-                    logging.debug('max_arg %s', max_arg)
-                    if max_arg:
-                        best_binding = max(max_arg)
-                        if best_binding:
-                            event_cnode.get_input_bindings_with(
-                                set([self.get_node_by_label(l) for l in best_binding]))[0].frequency += 1
+
 
                 logging.debug('obligations %s', obligations)
             else:

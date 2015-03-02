@@ -152,7 +152,8 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['a', 'd', 'd'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(set(replay_result[1]), {c, b, e})
+        self.assertEqual(set(replay_result[1]), {e})
+        self.assertEqual(set(replay_result[2]), {'d'})
 
     def test_replay_failing_2(self):
         cnet, a, b, c, d, e = _create_cnet()
@@ -163,8 +164,8 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['d', 'e'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(replay_result[1], set([a]))
-        self.assertEqual(replay_result[2], set(['d', 'e']))
+        self.assertEqual(replay_result[1], {a})
+        self.assertEqual(replay_result[2], {'d', 'e'})
 
     def test_replay_failing_unknown_events(self):
         cnet, a, b, c, d, e = _create_cnet()
