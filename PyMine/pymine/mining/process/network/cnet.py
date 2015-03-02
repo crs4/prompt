@@ -7,6 +7,13 @@ class UnexpectedEvent(Exception):
         super(UnexpectedEvent, self).__init__(*args, **kwargs)
         self.event = event
 
+    @property
+    def message(self):
+        return "unexpected event %s" % self.event
+
+    def __str__(self):
+        return self.message
+
 
 class Binding(LabeledObject):
     def __init__(self, node, node_set, frequency=None, label=None):
@@ -190,6 +197,17 @@ class CNet(Network):
         initial_nodes = self.get_initial_nodes()
         self._obligations = {initial_nodes[0]} if initial_nodes else set()
 
+    @property
+    def available_nodes(self):
+        if self.current_node is None:
+            return set(self.get_initial_nodes())
+
+        available_nodes = set()
+        for b in self._xor_bindings:
+            available_nodes |= b.nodes
+        available_nodes |= self.current_node.output_nodes
+        return available_nodes
+
     def replay_event(self, event, restart=False):
         if restart:
             self._init()
@@ -202,6 +220,7 @@ class CNet(Network):
         if event_cnode is None:
             raise UnexpectedEvent(event)
 
+        self.current_node = event_cnode
         event_cnode.frequency += 1
         if event_cnode in self._obligations:
             logging.debug('event_cnode %s. obligations %s', event_cnode, self._obligations)

@@ -85,11 +85,11 @@ class Node(BaseElement):
 
     @property
     def output_nodes(self):
-        return [arc.end_node for arc in self.output_arcs]
+        return {arc.end_node for arc in self.output_arcs}
 
     @property
     def input_nodes(self):
-        return [arc.start_node for arc in self.input_arcs]
+        return {arc.start_node for arc in self.input_arcs}
 
 
 class Network(LabeledObject):
