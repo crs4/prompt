@@ -1,4 +1,5 @@
 import networkx as nx
+import logging
 
 
 class Alignment(object):
@@ -52,6 +53,8 @@ def compute_optimal_alignment(case, net, cost_function=None):
     case = [e.activity_name for e in case.events]
 
     def add_moves_to_graph(log_move, net_move, previous_move):
+        logging.debug('log_move %s', log_move)
+        logging.debug('net_move %s', net_move)
         log_move = Move(log_move)
         net_move = Move(net_move)
         g.add_node(log_move)
@@ -64,13 +67,14 @@ def compute_optimal_alignment(case, net, cost_function=None):
         return log_move, net_move
 
     def add_move(event_index, available_nodes, previous_move=None):
-
         event = case[event_index] if event_index < len(case) else None
+        logging.debug('event %s', event)
+        logging.debug('available_nodes %s', available_nodes)
 
         if event is None and available_nodes:
             # TODO use shortest path in net
 
-            node = available_nodes[0]
+            node = list(available_nodes)[0]
             l_m = None
             n_m = node.label
             next_nodes = node.output_nodes
@@ -79,18 +83,18 @@ def compute_optimal_alignment(case, net, cost_function=None):
 
         elif event:
             available_events = [n.label for n in available_nodes]
+            logging.debug('available_events %s', available_events)
             if event in available_events:
-
+                net.replay_event(event)
                 log_move, net_move = add_moves_to_graph(event, event, previous_move)
                 next_node = net.get_node_by_label(event)
-
-                add_move(event_index + 1, next_node.output_nodes, net_move)
+                add_move(event_index + 1, net.available_nodes, net_move)
 
             else:
                 l_m = event
                 n_m = None
                 log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-                add_move(event_index + 1, available_nodes, net_move)
+                add_move(event_index + 1, net.available_nodes, net_move)
 
                 for e in available_events:
                     l_m = None
@@ -102,7 +106,8 @@ def compute_optimal_alignment(case, net, cost_function=None):
         else:
             g.add_edge(previous_move, end, {'cost': 0})
 
-    add_move(0, net.get_initial_nodes(), start)
+    net._init()
+    add_move(0, net.available_nodes, start)
     optimal_cost, optimal_path = nx.bidirectional_dijkstra(g, start, end, 'cost')
     optimal_path = optimal_path[1: -1]
     log_moves = [m for i, m in enumerate(optimal_path) if not i % 2]
