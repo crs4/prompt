@@ -1,5 +1,8 @@
 from pymine.mining.process.network import Node, Network, LabeledObject
+from pymine.mining.process.network.graph import graph_factory
 import logging
+
+GRAPH_IMPL = 'nx'
 
 
 class UnexpectedEvent(Exception):
@@ -161,6 +164,48 @@ class CNet(Network):
         for binding in self.bindings:
             binding.frequency = 0
 
+    def shortest_path(self):
+
+        class FakeNode(object):
+            def __init__(self, node_):
+                self.node = node_
+
+            @property
+            def output_bindings(self):
+                return self.node.output_bindings
+
+            def __str__(self):
+                return self.node.label
+
+            def __repr__(self):
+                return self.node.label
+
+        graph = graph_factory(GRAPH_IMPL)
+
+        def _add_node(node):
+            if not node.output_bindings:
+                return node
+
+            else:
+                previous_node_obj = node
+                for output_binding in node.output_bindings:
+                    logging.debug('node.output_bindings %s', node.output_bindings)
+                    for output_node in output_binding.node_set:
+                        logging.debug('output_node %s', output_node)
+                        output_fake_node = FakeNode(output_node)
+                        graph.add_node(output_fake_node)
+                        logging.debug('connecting %s -> %s', previous_node_obj, output_fake_node)
+                        graph.add_edge(previous_node_obj, output_fake_node)
+                        previous_node_obj = output_fake_node
+                        result =  _add_node(output_fake_node)
+            return result
+
+        initial_node = FakeNode(self.get_initial_nodes()[0])
+
+        graph.add_node(initial_node)
+        final_node = _add_node(initial_node)
+        logging.debug('final_node %s', final_node)
+        return graph.shortest_path(initial_node, final_node)
     @property
     def bindings(self):
         return self._bindings

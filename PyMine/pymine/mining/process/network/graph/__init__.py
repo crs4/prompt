@@ -24,6 +24,10 @@ class BaseGraph(object):
     def edges(self):
         pass
 
+    @abstractmethod
+    def draw(self):
+        pass
+
 
 def graph_factory(impl):
     module = importlib.import_module('pymine.mining.process.network.graph.' + impl)

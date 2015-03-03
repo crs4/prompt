@@ -174,4 +174,42 @@ class CNetTestCase(unittest.TestCase):
         self.assertEqual(len(replay_result[1]), 0)
         self.assertEqual(replay_result[2], set('y'))
 
+    def test_shortest_path(self):
+        cnet = CNet()
+        a, b, c = cnet.add_nodes('a', 'b', 'c')
 
+        cnet.add_output_binding(a, {b})
+        cnet.add_input_binding(b, {a})
+        cnet.add_output_binding(b, {c})
+        cnet.add_input_binding(c, {b})
+
+        cost, path = cnet.shortest_path()
+
+        self.assertEqual([p.node for p in path], [a, b, c])
+
+    def test_shortest_path_2(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        cost, path = cnet.shortest_path()
+        self.assertEqual([p.node for p in path], [a, b, e])
+
+    def test_shortest_path_3(self):
+        cnet = CNet()
+        a, b, c,  e = cnet.add_nodes('a', 'b', 'c', 'e')
+        cnet.add_output_binding(a, {b, c})
+        cnet.add_input_binding(b, {a})
+        cnet.add_output_binding(b, {e})
+
+        cnet.add_input_binding(c, {a})
+        cnet.add_output_binding(c, {e})
+        cnet.add_input_binding(e, {b, c})
+
+        cost, path = cnet.shortest_path()
+        self.assertEqual(path[0].node, a)
+        self.assertTrue({path[1].node} <= {b, c})
+        self.assertTrue({path[2].node} <= {b, c})
+        self.assertEqual(path[3].node, e)
+
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -21,5 +21,10 @@ class Graph(BaseGraph):
     def edges(self):
         return self._graph.edges()
 
+    def draw(self):
+        import matplotlib.pyplot as plt
+        nx.draw_networkx(self._graph)
+        plt.draw()
+
 
 
