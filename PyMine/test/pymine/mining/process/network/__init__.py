@@ -56,11 +56,10 @@ class NetworkTestCase(unittest.TestCase):
         self.assertTrue(net.get_final_nodes() == [b])
 
         self.assertTrue(len(a.input_nodes) == 0)
-        self.assertTrue(a.output_nodes == [b])
+        self.assertEqual(a.output_nodes, {b})
 
         self.assertTrue(len(b.output_nodes) == 0)
-        self.assertTrue(b.input_nodes == [a])
-
+        self.assertEqual(b.input_nodes, {a})
 
     def test_add_arc_full_args(self):
         net = Network()
