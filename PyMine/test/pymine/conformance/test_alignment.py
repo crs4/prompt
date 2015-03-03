@@ -2,6 +2,7 @@ import unittest
 from pymine.mining.process.network.cnet import CNet
 from pymine.mining.process.eventlog.factory import DictLogFactory
 import pymine.conformance.alignment as aln
+from pymine.conformance.alignment import Alignment
 import logging
 logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
@@ -31,6 +32,22 @@ class AlignmentTestCase(unittest.TestCase):
         self.assertEqual(alignment.cost, 0)
         self.assertEqual(alignment.get_flat_log_moves(), case)
         self.assertEqual(alignment.get_flat_net_moves(), case)
+
+    def test_optimal_alignment_worst_scenario(self):
+
+        case = ['w', 'y', 'z']
+        log = DictLogFactory({'test': [case]})
+        alignment = aln.compute_optimal_alignment(log.cases[0], self.net)
+        logging.debug('alignment.cost %s', alignment.cost)
+        logging.debug('alignment.get_flat_log_moves() %s', alignment.get_flat_log_moves())
+        logging.debug('alignment.get_flat_net_moves() %s', alignment.get_flat_net_moves())
+        #
+        self.assertEqual(alignment.cost, len(case) + len(self.net.nodes))
+        self.assertEqual(alignment.get_flat_log_moves(), case + [Alignment.null_move]*len(self.net.nodes))
+
+        cost, shortest_path = self.net.shortest_path()
+        self.assertEqual(alignment.get_flat_net_moves(), [Alignment.null_move]*len(case) +
+                         [n.label for n in shortest_path])
 
 
 if __name__ == '__main__':

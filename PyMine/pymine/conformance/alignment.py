@@ -4,7 +4,10 @@ import logging
 
 GRAPH_IMPL = 'nx'
 
+
 class Alignment(object):
+    null_move = '-'
+
     def __init__(self, log_moves, net_moves, cost):
         self.log_moves = log_moves
         self.net_moves = net_moves
@@ -16,10 +19,10 @@ class Alignment(object):
         return s
 
     def get_flat_log_moves(self):
-        return [m.value if m.value else '-' for m in self.log_moves]
+        return [m.value if m.value else self.null_move for m in self.log_moves]
 
     def get_flat_net_moves(self):
-        return [m.value if m.value else '-' for m in self.net_moves]
+        return [m.value if m.value else self.null_move for m in self.net_moves]
 
 
 class Move(object):
@@ -75,13 +78,18 @@ def compute_optimal_alignment(case, net, cost_function=None):
 
         if event is None and available_nodes:
             # TODO use shortest path in net
+            start_node = list(available_nodes)[0]
+            logging.debug('***********shortest path in net, start_node %s', start_node)
+            cost, path = net.shortest_path(start_node)
+            logging.debug('******path %s', path)
+            for node in path:
+                l_m = None
+                n_m = node.label
+                logging.debug('node %s', node)
+                log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
+                previous_move = net_move
 
-            node = list(available_nodes)[0]
-            l_m = None
-            n_m = node.label
-            next_nodes = node.output_nodes
-            log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-            add_move(event_index + 1, next_nodes, net_move)
+            g.add_edge(previous_move, end, {'cost': 0})
 
         elif event:
             available_events = [n.label for n in available_nodes]
