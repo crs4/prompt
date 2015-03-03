@@ -2,6 +2,10 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import importlib
 
 
+class PathDoesNotExist(Exception):
+    pass
+
+
 class BaseGraph(object):
 
     @abstractmethod

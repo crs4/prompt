@@ -1,5 +1,6 @@
 import unittest
 from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, OutputBinding
+from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
 logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
@@ -203,8 +204,8 @@ class CNetTestCase(unittest.TestCase):
         cnet.add_input_binding(c, {b})
 
         cost, path = cnet.shortest_path()
-
         self.assertEqual(path, [a, b, c])
+        self.assertEqual(cost, 2)
 
     def test_shortest_path_2(self):
         cnet, a, b, c, d, e = _create_cnet()
@@ -244,6 +245,20 @@ class CNetTestCase(unittest.TestCase):
 
         cost, path = cnet.shortest_path()
         self.assertEqual(path, [a, b, c])
+
+    def test_shortest_path_custom_nodes(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        cost, path = cnet.shortest_path(b, e)
+        self.assertEqual(path, [b, e])
+
+        cost, path = cnet.shortest_path(a, d)
+        self.assertEqual(path, [a, d])
+
+        self.assertRaises(PathDoesNotExist, cnet.shortest_path, b, c)
+
+        cost, path = cnet.shortest_path(a, e)
+        self.assertEqual(path, [a, d, e])
+
 
 
 if __name__ == '__main__':

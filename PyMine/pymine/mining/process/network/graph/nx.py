@@ -1,5 +1,5 @@
 import networkx as nx
-from pymine.mining.process.network.graph import BaseGraph
+from pymine.mining.process.network.graph import BaseGraph, PathDoesNotExist
 
 
 class Graph(BaseGraph):
@@ -13,7 +13,10 @@ class Graph(BaseGraph):
         return self._graph.add_edge(start_node, end_node, data)
 
     def shortest_path(self, start, end, attribute=None):
-        return nx.bidirectional_dijkstra(self._graph, start, end, attribute)
+        try:
+            return nx.bidirectional_dijkstra(self._graph, start, end, attribute)
+        except nx.NetworkXNoPath as ex:
+            raise PathDoesNotExist(ex.message)
 
     def nodes(self):
         return self._graph.nodes()

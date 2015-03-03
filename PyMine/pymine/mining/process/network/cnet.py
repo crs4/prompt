@@ -164,7 +164,7 @@ class CNet(Network):
         for binding in self.bindings:
             binding.frequency = 0
 
-    def shortest_path(self, max_level=30):
+    def shortest_path(self, start_node=None, end_node=None, max_level=30):
 
         class FakeNode(object):
             def __init__(self, node_):
@@ -181,13 +181,12 @@ class CNet(Network):
                 return self.node.label
 
         graph = graph_factory(GRAPH_IMPL)
-
         final_nodes = []
 
-        def _add_node(node, level, final_nodes_):
+        def _add_node(node, level, final_nodes_, end_node_):
             logging.debug('----------------')
             logging.debug('node %s level %s', node, level)
-            if level == max_level or not node.output_bindings:
+            if level == max_level or node.node == end_node_.node:
                 final_nodes_.append(node)
             else:
 
@@ -201,14 +200,14 @@ class CNet(Network):
                         logging.debug('connecting %s -> %s', previous_node_obj, output_fake_node)
                         graph.add_edge(previous_node_obj, output_fake_node)
                         previous_node_obj = output_fake_node
-                    _add_node(output_fake_node, level + 1, final_nodes_)
+                    _add_node(output_fake_node, level + 1, final_nodes_, end_node_)
             return node
 
-        initial_node = FakeNode(self.get_initial_nodes()[0])
+        initial_node = FakeNode(start_node if start_node else self.get_initial_nodes()[0])
         graph.add_node(initial_node)
         final_node = 'end'
         graph.add_node(final_node)
-        _add_node(initial_node, 0, final_nodes)
+        _add_node(initial_node, 0, final_nodes, FakeNode(end_node if end_node else self.get_final_nodes()[0]))
         logging.debug('final_nodes %s', final_nodes)
         for n in final_nodes:
             graph.add_edge(n, final_node)
