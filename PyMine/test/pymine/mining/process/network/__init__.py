@@ -21,12 +21,11 @@ class NetworkTestCase(unittest.TestCase):
         self.assertTrue(isinstance(a, Node))
         self.assertTrue(a.label == 'a')
         self.assertTrue(a.frequency == freq)
-        self.assertTrue(a.attrs == attrs )
+        self.assertTrue(a.attrs == attrs)
         self.assertTrue(net.nodes == [a])
         self.assertTrue(net.get_node_by_label('a') == a)
         self.assertTrue(len(a.input_nodes) == 0)
         self.assertTrue(len(a.output_nodes) == 0)
-
 
     def test_add_nodes(self):
         net = Network()
@@ -65,10 +64,10 @@ class NetworkTestCase(unittest.TestCase):
         net = Network()
         a, b = net.add_nodes('a', 'b')
         freq = 1
-        attrs= {'test': True}
+        attrs = {'test': True}
         arc = net.add_arc(a, b, 'arc', freq, attrs)
 
         self.assertTrue(net.arcs == [arc])
         self.assertTrue(arc.label == 'arc')
-        self.assertTrue(arc.frequency== freq)
+        self.assertTrue(arc.frequency == freq)
         self.assertTrue(arc.attrs == attrs)
