@@ -201,6 +201,7 @@ class CNet(Network):
                         graph.add_edge(previous_node_obj, output_fake_node)
                         previous_node_obj = output_fake_node
                     _add_node(output_fake_node, level + 1, final_nodes_, end_node_)
+                    # TODO it uses only one of the nodes in node_set, so it could fail in some cases...
             return node
 
         initial_node = FakeNode(start_node if start_node else self.get_initial_nodes()[0])
