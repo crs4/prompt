@@ -202,6 +202,7 @@ class CNet(Network):
                         graph.add_edge(previous_node_obj, output_fake_node)
                         previous_node_obj = output_fake_node
                     _add_node(output_fake_node, level + 1, final_nodes_)
+            return node
 
         initial_node = FakeNode(self.get_initial_nodes()[0])
         graph.add_node(initial_node)
@@ -286,8 +287,7 @@ class CNet(Network):
         if event_cnode in self._obligations:
             logging.debug('event_cnode %s. obligations %s', event_cnode, self._obligations)
             self._obligations.remove(event_cnode)
-            if event_cnode.output_bindings:
-                self._xor_bindings.append(_XorBindings(event_cnode.output_bindings, self))
+
 
             # incrementing input_binding_frequency
             input_binding_completed = None
@@ -332,6 +332,9 @@ class CNet(Network):
 
             for xor_binding in event_cnode.output_bindings:
                 self._obligations |= set([el for el in xor_binding.node_set])
+
+            if event_cnode.output_bindings:
+                self._xor_bindings.append(_XorBindings(event_cnode.output_bindings, self))
 
             logging.debug('obligations %s', self._obligations)
         else:

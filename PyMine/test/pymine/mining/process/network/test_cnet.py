@@ -148,20 +148,23 @@ class CNetTestCase(unittest.TestCase):
         self.assertTrue(cnet.replay_sequence(['a', 'c', 'b',  'e'])[0])
         self.assertEqual(e.get_input_bindings_with({b, c})[0].frequency, 2)
 
-    # def test_replay_loop(self):
-    #     cnet = CNet()
-    #     a, b, c = cnet.add_nodes('a', 'b', 'c')
-    #
-    #     cnet.add_output_binding(a, {b})
-    #     cnet.add_input_binding(b, {a})
-    #     cnet.add_input_binding(b, {b})
-    #
-    #     cnet.add_output_binding(b, {b})
-    #     cnet.add_output_binding(b, {c})
-    #     cnet.add_input_binding(c, {b})
-    #
-    #     self.assertTrue(cnet.replay_sequence(['a', 'b', 'c'])[0])
-    #     self.assertTrue(cnet.replay_sequence(['a', 'b', 'b' 'c'])[0])
+    def test_replay_loop(self):
+        cnet = CNet()
+        a, b, c = cnet.add_nodes('a', 'b', 'c')
+
+        cnet.add_output_binding(a, {b})
+        cnet.add_input_binding(b, {a})
+        cnet.add_input_binding(b, {b})
+
+        cnet.add_output_binding(b, {b})
+        cnet.add_output_binding(b, {c})
+        cnet.add_input_binding(c, {b})
+
+        result_1 = cnet.replay_sequence(['a', 'b', 'c'])
+        logging.debug('result_1 %s', result_1)
+        self.assertTrue(result_1[0])
+        result_2 = cnet.replay_sequence(['a', 'b', 'b', 'c'])
+        self.assertTrue(result_2[0])
 
 
     def test_replay_failing(self):
