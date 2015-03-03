@@ -164,7 +164,7 @@ class CNet(Network):
         for binding in self.bindings:
             binding.frequency = 0
 
-    def shortest_path(self):
+    def shortest_path(self, max_level=30):
 
         class FakeNode(object):
             def __init__(self, node_):
@@ -182,13 +182,17 @@ class CNet(Network):
 
         graph = graph_factory(GRAPH_IMPL)
 
-        def _add_node(node):
-            if not node.output_bindings:
-                return node
+        final_nodes = []
 
+        def _add_node(node, level, final_nodes_):
+            logging.debug('----------------')
+            logging.debug('node %s level %s', node, level)
+            if level == max_level or not node.output_bindings:
+                final_nodes_.append(node)
             else:
-                previous_node_obj = node
+
                 for output_binding in node.output_bindings:
+                    previous_node_obj = node
                     logging.debug('node.output_bindings %s', node.output_bindings)
                     for output_node in output_binding.node_set:
                         logging.debug('output_node %s', output_node)
@@ -197,15 +201,22 @@ class CNet(Network):
                         logging.debug('connecting %s -> %s', previous_node_obj, output_fake_node)
                         graph.add_edge(previous_node_obj, output_fake_node)
                         previous_node_obj = output_fake_node
-                        result =  _add_node(output_fake_node)
-            return result
+                    _add_node(output_fake_node, level + 1, final_nodes_)
 
         initial_node = FakeNode(self.get_initial_nodes()[0])
-
         graph.add_node(initial_node)
-        final_node = _add_node(initial_node)
-        logging.debug('final_node %s', final_node)
-        return graph.shortest_path(initial_node, final_node)
+        final_node = 'end'
+        graph.add_node(final_node)
+        _add_node(initial_node, 0, final_nodes)
+        logging.debug('final_nodes %s', final_nodes)
+        for n in final_nodes:
+            graph.add_edge(n, final_node)
+
+        cost, path = graph.shortest_path(initial_node, final_node)
+        cost -= 1
+        path = [p.node for p in path[:-1]]
+        return cost, path
+
     @property
     def bindings(self):
         return self._bindings
