@@ -1,4 +1,5 @@
 from pymine.mining.process.network.graph import graph_factory
+from pymine.mining.process.network import UnexpectedEvent
 import logging
 
 
@@ -43,6 +44,9 @@ def case_fitness(case, net, cost_function=None):
 
 
 def compute_optimal_alignment(case, net, cost_function=None):
+
+    net._init() # TODO design a better api for network reset
+
     class FakeMove(Move):
         pass
 
@@ -73,11 +77,11 @@ def compute_optimal_alignment(case, net, cost_function=None):
 
     def add_move(event_index, available_nodes, previous_move=None):
         event = case[event_index] if event_index < len(case) else None
+        logging.debug('***********add_move************')
         logging.debug('event %s', event)
         logging.debug('available_nodes %s', available_nodes)
 
         if event is None and available_nodes:
-            # TODO use shortest path in net
             start_node = list(available_nodes)[0]
             logging.debug('***********shortest path in net, start_node %s', start_node)
             cost, path = net.shortest_path(start_node)
@@ -95,7 +99,10 @@ def compute_optimal_alignment(case, net, cost_function=None):
             available_events = [n.label for n in available_nodes]
             logging.debug('available_events %s', available_events)
             if event in available_events:
-                net.replay_event(event)
+                try:
+                    net.replay_event(event)
+                except UnexpectedEvent:
+                    pass
                 log_move, net_move = add_moves_to_graph(event, event, previous_move)
                 next_node = net.get_node_by_label(event)
                 add_move(event_index + 1, net.available_nodes, net_move)
@@ -123,3 +130,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
     net_moves = [m for i, m in enumerate(optimal_path) if i % 2]
     optimal_alignment = Alignment(log_moves, net_moves, optimal_cost)
     return optimal_alignment
+
+
+def case_alignment(case, net, cost_function=None):
+    optimal_aln = compute_optimal_alignment(case, net, cost_function)
