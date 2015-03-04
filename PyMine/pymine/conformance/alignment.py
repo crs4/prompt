@@ -4,6 +4,8 @@ import logging
 
 
 GRAPH_IMPL = 'nx'
+_default_cost_function = lambda log_move, model_move: 0 if (log_move == model_move) and \
+                                                           (log_move.value is not None) else 1
 
 
 class Alignment(object):
@@ -38,12 +40,6 @@ class Move(object):
             return False
         return self.value == other.value
 
-
-def case_fitness(case, net, cost_function=None):
-    pass
-
-_default_cost_function = lambda log_move, model_move: 0 if (log_move == model_move) and \
-                                   (log_move.value is not None) else 1
 
 def compute_optimal_alignment(case, net, cost_function=None):
 
@@ -133,7 +129,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
     return optimal_alignment
 
 
-def case_alignment(case, net, cost_function=None):
+def case_fitness(case, net, cost_function=None):
     net._init()
     cost_function = cost_function or _default_cost_function
     optimal_aln = compute_optimal_alignment(case, net, cost_function)

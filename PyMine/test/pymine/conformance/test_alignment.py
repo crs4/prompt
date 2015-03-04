@@ -68,19 +68,19 @@ class AlignmentTestCase(unittest.TestCase):
     def test_alignment_complete(self):
         case = ['a', 'b', 'c', 'd']
         log = DictLogFactory({'test': [case]})
-        alignment = aln.case_alignment(log.cases[0], self.net)
+        alignment = aln.case_fitness(log.cases[0], self.net)
         self.assertEqual(alignment, 1)
 
     def test_alignment_2(self):
         case = ['a', 'b', 'd']
         log = DictLogFactory({'test': [case]})
-        alignment = aln.case_alignment(log.cases[0], self.net)
+        alignment = aln.case_fitness(log.cases[0], self.net)
         self.assertEqual(alignment, 1 - 1.0/(4 + 3))
 
     def test_alignment__with_cost(self):
         case = ['a', 'b', 'd']
         log = DictLogFactory({'test': [case]})
-        alignment = aln.case_alignment(log.cases[0], self.net, self.double_cost_function)
+        alignment = aln.case_fitness(log.cases[0], self.net, self.double_cost_function)
         self.assertEqual(alignment, 1 - 1.0/(4 + 3))
 
 
