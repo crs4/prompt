@@ -1,6 +1,21 @@
 import uuid
 
 
+class UnexpectedEvent(Exception):
+
+    # TODO: move in a proper file
+    def __init__(self, event, *args, **kwargs):
+        super(UnexpectedEvent, self).__init__(*args, **kwargs)
+        self.event = event
+
+    @property
+    def message(self):
+        return "unexpected event %s" % self.event
+
+    def __str__(self):
+        return self.message
+
+
 class LabeledObject(object):
     def __init__(self, label=None):
         self.label = label or str(uuid.uuid4())
