@@ -42,6 +42,8 @@ class Move(object):
 def case_fitness(case, net, cost_function=None):
     pass
 
+_default_cost_function = lambda log_move, model_move: 0 if (log_move == model_move) and \
+                                   (log_move.value is not None) else 1
 
 def compute_optimal_alignment(case, net, cost_function=None):
 
@@ -50,8 +52,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
     class FakeMove(Move):
         pass
 
-    cost_function = cost_function or \
-        (lambda log_move, model_move: 0 if (log_move == model_move) and (log_move.value is not None) else 1)
+    cost_function = cost_function or _default_cost_function
 
     g = graph_factory(GRAPH_IMPL)
     start = FakeMove('start')
@@ -133,4 +134,15 @@ def compute_optimal_alignment(case, net, cost_function=None):
 
 
 def case_alignment(case, net, cost_function=None):
+    net._init()
+    cost_function = cost_function or _default_cost_function
     optimal_aln = compute_optimal_alignment(case, net, cost_function)
+    cost, shortest_path = net.shortest_path()
+    worst_scenario_cost = 0.0
+    for event in case.events:
+        worst_scenario_cost += cost_function(event, None)
+    for node in shortest_path:
+        worst_scenario_cost += cost_function(None, node.label)
+    return 1 - optimal_aln.cost/worst_scenario_cost
+
+
