@@ -1,16 +1,17 @@
-from pymine.mining.process.network import Node, Network
+from pymine.mining.process.network import Node, Network, LabeledObject
 
 
-class Binding(object):
-    def __init__(self, node, node_set, frequency=None):
+class Binding(LabeledObject):
+    def __init__(self, node, node_set, frequency=None, label=None):
+        super(Binding, self).__init__(label=label)
         self.node = node
         self.node_set = node_set
         self.frequency = frequency
         self.net = self.node.net
 
     def get_json(self):
-        json = [{'label': self.label,
-                 'node': self.node,
+        json = [{'label': str(self.label),
+                 'node': self.node.label,
                  'node_set': [node.label for node in self.node_set],
                  'frequency': self.frequency}]
         return json
@@ -29,6 +30,15 @@ class CNode(Node):
         self.input_bindings = []
         self.output_bindings = []
 
+    def get_json(self):
+        json = [{'label': str(self.label),
+                 'input_arcs': [arc.label for arc in self.input_arcs],
+                 'output_arcs': [arc.label for arc in self.output_arcs],
+                 'frequency': self.frequency,
+                 'attributes': self.attrs,
+                 'input_bindings': [binding.label for binding in self.input_bindings],
+                 'output_bindings': [binding.label for binding in self.output_bindings]}]
+        return json
 
 class CNet(Network):
     def __init__(self, label=None):
@@ -71,7 +81,7 @@ class CNet(Network):
         return CNode(label, self, frequency, attrs)
 
     def get_json(self):
-        json = [{'label': self.label,
+        json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs],
                  'bindings': [binding.get_json() for binding in self.bindings]}]
