@@ -132,3 +132,21 @@ class CsvLogFactory(LogFactory):
         if input_filename:
             self.parse_csv_file(input_filename)
         return self.create_loginfo()
+
+
+class DictLogFactory(LogFactory):
+
+    def __init__(self, processes_dict):
+        self.processes_dict = processes_dict
+        self.cases = []
+
+        for process_name, cases in processes_dict.items():
+            process = Process(_id=process_name)
+            for case in cases:
+                case_obj = Case(process)
+                for event in case:
+                    activity = process.add_activity(event)
+                    activity_instance = case_obj.add_activity_instance(activity)
+                    event = activity_instance.add_event(activity_instance)
+
+                self.cases.append(case_obj)

@@ -1,6 +1,21 @@
 import uuid
 
 
+class UnexpectedEvent(Exception):
+
+    # TODO: move in a proper file
+    def __init__(self, event, *args, **kwargs):
+        super(UnexpectedEvent, self).__init__(*args, **kwargs)
+        self.event = event
+
+    @property
+    def message(self):
+        return "unexpected event %s" % self.event
+
+    def __str__(self):
+        return self.message
+
+
 class LabeledObject(object):
     def __init__(self, label=None):
         self.label = label or str(uuid.uuid4())
@@ -74,6 +89,9 @@ class Node(BaseElement):
     def __str__(self):
         return str(self.label)
 
+    def __repr__(self):
+        return self.label
+
     def is_last(self):
         return len(self.output_arcs) == 0
 
@@ -82,11 +100,11 @@ class Node(BaseElement):
 
     @property
     def output_nodes(self):
-        return [arc.end_node for arc in self.output_arcs]
+        return {arc.end_node for arc in self.output_arcs}
 
     @property
     def input_nodes(self):
-        return [arc.start_node for arc in self.input_arcs]
+        return {arc.start_node for arc in self.input_arcs}
 
 
 class Network(LabeledObject):
