@@ -3,10 +3,11 @@ import uuid
 
 class LabeledObject(object):
     def __init__(self, label=None):
-        self.label = label or uuid.uuid4()
+        self.label = label or str(uuid.uuid4())
+        #self.label = label
 
     def get_json(self):
-        return [{'label': self.label}]
+        return [{'label': str(self.label)}]
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -25,7 +26,7 @@ class BaseElement(LabeledObject):
         self.attrs = attrs or {}
 
     def get_json(self):
-        json = [{'label': self.label,
+        json = [{'label': str(self.label),
                  'frequency': self.frequency,
                  'attributes': self.attrs}]
         return json
@@ -39,19 +40,20 @@ class Arc(BaseElement):
         #self.net = self.input_node.net
 
     def get_json(self):
-        json = [{'label': self.label,
+        json = [{'label': str(self.label),
                  'input_node': self.input_node.label,
                  'output_node': self.output_node.label,
                  'frequency': self.frequency,
                  'attributes': self.attrs}]
         return json
 
+    '''
     def __str__(self):
         doc = "label %s %s -> %s" % (self.label, self.input_node, self.output_node)
         if self.frequency is not None:
             doc += " freq: %s" % self.frequency
         return doc
-
+    '''
 
 class Node(BaseElement):
     def __init__(self, label, net, frequency=None, attrs=None):
@@ -62,7 +64,7 @@ class Node(BaseElement):
         self.output_arcs = []
 
     def get_json(self):
-        json = [{'label': self.label,
+        json = [{'label': str(self.label),
                  'input_arcs': [arc.label for arc in self.input_arcs],
                  'output_arcs': [arc.label for arc in self.output_arcs],
                  'frequency': self.frequency,
@@ -153,7 +155,7 @@ class Network(LabeledObject):
         return self._add_arc(arc, node_a, node_b)
 
     def get_json(self):
-        json = [{'label': self.label,
+        json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs]}]
         return json
