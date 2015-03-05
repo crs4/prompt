@@ -36,8 +36,8 @@ class Activity(Node):
 
 
 class Transaction(Arc):
-    def __init__(self, label, input_node, output_node, frequency=None, desc=None ):
-        super(Transaction, self).__init__(label, input_node, output_node, frequency)
+    def __init__(self, label, start_node, end_node, frequency=None, desc=None ):
+        super(Transaction, self).__init__(label, start_node, end_node, frequency)
         self.label = label
         self.desc = desc
         self.attributes = {}

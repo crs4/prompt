@@ -21,8 +21,8 @@ class DependencyTestCase(unittest.TestCase):
         self.assertTrue(len(b.output_arcs) == 0)
         self.assertTrue(set(b.input_arcs) == {arc})
 
-        self.assertTrue(arc.input_node == a)
-        self.assertTrue(arc.output_node == b)
+        self.assertTrue(arc.start_node == a)
+        self.assertTrue(arc.end_node == b)
 
         self.assertTrue(net.get_initial_nodes() == [a])
         self.assertTrue(net.get_final_nodes() == [b])

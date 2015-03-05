@@ -42,11 +42,6 @@ class TestBPMNDiagram(unittest.TestCase):
         self.bpmn_diagram.add_arc(self.a2, end_2, 'end_arc_2')
         self.assertEqual([self.final, end_2], self.bpmn_diagram.get_final_nodes())
 
-    def test_add_transaction(self):
-        end_2 = self.bpmn_diagram.add_node('multiple_end')
-        new_tr = self.bpmn_diagram.add_arc(self.a2, end_2, 'end_arc_2')
-        self.assertTrue(new_tr.net, self.bpmn_diagram)
-
     def test_get_activity_by_id(self):
          get_a2 = self.bpmn_diagram.get_node_by_label('a2')
          self.assertEqual(get_a2, self.a2)

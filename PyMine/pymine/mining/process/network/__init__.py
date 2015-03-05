@@ -32,17 +32,17 @@ class BaseElement(LabeledObject):
         return json
 
 class Arc(BaseElement):
-    def __init__(self, input_node, output_node, label=None, frequency=None, attrs=None):
+    def __init__(self, start_node, end_node, label=None, frequency=None, attrs=None):
         super(Arc, self).__init__(label, frequency, attrs)
-        self.input_node = input_node
-        self.output_node = output_node
+        self.start_node = start_node
+        self.end_node = end_node
 
         #self.net = self.input_node.net
 
     def get_json(self):
         json = [{'label': str(self.label),
-                 'input_node': self.input_node.label,
-                 'output_node': self.output_node.label,
+                 'start_node': self.start_node.label,
+                 'end_node': self.end_node.label,
                  'frequency': self.frequency,
                  'attributes': self.attrs}]
         return json
@@ -82,11 +82,11 @@ class Node(BaseElement):
 
     @property
     def output_nodes(self):
-        return [arc.input_node for arc in self.output_arcs]
+        return [arc.end_node for arc in self.output_arcs]
 
     @property
     def input_nodes(self):
-        return [arc.output_node for arc in self.input_arcs]
+        return [arc.start_node for arc in self.input_arcs]
 
 
 class Network(LabeledObject):

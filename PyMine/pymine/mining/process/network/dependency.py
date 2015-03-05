@@ -3,8 +3,8 @@ from pymine.mining.process.network import Network, Arc, Node
 
 class DArc(Arc):
 
-    def __init__(self, input_node, output_node, label=None, frequency=0, dependency=0.0, attrs={}):
-        super(DArc, self).__init__(input_node, output_node, label, frequency, attrs)
+    def __init__(self, start_node, end_node, label=None, frequency=0, dependency=0.0, attrs={}):
+        super(DArc, self).__init__(start_node, end_node, label, frequency, attrs)
         self.dependency = dependency
 
     def __str__(self):
@@ -15,8 +15,8 @@ class DArc(Arc):
 
     def get_json(self):
         json = [{'label': self.label,
-                 'input_node': self.input_node.label,
-                 'output_node': self.output_node.label,
+                 'input_node': self.start_node.label,
+                 'output_node': self.end_node.label,
                  'frequency': self.frequency,
                  'dependency': self.dependency,
                  'attributes': self.attrs}]
