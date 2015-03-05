@@ -60,8 +60,8 @@ class CNetTestCase(unittest.TestCase):
         binding_b_a = net.add_input_binding(b, {a})
         binding_c_a = net.add_input_binding(c, {a})
 
-        binding_d_b = net.add_input_binding(d, {b})
-        binding_d_c = net.add_input_binding(d, {c})
+        binding_d_b = net.add_input_binding(d, {b, c})
+        binding_d_c = net.add_input_binding(d, {b})
 
         self.assertTrue(a.output_bindings == [binding_b_c, binding_b])
         self.assertTrue(d.input_bindings == [binding_d_b, binding_d_c])
@@ -81,6 +81,18 @@ class CNetTestCase(unittest.TestCase):
 
         self.assertIn(binding_b_a, b.get_input_bindings_with({a}))
         self.assertEqual(len(b.get_input_bindings_with({a})), 1)
+
+        self.assertEqual(len(a.output_arcs), 2)
+        self.assertEqual(len(a.input_arcs), 0)
+
+        self.assertEqual(len(b.input_arcs), 1)
+        self.assertEqual(len(b.output_arcs), 1)
+
+        self.assertEqual(len(c.input_arcs), 1)
+        self.assertEqual(len(c.output_arcs), 1)
+
+        self.assertEqual(len(d.input_arcs), 2)
+        self.assertEqual(len(d.output_arcs), 0)
 
     def test_replay(self):
         cnet, a, b, c, d, e = _create_cnet()
