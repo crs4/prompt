@@ -5,7 +5,7 @@ from datetime import datetime as dt
 from pymine.mining.process.eventlog.factory import CsvLogFactory, DictLogFactory
 from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import *
-logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
+# logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
 
 
 class TestFactory(unittest.TestCase):

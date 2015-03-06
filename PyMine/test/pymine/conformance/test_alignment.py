@@ -4,7 +4,7 @@ from pymine.mining.process.eventlog.factory import DictLogFactory
 import pymine.conformance.alignment as aln
 from pymine.conformance.alignment import Alignment
 import logging
-logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+# logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
 
 class AlignmentTestCase(unittest.TestCase):
