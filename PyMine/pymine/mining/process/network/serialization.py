@@ -1,5 +1,6 @@
 import pickle
 import json
+import os
 
 class Serializer(object):
 
@@ -30,12 +31,24 @@ class Serializer(object):
 
     def serialize_as_json_file(self, obj, filename):
         try:
-            return json.dump(obj, filename, sort_keys=True, indent=2)
+            file_path = os.getcwd()+'/'+filename
+            json_file = open(file_path, 'w')
+            json.dump(obj, json_file, sort_keys=True, indent=2)
+            json_file.close()
+            return True
         except Exception, e:
+            print("An error occurred while serializing to "+file_path)
+            print(str(e))
             return False
 
     def deserialize_json_from_file(self, filename):
         try:
-            return json.load(filename)
+            file_path = os.getcwd()+'/'+filename
+            json_file = open(file_path, 'r')
+            obj = json.load(json_file)
+            json_file.close()
+            return obj
         except Exception, e:
+            print("An error occurred while deserializing "+file_path)
+            print(str(e))
             return False
