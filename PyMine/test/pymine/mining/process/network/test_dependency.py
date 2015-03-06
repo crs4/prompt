@@ -1,15 +1,26 @@
 import unittest
+import pymine.mining.process.network.dependency
 from pymine.mining.process.network.dependency import DependencyGraph, DArc
 
 
 class DependencyTestCase(unittest.TestCase):
 
+    def create_dependency_graph(self):
+        graph = DependencyGraph()
+        node_a = graph.add_node("A")
+        node_b = graph.add_node("B")
+        node_c = graph.add_node("C")
+        node_d = graph.add_node("D")
+        graph.add_arc(node_a, node_b, "A->B", 2)
+        graph.add_arc(node_b, node_c, "B->C", 1)
+        graph.add_arc(node_c, node_b, "C->B", 1)
+        graph.add_arc(node_b, node_d, "B->D", 2)
+        return graph
+
     def test_add_arc(self):
         net = DependencyGraph()
         a, b = net.add_nodes('a', 'b')
         arc = net.add_arc(a, b, 'arc')
-
-        print net.get_json()
 
         self.assertTrue(net.arcs == [arc])
         self.assertTrue(arc.label == 'arc')
@@ -38,3 +49,9 @@ class DependencyTestCase(unittest.TestCase):
         self.assertTrue(arc.frequency == freq)
         self.assertTrue(arc.dependency == dep)
         self.assertTrue(arc.attrs == attrs)
+
+    def test_get_dependency_graph_from_json(self):
+        orig_graph = self.create_dependency_graph()
+        json = orig_graph.get_json()
+        the_graph = pymine.mining.process.network.dependency.get_dependency_graph_from_json(json)
+        self.assertTrue(json == the_graph.get_json())

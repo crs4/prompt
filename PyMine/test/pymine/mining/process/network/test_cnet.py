@@ -1,5 +1,6 @@
 import unittest
 from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, OutputBinding
+import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
 # logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
@@ -28,6 +29,26 @@ def _create_cnet():
 
 class CNetTestCase(unittest.TestCase):
 
+    def create_cnet(self):
+        cnet = CNet()
+        node_a = cnet.add_node("A")
+        node_b = cnet.add_node("B")
+        node_c = cnet.add_node("C")
+        node_d = cnet.add_node("D")
+        cnet.add_arc(node_a, node_b, "A->B", 2)
+        cnet.add_arc(node_b, node_c, "B->C", 1)
+        cnet.add_arc(node_c, node_b, "C->B", 1)
+        cnet.add_arc(node_b, node_d, "B->D", 2)
+        cnet.add_output_binding(node_a, {node_b}, frequency=2)
+        cnet.add_output_binding(node_b, {node_c}, frequency=1)
+        cnet.add_output_binding(node_b, {node_d}, frequency=2)
+        cnet.add_output_binding(node_c, {node_b}, frequency=1)
+        cnet.add_input_binding(node_b, {node_a}, frequency=2)
+        cnet.add_input_binding(node_b, {node_c}, frequency=1)
+        cnet.add_input_binding(node_c, {node_b}, frequency=1)
+        cnet.add_input_binding(node_d, {node_b}, frequency=2)
+        return cnet
+
     def test_add_node(self):
         net = CNet()
         a = net.add_node('a')
@@ -55,7 +76,7 @@ class CNetTestCase(unittest.TestCase):
         net = CNet()
         a, b, c, d = net.add_nodes('a', 'b', 'c', 'd')
         binding_b_c = net.add_output_binding(a, {b, c})
-        binding_b = net.add_output_binding(a, {b}, 1)
+        binding_b = net.add_output_binding(a, {b}, frequency=1)
 
         binding_b_a = net.add_input_binding(b, {a})
         binding_c_a = net.add_input_binding(c, {a})
@@ -328,7 +349,11 @@ class CNetTestCase(unittest.TestCase):
         self.assertTrue(d_clone.input_nodes, {b_clone, c_clone})
         self.assertTrue(d_clone.input_bindings[0].node_set, {b_clone, c_clone})
 
-
+    def test_get_network_from_json(self):
+        orig_net = self.create_cnet()
+        json = orig_net.get_json()
+        the_net = pymine.mining.process.network.cnet.get_cnet_from_json(json)
+        self.assertTrue(json == the_net.get_json())
 
 
 if __name__ == '__main__':
