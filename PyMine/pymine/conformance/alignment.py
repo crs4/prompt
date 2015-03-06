@@ -1,6 +1,9 @@
 from pymine.mining.process.network.graph import graph_factory
 from pymine.mining.process.network import UnexpectedEvent
+from pymine.mining.process.eventlog.log import Log
+from pymine.mining.process.eventlog import Case
 import logging
+logger = logging.getLogger('alignment')
 
 
 GRAPH_IMPL = 'nx'
@@ -59,8 +62,8 @@ def compute_optimal_alignment(case, net, cost_function=None):
     case = [e.activity_name for e in case.events]
 
     def add_moves_to_graph(log_move, net_move, previous_move):
-        logging.debug('-----log_move %s', log_move)
-        logging.debug('-----net_move %s', net_move)
+        logger.debug('-----log_move %s', log_move)
+        logger.debug('-----net_move %s', net_move)
         log_move = Move(log_move)
         net_move = Move(net_move)
         g.add_node(log_move)
@@ -71,65 +74,51 @@ def compute_optimal_alignment(case, net, cost_function=None):
         return log_move, net_move
 
     def add_move(event_index, net_, previous_move=None):
-        available_nodes = net_.available_nodes
+
         event = case[event_index] if event_index < len(case) else None
-        logging.debug('***********add_move************')
-        logging.debug('event %s', event)
-        logging.debug('available_nodes %s', available_nodes)
-        logging.debug('net_.events_played %s', net_.events_played)
-
-        if event is None and available_nodes:
-            # start_node = list(available_nodes)[0]
-            # logging.debug('***********shortest path in net, start_node %s', start_node)
-            # cost, path = net_.shortest_path(start_node)
-            # logging.debug('******path %s', path)
-            # for node in path:
-            #     l_m = None
-            #     n_m = node.label
-            #     logging.debug('node %s', node)
-            #     log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-            #     previous_move = net_move
-            #
-            # g.add_edge(previous_move, end, {'cost': 0})
-            logging.debug('DONE')
-
-        elif event:
-            available_events = [n.label for n in available_nodes]
-            logging.debug('available_events %s', available_events)
-            if event in available_events:
-                logging.debug('event in available_events')
-                try:
-                    net_.replay_event(event)
-                except UnexpectedEvent:
-                    pass
-                log_move, net_move = add_moves_to_graph(event, event, previous_move)
-                add_move(event_index + 1, net_, net_move)
-
-            else:
-                logging.debug('event NOT in available_events')
-                l_m = event
-                n_m = None
-                log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-                add_move(event_index + 1, net_, net_move)
-
-                for e in available_events:
-                    logging.debug('cycling over all available nodes %s, e: %s, event %s', available_nodes, e, event)
-                    l_m = None
-                    n_m = e
-                    played_events = net_.events_played
-                    net_clone = net_.clone()
-                    logging.debug('replay_sequence %s', played_events)
-                    result, obl, unexpected = net_clone.replay_sequence(played_events)
-                    logging.debug('result %s, obl %s, unexpected %s', result, obl, unexpected)
-                    logging.debug('---------replaying event %s, available_nodes %s', e, net_clone.available_nodes)
-
-                    net_clone.replay_event(e)
-
-                    log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-                    add_move(event_index, net_clone, net_move)
-
-        else:
+        available_nodes = net_.available_nodes
+        available_events = [n.label for n in available_nodes]
+        logger.debug('add_move event %s, available_events %s', event, available_events)
+        if event is None and not available_events:
             g.add_edge(previous_move, end, {'cost': 0})
+            logger.debug('final node reached')
+
+        elif event in available_events:
+            logger.debug('event in available_events')
+            net_.replay_event(event)
+            log_move, net_move = add_moves_to_graph(event, event, previous_move)
+            add_move(event_index + 1, net_, net_move)
+        elif event is None:
+            logger.debug('event is None')
+            played_events = net_.events_played
+            for net_event in available_events:
+                l_m = None
+                n_m = net_event
+                net_clone = net_.clone()
+                logger.debug('replay_sequence %s', played_events)
+                result, obl, unexpected = net_clone.replay_sequence(played_events)
+                net_clone.replay_event(net_event)
+                log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
+                add_move(event_index, net_clone, net_move)
+        else:
+            logger.debug('else...')
+            logger.debug('event %s, available_events %s', event, available_events)
+            l_m = event
+            n_m = None
+            log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
+            add_move(event_index + 1, net_, net_move)
+
+            played_events = net_.events_played
+            logger.debug('played_events %s, available_events %s', played_events, available_events)
+            for net_event in set(available_events) - set(played_events):
+                l_m = None
+                n_m = net_event
+                net_clone = net_.clone()
+                logger.debug('replay_sequence %s', played_events)
+                result, obl, unexpected = net_clone.replay_sequence(played_events)
+                net_clone.replay_event(net_event)
+                log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
+                add_move(event_index, net_clone, net_move)
 
     add_move(0, net, start)
     optimal_cost, optimal_path = g.shortest_path(start, end, 'cost')
@@ -140,18 +129,43 @@ def compute_optimal_alignment(case, net, cost_function=None):
     return optimal_alignment
 
 
-def case_fitness(case, net, cost_function=None):
-    net.rewind()
-    cost_function = cost_function or _default_cost_function
-    optimal_aln = compute_optimal_alignment(case, net, cost_function)
-    cost, shortest_path = net.shortest_path()
+def _worst_scenario_cost(case, cost_function, shortest_path):
     worst_scenario_cost = 0.0
     for event in case.events:
         worst_scenario_cost += cost_function(event, None)
     for node in shortest_path:
         worst_scenario_cost += cost_function(None, node.label)
-    logging.debug('optimal_aln.cost %s', optimal_aln.cost)
-    logging.debug('worst_scenario_cost %s', worst_scenario_cost )
-    return 1 - optimal_aln.cost/worst_scenario_cost
+
+    return worst_scenario_cost
 
 
+def _case_fitness(case, net, cost_function, shortest_path):
+    optimal_aln = compute_optimal_alignment(case, net, cost_function)
+    worst_scenario_cost = _worst_scenario_cost(case, cost_function, shortest_path)
+    return optimal_aln, worst_scenario_cost
+
+
+def _log_fitness(log, net, cost_function, shortest_path):
+    total_cost = 0.0
+    total_worst_scenario_cost = 0.0
+    for case in log.cases:
+        optimal_aln, worst_scenario_cost = _case_fitness(case, net, cost_function, shortest_path)
+        total_cost += optimal_aln.cost
+        total_worst_scenario_cost += worst_scenario_cost
+    return 1 - total_cost/total_worst_scenario_cost
+
+
+def fitness(events_container, net, cost_function=None):
+    net.rewind()
+    cost_function = cost_function or _default_cost_function
+    cost, shortest_path = net.shortest_path()
+    if isinstance(events_container, Log):
+        return _log_fitness(events_container, net, cost_function, shortest_path)
+
+    elif isinstance(events_container, Case):
+        optimal_aln, worst_scenario_cost = _case_fitness(events_container, net, cost_function, shortest_path)
+        print optimal_aln
+        return 1 - optimal_aln.cost/worst_scenario_cost
+
+    else:
+        raise Exception('events_container must be Log or Case instance')
