@@ -168,7 +168,7 @@ class Network(LabeledObject):
         node_b.input_arcs.append(arc)
         return arc
 
-    def add_arc(self, node_a, node_b, label=None, frequency=None, attrs={}):
+    def add_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
         arc = self._create_arc(node_a, node_b, label, frequency, attrs)
         return self._add_arc(arc, node_a, node_b)
 
@@ -177,3 +177,26 @@ class Network(LabeledObject):
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs]}]
         return json
+
+
+def get_network_from_json(json):
+    try:
+        origin = json[0]
+        label = origin['label']
+        the_net = Network(label)
+        for n in origin['nodes']:
+            node = [n][0][0]
+            if node:
+                the_net.add_node(node['label'], node['frequency'], node['attributes'])
+        for a in origin['arcs']:
+            arc = [a][0][0]
+            if arc:
+                node_a = the_net.get_node_by_label(arc['start_node'])
+                node_b = the_net.get_node_by_label(arc['end_node'])
+                the_net.add_arc(node_a, node_b, label=arc['label'],
+                                frequency=arc['frequency'], attrs=arc['attributes'])
+        return the_net
+    except Exception, e:
+        print("An error occurred while trying to create a Network from a json")
+        print(e.message)
+        return None

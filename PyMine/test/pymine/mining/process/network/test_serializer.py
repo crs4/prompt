@@ -18,14 +18,14 @@ class TestSerializer(unittest.TestCase):
         cnet.add_arc(node_b, node_c, "B->C", 1)
         cnet.add_arc(node_c, node_b, "C->B", 1)
         cnet.add_arc(node_b, node_d, "B->D", 2)
-        cnet.add_output_binding(node_a, {node_b}, 2)
-        cnet.add_output_binding(node_b, {node_c}, 1)
-        cnet.add_output_binding(node_b, {node_d}, 2)
-        cnet.add_output_binding(node_c, {node_b}, 1)
-        cnet.add_input_binding(node_b, {node_a}, 2)
-        cnet.add_input_binding(node_b, {node_c}, 1)
-        cnet.add_input_binding(node_c, {node_b}, 1)
-        cnet.add_input_binding(node_d, {node_b}, 2)
+        cnet.add_output_binding(node_a, {node_b}, frequency=2)
+        cnet.add_output_binding(node_b, {node_c}, frequency=1)
+        cnet.add_output_binding(node_b, {node_d}, frequency=2)
+        cnet.add_output_binding(node_c, {node_b}, frequency=1)
+        cnet.add_input_binding(node_b, {node_a}, frequency=2)
+        cnet.add_input_binding(node_b, {node_c}, frequency=1)
+        cnet.add_input_binding(node_c, {node_b}, frequency=1)
+        cnet.add_input_binding(node_d, {node_b}, frequency=2)
         return cnet
 
     def test_serialize_as_string(self):
@@ -38,7 +38,7 @@ class TestSerializer(unittest.TestCase):
 
     def test_serialize_as_file(self):
         serializer = Serializer()
-        filename = "test_serializer.json"
+        filename = "test_serialize.json"
         input_string = json.dumps(self.create_cnet().get_json(), sort_keys=True, indent=2)
         serializer.serialize_as_file(input_string, filename)
         serialized_string = serializer.deserialize_from_file(filename)
@@ -49,7 +49,7 @@ class TestSerializer(unittest.TestCase):
 
     def test_serialize_as_json_file(self):
         serializer = Serializer()
-        filename = "test_serializer.json"
+        filename = "test_serialize_as_json.json"
         input_json = self.create_cnet().get_json()
         serializer.serialize_as_json_file(input_json, filename)
         deserialized_json = serializer.deserialize_json_from_file(filename)

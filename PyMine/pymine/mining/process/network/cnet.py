@@ -59,7 +59,6 @@ class CNode(Node):
     def get_output_bindings_with(self, node_set, exactly=False):
         return self._get_bindings_with(node_set, exactly, 'output')
 
-
     @property
     def obligations(self):
         return self.output_nodes
@@ -165,6 +164,8 @@ class _XorBindings(object):
 class CNet(Network):
     def __init__(self, label=None):
         super(CNet,  self).__init__(label)
+        self._input_bindings = []
+        self._output_bindings = []
         self._bindings = []
         self._clean = True
         self.rewind()
@@ -251,32 +252,54 @@ class CNet(Network):
 
     @property
     def bindings(self):
-        return self._bindings
+        return self._input_bindings+self._output_bindings
+
+    @property
+    def input_bindings(self):
+        return self._input_bindings
+
+    @property
+    def output_bindings(self):
+        return self._output_bindings
+
+    def replay_case(self, case):
+        pass
+
+    def replay_log(self, log):
+        pass
+
+    def _add_input_binding(self, binding):
+        self._input_bindings.append(binding)
+        return binding
 
     def _add_binding(self, binding):
         self.rewind()
         self._bindings.append(binding)
         return binding
 
+    def _add_output_binding(self, binding):
+        self._output_bindings.append(binding)
+        return binding
+
     def add_node(self, label, frequency=None, attrs=None):
         self.rewind()
         return super(CNet, self).add_node(label, frequency, attrs)
 
-    def add_input_binding(self, node, node_set, frequency=None):
+    def add_input_binding(self, node, node_set, label=None, frequency=None):
         for n in node_set:
             if n not in node.input_nodes:
                 self.add_arc(n, node)
 
-        binding = self._add_binding(InputBinding(node, node_set, frequency))
+        binding = self._add_input_binding(InputBinding(node, node_set, frequency, label=label))
         node.input_bindings.append(binding)
         return binding
 
-    def add_output_binding(self, node, node_set, frequency=None):
+    def add_output_binding(self, node, node_set, label=None, frequency=None):
         for n in node_set:
             if n not in node.output_nodes:
                 self.add_arc(node, n)
 
-        binding = self._add_binding(OutputBinding(node, node_set, frequency))
+        binding = self._add_output_binding(OutputBinding(node, node_set, frequency, label=label))
         node.output_bindings.append(binding)
         return binding
 
@@ -422,5 +445,45 @@ class CNet(Network):
         json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs],
-                 'bindings': [binding.get_json() for binding in self.bindings]}]
+                 'input_bindings': [binding.get_json() for binding in self.input_bindings],
+                 'output_bindings': [binding.get_json() for binding in self.output_bindings]}]
         return json
+
+
+def get_cnet_from_json(json):
+    try:
+        origin = json[0]
+        label = origin['label']
+        the_net = CNet(label)
+        for n in origin['nodes']:
+            node = [n][0][0]
+            if node:
+                the_net.add_node(node['label'], node['frequency'], node['attributes'])
+        for a in origin['arcs']:
+            arc = [a][0][0]
+            if arc:
+                node_a = the_net.get_node_by_label(arc['start_node'])
+                node_b = the_net.get_node_by_label(arc['end_node'])
+                the_net.add_arc(node_a, node_b, label=arc['label'],
+                                frequency=arc['frequency'], attrs=arc['attributes'])
+        for b in origin['input_bindings']:
+            binding = [b][0][0]
+            if binding:
+                node = the_net.get_node_by_label(binding['node'])
+                node_set = set()
+                for n in binding['node_set']:
+                    node_set.add(the_net.get_node_by_label(n))
+                the_net.add_input_binding(node, node_set, label=binding['label'], frequency=binding['frequency'])
+        for b in origin['output_bindings']:
+            binding = [b][0][0]
+            if binding:
+                node = the_net.get_node_by_label(binding['node'])
+                node_set = set()
+                for n in binding['node_set']:
+                    node_set.add(the_net.get_node_by_label(n))
+                the_net.add_output_binding(node, node_set, label=binding['label'], frequency=binding['frequency'])
+        return the_net
+    except Exception, e:
+        print("An error occurred while trying to create a Network from a json")
+        print(e.message)
+        return None

@@ -17,8 +17,8 @@ class HeuristicMiner(Miner):
     def calculate_arcs_dependency(self, net):
         for arc in net.arcs:
             a = float(arc.frequency)
-            if arc.input_node != arc.output_node:
-                reversed_arc = arc.input_node.label+"->"+arc.output_node.label
+            if arc.start_node != arc.end_node:
+                reversed_arc = arc.start_node.label+"->"+arc.end_node.label
                 r_arc = net.get_arc_by_label(reversed_arc)
                 if r_arc:
                     b = float(r_arc.frequency)
@@ -98,8 +98,8 @@ class HeuristicMiner(Miner):
             for activity in dep_net.nodes:
                 c_net.add_node(label=activity.label)
             for connection in dep_net.arcs:
-                c_net.add_arc(c_net.get_node_by_label(connection.input_node.label),
-                              c_net.get_node_by_label(connection.output_node.label),
+                c_net.add_arc(c_net.get_node_by_label(connection.start_node.label),
+                              c_net.get_node_by_label(connection.end_node.label),
                               label=connection.label,
                               frequency=connection.frequency)
             self.calculate_possible_binds(c_net, p_info.process, p_info.average_case_size)
@@ -148,7 +148,6 @@ class HeuristicMiner(Miner):
                                 output_binds[candidate] = 1
                     except Exception, e:
                         print("Cannot compute bindins: "+str(e.message))
-            print("INPUTBINDS: "+str(input_binds))
             for binds in input_binds:
                 c_net.add_input_binding(node, {binds}, input_binds[binds])
             for binds in output_binds:

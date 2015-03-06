@@ -15,8 +15,8 @@ class DArc(Arc):
 
     def get_json(self):
         json = [{'label': self.label,
-                 'input_node': self.start_node.label,
-                 'output_node': self.end_node.label,
+                 'start_node': self.start_node.label,
+                 'end_node': self.end_node.label,
                  'frequency': self.frequency,
                  'dependency': self.dependency,
                  'attributes': self.attrs}]
@@ -30,3 +30,26 @@ class DependencyGraph(Network):
     def add_arc(self, node_a, node_b, label=None, frequency=None, dependency=None, attrs={}):
         arc = DArc(node_a, node_b, label, frequency, dependency, attrs)
         return self._add_arc(arc, node_a, node_b)
+
+
+def get_dependency_graph_from_json(json):
+    try:
+        origin = json[0]
+        label = origin['label']
+        the_net = DependencyGraph(label)
+        for n in origin['nodes']:
+            node = [n][0][0]
+            if node:
+                the_net.add_node(node['label'], node['frequency'], node['attributes'])
+        for a in origin['arcs']:
+            arc = [a][0][0]
+            if arc:
+                node_a = the_net.get_node_by_label(arc['start_node'])
+                node_b = the_net.get_node_by_label(arc['end_node'])
+                the_net.add_arc(node_a, node_b, label=arc['label'],
+                                frequency=arc['frequency'], dependency=arc['dependency'], attrs=arc['attributes'])
+        return the_net
+    except Exception, e:
+        print("An error occurred while trying to create a Network from a json")
+        print(e.message)
+        return None
