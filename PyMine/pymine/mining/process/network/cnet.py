@@ -167,16 +167,28 @@ class CNet(Network):
         super(CNet,  self).__init__(label)
         self._bindings = []
         self._clean = True
-        self._init()
+        self.rewind()
 
-    def _init(self):
-        self._events_played = []
+    def rewind(self):
+        self.events_played = []
         self.current_node = None
         self._xor_bindings = []
         initial_nodes = self.get_initial_nodes()
         self._obligations = {initial_nodes[0]} if initial_nodes else set()
 
-    def reset(self):
+    def clone(self):
+        clone = CNet()
+        clone.add_nodes(*[n.label for n in self.nodes])
+        for binding in self.bindings:
+            node = clone.get_node_by_label(binding.node.label)
+            node_set = {clone.get_node_by_label(n.label) for n in binding.node_set}
+            if isinstance(binding, InputBinding):
+                clone.add_input_binding(node, node_set)
+            else:
+                clone.add_output_binding(node, node_set)
+        return clone
+
+    def reset_frequencies(self):
         logging.debug('reset')
         for node in self.nodes:
             node.frequency = 0
@@ -242,12 +254,12 @@ class CNet(Network):
         return self._bindings
 
     def _add_binding(self, binding):
-        self._init()
+        self.rewind()
         self._bindings.append(binding)
         return binding
 
     def add_node(self, label, frequency=None, attrs=None):
-        self._init()
+        self.rewind()
         return super(CNet, self).add_node(label, frequency, attrs)
 
     def add_input_binding(self, node, node_set, frequency=None):
@@ -309,7 +321,7 @@ class CNet(Network):
         logging.debug('_get_input_binding_completed %s', node)
         input_binding_completed = None
         if node.input_bindings:
-            previous_events = set(self._events_played)
+            previous_events = set(self.events_played)
             max_arg = [b.node_set_labels() & previous_events for b in node.input_bindings]
             logging.debug('max_arg %s', max_arg)
             if max_arg:
@@ -321,19 +333,23 @@ class CNet(Network):
 
     def replay_event(self, event, restart=False):
         if restart:
-            self._init()
+            self.rewind()
         if self._clean:
-            self.reset()
+            self.reset_frequencies()
             self._clean = False
 
-        self._events_played.append(event)
+        self.events_played.append(event)
         event_cnode = self.get_node_by_label(event)
         if event_cnode is None:
             raise UnexpectedEvent(event)
 
-        self.current_node = event_cnode
-        event_cnode.frequency += 1
+        logging.debug('event_cnode %s obligations %s', event_cnode, self._obligations)
+
+        logging.debug('id(event_cnode) %s. obl_ids %s ', id(event_cnode), [id(obl) for obl in self._obligations])
+        logging.debug('event_cnode in self._obligations %s', event_cnode in self._obligations)
         if event_cnode in self._obligations:
+            self.current_node = event_cnode
+            event_cnode.frequency += 1
             logging.debug('event_cnode %s. obligations %s', event_cnode, self._obligations)
             self._obligations.remove(event_cnode)
 
@@ -375,7 +391,6 @@ class CNet(Network):
                     logging.debug('unexpected event %s', node)
                     raise UnexpectedEvent(node.label)
 
-
             for xor_binding in bindings_to_remove:
                 self._xor_bindings.remove(xor_binding)
 
@@ -390,7 +405,7 @@ class CNet(Network):
             raise UnexpectedEvent(event)
 
     def replay_sequence(self, sequence):
-        self._init()
+        self.rewind()
         unexpected_events = set()
 
         for index, event in enumerate(sequence):
@@ -400,6 +415,7 @@ class CNet(Network):
             try:
                 self.replay_event(event, restart)
             except UnexpectedEvent as ex:
+                logging.debug('unexpected event %s', event)
                 unexpected_events.add(ex.event)
 
         return len(self._obligations | set(unexpected_events)) == 0, self._obligations, unexpected_events
