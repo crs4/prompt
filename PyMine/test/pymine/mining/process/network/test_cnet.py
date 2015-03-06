@@ -285,6 +285,39 @@ class CNetTestCase(unittest.TestCase):
         cnet.replay_event('e')
         self.assertEqual(cnet.available_nodes, set([]))
 
+    def test_clone(self):
+        net = CNet()
+        a, b, c, d = net.add_nodes('a', 'b', 'c', 'd')
+        net.add_output_binding(a, {b, c})
+        net.add_input_binding(b, {a})
+        net.add_input_binding(c, {a})
+
+        net.add_output_binding(b, {d})
+        net.add_output_binding(c, {d})
+        net.add_input_binding(d, {b, c})
+
+        clone = net.clone()
+        a_clone = clone.get_node_by_label(a.label)
+        b_clone = clone.get_node_by_label(b.label)
+        c_clone = clone.get_node_by_label(c.label)
+        d_clone = clone.get_node_by_label(d.label)
+        self.assertTrue(clone.get_initial_nodes(), [a_clone])
+        self.assertTrue(clone.get_final_nodes(), [d_clone])
+
+        self.assertTrue(a_clone.output_nodes, {b_clone, c_clone, d_clone})
+        self.assertTrue(a_clone.output_bindings[0].node_set, {b_clone, c_clone})
+
+        self.assertTrue(b_clone.input_nodes, {a_clone})
+        self.assertTrue(b_clone.output_nodes, {d_clone})
+
+        self.assertTrue(c_clone.input_nodes, {a_clone})
+        self.assertTrue(c_clone.output_nodes, {d_clone})
+
+        self.assertTrue(d_clone.input_nodes, {b_clone, c_clone})
+        self.assertTrue(d_clone.input_bindings[0].node_set, {b_clone, c_clone})
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
