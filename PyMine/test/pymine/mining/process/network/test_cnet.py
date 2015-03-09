@@ -3,7 +3,7 @@ from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, Output
 import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
-logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+# logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
 
 def _create_cnet():
