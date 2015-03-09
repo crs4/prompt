@@ -18,8 +18,16 @@ class BPMNDiagram(Network):
     def add_node(self, label, frequency = None, attrs= {}, node_type='activity'):
         if node_type == 'activity':
             return super(BPMNDiagram, self).add_node(label)
+        elif node_type == 'inclusive_gateway':
+            node = InclusiveGateway(label,frequency, attrs)
+            self._nodes.append(node)
+            return node
         elif node_type == 'exclusive_gateway':
             node = ExclusiveGateway(label,frequency, attrs)
+            self._nodes.append(node)
+            return node
+        elif node_type == 'parallel_gateway':
+            node = ParallelGateway(label,frequency, attrs)
             self._nodes.append(node)
             return node
 
@@ -47,6 +55,14 @@ class Transaction(Arc):
 class ParallelGateway(Node):
     def __init__(self, label, net, frequency=None, desc=None):
         super(ParallelGateway, self).__init__(label, net, frequency)
+        self.label = label
+        self.desc = desc
+        self.attributes = {}
+
+
+class InclusiveGateway(Node):
+    def __init__(self, label, net, frequency=None, desc=None):
+        super(InclusiveGateway, self).__init__(label, net, frequency)
         self.label = label
         self.desc = desc
         self.attributes = {}
