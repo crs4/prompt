@@ -1,9 +1,11 @@
 import unittest
+import logging
+
 from pymine.mining.process.network.cnet import CNet
 from pymine.mining.process.eventlog.factory import DictLogFactory
-import pymine.conformance.alignment as aln
-from pymine.conformance.alignment import Alignment
-import logging
+import pymine.mining.process.conformance.alignment as aln
+from pymine.mining.process.conformance.alignment import Alignment
+
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('alignment')
 # logger.setLevel(logging.DEBUG)
