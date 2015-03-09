@@ -166,7 +166,6 @@ def fitness(events_container, net, cost_function=None):
 
     elif isinstance(events_container, Case):
         optimal_aln, worst_scenario_cost = _case_fitness(events_container, net, cost_function, shortest_path)
-        print optimal_aln
         return 1 - optimal_aln.cost/worst_scenario_cost
 
     else:

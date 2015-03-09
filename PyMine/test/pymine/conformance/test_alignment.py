@@ -6,9 +6,7 @@ from pymine.conformance.alignment import Alignment
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('alignment')
-logger.setLevel(logging.DEBUG)
-
-
+# logger.setLevel(logging.DEBUG)
 
 
 class AlignmentTestCase(unittest.TestCase):
