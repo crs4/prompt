@@ -1,5 +1,6 @@
 import unittest
-from pymine.conformance import replay_case, simple_fitness
+
+from pymine.mining.process.conformance import replay_case, simple_fitness
 from pymine.mining.process.eventlog.factory import DictLogFactory
 from test.pymine.mining.process.network.test_cnet import _create_cnet
 

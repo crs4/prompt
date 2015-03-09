@@ -252,7 +252,7 @@ class CNet(Network):
 
     @property
     def bindings(self):
-        return self._input_bindings+self._output_bindings
+        return self._input_bindings + self._output_bindings
 
     @property
     def input_bindings(self):
@@ -261,12 +261,6 @@ class CNet(Network):
     @property
     def output_bindings(self):
         return self._output_bindings
-
-    def replay_case(self, case):
-        pass
-
-    def replay_log(self, log):
-        pass
 
     def _add_input_binding(self, binding):
         self._input_bindings.append(binding)
@@ -355,6 +349,7 @@ class CNet(Network):
         return input_binding_completed
 
     def replay_event(self, event, restart=False):
+        logging.debug('replay event %s', event)
         if restart:
             self.rewind()
         if self._clean:
@@ -365,11 +360,7 @@ class CNet(Network):
         event_cnode = self.get_node_by_label(event)
         if event_cnode is None:
             raise UnexpectedEvent(event)
-
         logging.debug('event_cnode %s obligations %s', event_cnode, self._obligations)
-
-        logging.debug('id(event_cnode) %s. obl_ids %s ', id(event_cnode), [id(obl) for obl in self._obligations])
-        logging.debug('event_cnode in self._obligations %s', event_cnode in self._obligations)
         if event_cnode in self._obligations:
             self.current_node = event_cnode
             event_cnode.frequency += 1
@@ -388,22 +379,23 @@ class CNet(Network):
             nodes_to_remove = set()
 
             for xor_binding in self._xor_bindings:
-                logging.debug('xor_binding %s', xor_binding)
-                completed_binding, obligations_to_remove = xor_binding.remove_node(event_cnode, input_binding_completed)
-                logging.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
+                if xor_binding.has_node(event_cnode):
+                    logging.debug('xor_binding %s', xor_binding)
+                    completed_binding, obligations_to_remove = xor_binding.remove_node(event_cnode, input_binding_completed)
+                    logging.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
 
-                nodes_to_remove |= obligations_to_remove
+                    nodes_to_remove |= obligations_to_remove
 
-                if completed_binding:
-                    logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
+                    if completed_binding:
+                        logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
 
-                    for b in xor_binding.bindings:
-                        if b != completed_binding:
-                            nodes_to_remove |= b.node_set
+                        for b in xor_binding.bindings:
+                            if b != completed_binding:
+                                nodes_to_remove |= b.node_set
 
-                    # in case two bindings share one or more nodes
-                    nodes_to_remove = nodes_to_remove - xor_binding.completed_binding.node_set
-                    bindings_to_remove.append(xor_binding)
+                        # in case two bindings share one or more nodes
+                        nodes_to_remove = nodes_to_remove - xor_binding.completed_binding.node_set
+                        bindings_to_remove.append(xor_binding)
 
             logging.debug("nodes to remove from obligations %s ", nodes_to_remove)
             for node in nodes_to_remove:
@@ -486,6 +478,5 @@ def get_cnet_from_json(json):
                 the_net.add_output_binding(node, node_set, label=binding['label'], frequency=binding['frequency'])
         return the_net
     except Exception, e:
-        print("An error occurred while trying to create a Network from a json")
-        print(e.message)
-        return None
+        logging.error("An error occurred while trying to create a Network from a json")
+        logging.error(e.message)
