@@ -2,7 +2,7 @@ import unittest
 from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, OutputBinding
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
-# logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
 
 def _create_cnet():
@@ -24,6 +24,21 @@ def _create_cnet():
     cnet.add_input_binding(e, {b, c})
     cnet.add_input_binding(e, {d})
     return cnet, a, b, c, d, e
+
+
+def _create_loop_cnet():
+    loop_net = CNet()
+    a, b, c, d = loop_net.add_nodes('a', 'b', 'c', 'd')
+    loop_net.add_output_binding(a, {b, c})
+    loop_net.add_input_binding(b, {a})
+    loop_net.add_input_binding(b, {b})
+    loop_net.add_input_binding(c, {a})
+
+    loop_net.add_output_binding(b, {b})
+    loop_net.add_output_binding(b, {d})
+    loop_net.add_output_binding(c, {d})
+    loop_net.add_input_binding(d, {b, c})
+    return loop_net, a, b, c, d
 
 
 class CNetTestCase(unittest.TestCase):
@@ -296,6 +311,21 @@ class CNetTestCase(unittest.TestCase):
 
         cnet.replay_event('e')
         self.assertEqual(cnet.available_nodes, set([]))
+
+
+    def test_available_nodes_loop(self):
+        cnet, a, b, c, d = _create_loop_cnet()
+        self.assertEqual(cnet.available_nodes, {a})
+
+        cnet.replay_event('a')
+        self.assertEqual(cnet.available_nodes, {b, c})
+
+        cnet.replay_event('b')
+        self.assertEqual(cnet.available_nodes, {c, b})
+
+        cnet.replay_event('c')
+        self.assertEqual(cnet.available_nodes, {b, d})
+
 
     def test_clone(self):
         net = CNet()
