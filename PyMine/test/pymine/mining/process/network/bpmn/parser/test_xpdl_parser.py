@@ -1,31 +1,31 @@
 import unittest
 from pymine.mining.process.network.bpmn import BPMNDiagram, Activity, Transaction, ParallelGateway, ExclusiveGateway
 from pymine.mining.process.network.bpmn.parser.xpdl_parser import XPDLParser
+import os
+MODULE_PATH = os.path.dirname(__file__)
 
 class TestXPDLparser(unittest.TestCase):
 
     def setUp(self):
-        xpdl_file = './test.xpdl'
+        xpdl_file = os.path.join(MODULE_PATH, 'test.xpdl')
         parser = XPDLParser(xpdl_file=xpdl_file)
         self.bpmn_network = parser.parse()
 
-
     def tearDown(self):
         pass
-
-    def test_process_label(self):
-        self.assertEqual(self.bpmn_network.label, 'test_process')
 
     def test_process_initial_activity(self):
         self.assertItemsEqual(self.bpmn_network.get_initial_nodes(), [self.bpmn_network.get_node_by_label('start_0')])
 
     def test_process_final_activities(self):
-        self.assertItemsEqual(self.bpmn_network.get_final_nodes(), [self.bpmn_network.get_node_by_label('fail_switch'), \
-                                                               self.bpmn_network.get_node_by_label('nf_switch'), \
-                                                               self.bpmn_network.get_node_by_label('fail_4'), \
-                                                               self.bpmn_network.get_node_by_label('abort_6'), \
-                                                               self.bpmn_network.get_node_by_label('end_8')
-                                                              ])
+        self.assertItemsEqual(self.bpmn_network.get_final_nodes(),
+                              [self.bpmn_network.get_node_by_label('fail_switch'),
+                               self.bpmn_network.get_node_by_label('nf_switch'),
+                               self.bpmn_network.get_node_by_label('fail_4'),
+                               self.bpmn_network.get_node_by_label('abort_6'),
+                               self.bpmn_network.get_node_by_label('end_8')
+                                ])
+
     def test_activity_label(self):
         label = 'test_activity_3'
         self.assertEqual(self.bpmn_network.get_node_by_label(label).label, label)
