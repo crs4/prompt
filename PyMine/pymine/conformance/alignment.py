@@ -44,7 +44,7 @@ class Move(object):
         return self.value == other.value
 
 
-def compute_optimal_alignment(case, net, cost_function=None):
+def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
 
     net.rewind() # TODO design a better api for network reset
 
@@ -73,7 +73,9 @@ def compute_optimal_alignment(case, net, cost_function=None):
 
         return log_move, net_move
 
-    def add_move(event_index, net_, previous_move=None):
+    def add_move(event_index, net_, previous_move=None, depth=0):
+        if depth > max_depth:
+            return
 
         event = case[event_index] if event_index < len(case) else None
         available_nodes = net_.available_nodes
@@ -87,7 +89,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
             logger.debug('event in available_events')
             net_.replay_event(event)
             log_move, net_move = add_moves_to_graph(event, event, previous_move)
-            add_move(event_index + 1, net_, net_move)
+            add_move(event_index + 1, net_, net_move, depth + 1)
         elif event is None:
             logger.debug('event is None')
             played_events = net_.events_played
@@ -99,14 +101,14 @@ def compute_optimal_alignment(case, net, cost_function=None):
                 result, obl, unexpected = net_clone.replay_sequence(played_events)
                 net_clone.replay_event(net_event)
                 log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-                add_move(event_index, net_clone, net_move)
+                add_move(event_index, net_clone, net_move, depth + 1)
         else:
             logger.debug('else...')
             logger.debug('event %s, available_events %s', event, available_events)
             l_m = event
             n_m = None
             log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-            add_move(event_index + 1, net_, net_move)
+            add_move(event_index + 1, net_, net_move, depth + 1)
 
             played_events = net_.events_played
             logger.debug('played_events %s, available_events %s', played_events, available_events)
@@ -118,7 +120,7 @@ def compute_optimal_alignment(case, net, cost_function=None):
                 result, obl, unexpected = net_clone.replay_sequence(played_events)
                 net_clone.replay_event(net_event)
                 log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-                add_move(event_index, net_clone, net_move)
+                add_move(event_index, net_clone, net_move, depth + 1)
 
     add_move(0, net, start)
     optimal_cost, optimal_path = g.shortest_path(start, end, 'cost')

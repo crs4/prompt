@@ -28,6 +28,19 @@ class AlignmentTestCase(unittest.TestCase):
         self.net.add_output_binding(c, {d})
         self.net.add_input_binding(d, {b, c})
 
+        self.loop_net = CNet()
+        a, b, c, d = self.loop_net.add_nodes('a', 'b', 'c', 'd')
+        self.loop_net.add_output_binding(a, {b, c})
+        self.loop_net.add_input_binding(b, {a})
+        self.loop_net.add_input_binding(b, {b})
+        self.loop_net.add_input_binding(c, {a})
+
+        self.loop_net.add_output_binding(b, {b})
+        self.loop_net.add_output_binding(b, {d})
+        self.loop_net.add_output_binding(c, {d})
+        self.loop_net.add_input_binding(d, {b, c})
+
+
     # def setUp(self):
     #     self.init_net()
 
@@ -79,6 +92,20 @@ class AlignmentTestCase(unittest.TestCase):
         alignment = aln.fitness(log.cases[0], self.net)
         self.assertEqual(alignment, 1)
 
+    def test_case_fitness_complete_loop(self):
+
+        case = ['a', 'b', 'c', 'd']
+        log = DictLogFactory({'test': [case]}).create_log()
+        alignment = aln.fitness(log.cases[0], self.loop_net)
+        self.assertEqual(alignment, 1)
+
+    def test_case_fitness_complete_loop_2(self):
+
+        case = ['a', 'b', 'b', 'c', 'd']
+        log = DictLogFactory({'test': [case]}).create_log()
+        alignment = aln.fitness(log.cases[0], self.loop_net)
+        self.assertEqual(alignment, 1)
+
     def test_case_fitness_2(self):
         case = ['a', 'b', 'd']
         log = DictLogFactory({'test': [case]}).create_log()
@@ -90,6 +117,18 @@ class AlignmentTestCase(unittest.TestCase):
         log = DictLogFactory({'test': [case]}).create_log()
         fitness = aln.fitness(log.cases[0], self.net)
         self.assertEqual(fitness, 1 - 2.0/(4 + 4))
+
+    def test_case_fitness_bad_2(self):
+        case = ['a', 'b', 'c', 'd', 'd', 'd']
+        log = DictLogFactory({'test': [case]}).create_log()
+        fitness = aln.fitness(log.cases[0], self.net)
+        self.assertEqual(fitness, 1 - 2.0/(6 + 4))
+
+    def test_case_fitness_bad_3(self):
+        case = ['x', 'x', 'a', 'b', 'c', 'd']
+        log = DictLogFactory({'test': [case]}).create_log()
+        fitness = aln.fitness(log.cases[0], self.net)
+        self.assertEqual(fitness, 1 - 2.0/(6 + 4))
 
     def test_case_fitness_with_cost(self):
         logging.debug('test_fitness_with_cost')
@@ -113,7 +152,6 @@ class AlignmentTestCase(unittest.TestCase):
         ]}).create_log()
         fitness = aln.fitness(log, self.net)
         self.assertEqual(fitness, 1 - 2.0/(4 + 4 + 2*4))
-
 
 
 if __name__ == '__main__':
