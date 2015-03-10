@@ -1,10 +1,8 @@
 __author__ = 'paolo'
 
 from pymine.mining.process.discovery import Miner as Miner
-from pymine.mining.process.network import *
 from pymine.mining.process.network.dependency import DependencyGraph as DependencyGraph
 from pymine.mining.process.network.cnet import CNet as CNet
-from pymine.mining.process.network.cnet import CNode as CNode
 
 from pymine.mining.process.eventlog.factory import CsvLogFactory as CsvLogFactory
 from pymine.mining.process.eventlog.factory import LogInfoFactory as LogInfoFactory
@@ -102,56 +100,59 @@ class HeuristicMiner(Miner):
                               c_net.get_node_by_label(connection.end_node.label),
                               label=connection.label,
                               frequency=connection.frequency)
-            self.calculate_possible_binds(c_net, p_info.process, p_info.average_case_size)
+            self.calculate_possible_binds(c_net, p_info.process, int(p_info.average_case_size))
             nets.append(c_net)
         return nets
 
     def calculate_possible_binds(self, c_net, process, window_size):
-        # for each case in the process log check the activity position
-        for node in c_net.nodes:
-            input_binds = {}
-            output_binds = {}
-            for case in process.cases:
-                candidate_input_binds = set()
-                candidate_output_binds = set()
-                found = False
-                counter = 0
-                for event in case.events:
-                    activity = event.activity_instance.activity
+        try:
+            # for each case in the process log check the activity position
+            for node in c_net.nodes:
+                input_binds = {}
+                output_binds = {}
+                for case in process.cases:
                     try:
-                        if not found:
-                            if activity.name == node.label:
-                                found = True
-                                counter = 0
-                            else:
-                                arc_name = activity.name+"->"+node.label
-                                arc = c_net.get_arc_by_label(arc_name)
-                                if (arc in node.input_arcs) and (counter < window_size):
-                                    candidate_input_binds.add(c_net.get_node_by_label(activity.name))
-                                counter += 1
-                        else:
-                            arc_name = node.label+"->"+activity.name
-                            arc = c_net.get_arc_by_label(arc_name)
-                            if (arc in node.output_arcs) and (counter < window_size):
-                                candidate_output_binds.add(c_net.get_node_by_label(activity.name))
-                                counter += 1
-                            #for candidate in candidate_input_binds:
-                        for candidate in candidate_input_binds:
-                            if candidate in input_binds:
-                                input_binds[candidate] += 1
-                            else:
-                                input_binds[candidate] = 1
-                        for candidate in candidate_output_binds:
-                            if candidate in output_binds:
-                                output_binds[candidate] += 1
-                            else:
-                                output_binds[candidate] = 1
-                    except Exception, e:
-                        print("Cannot compute bindins: "+str(e.message))
-            for binds in input_binds:
-                c_net.add_input_binding(node, {binds}, input_binds[binds])
-            for binds in output_binds:
-                c_net.add_output_binding(node, {binds}, output_binds[binds])
+                        candidate_input_bind = []
+                        candidate_output_bind = []
+                        found = False
+                        node_indexes = [i for i,x in enumerate(xs) if x == 'foo']
+                        node_index = case.activity_list.index(node.label)
+                        counter = 0
+                        for event in case.events:
+                            try:
+                                candidate_node = c_net.get_node_by_label(event.activity_name)
+                                if not found:
+                                    if candidate_node.label == node.label:
+                                        found = True
+                                        counter = 0
+                                    else:
+                                        if (candidate_node in node.input_nodes) and ((node_index-counter) < window_size):
+                                            candidate_input_bind.append(candidate_node)
+                                        counter += 1
+                                else:
+                                    if (candidate_node in node.output_nodes) and (counter < window_size):
+                                        candidate_output_bind.append(candidate_node)
+                                    counter += 1
+                            except Exception, e:
+                                print("Cannot compute bindins: "+str(e.message))
+                        frozen_candidate_input_bind = frozenset(candidate_input_bind)
+                        frozen_candidate_output_bind = frozenset(candidate_output_bind)
+                        if frozen_candidate_input_bind in input_binds:
+                            input_binds[frozen_candidate_input_bind] += 1
+                        elif len(frozen_candidate_input_bind) > 0:
+                            input_binds[frozen_candidate_input_bind] = 1
+                        if frozen_candidate_output_bind in output_binds:
+                            output_binds[frozen_candidate_output_bind] += 1
+                        elif len(frozen_candidate_output_bind) > 0:
+                            output_binds[frozen_candidate_output_bind] = 1
+                    except ValueError, ve:
+                        print("Value error: "+str(ve))
+                for binds in input_binds:
+                    c_net.add_input_binding(node, set(binds), frequency=input_binds[binds])
+                for binds in output_binds:
+                    c_net.add_output_binding(node, set(binds), frequency=output_binds[binds])
+        except Exception, e:
+            print("Error: "+str(e))
 
     def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
         dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)

@@ -109,6 +109,13 @@ class Case(IdObject):
             events.extend(act_instance.events)
         return events
 
+    @property
+    def activity_list(self):
+        activities = []
+        for act_instance in self.activity_instances:
+            activities.extend(act_instance.activity.name)
+        return activities
+
 
 
     # def __eq__(self, other):

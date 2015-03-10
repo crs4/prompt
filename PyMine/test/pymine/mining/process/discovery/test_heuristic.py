@@ -88,11 +88,11 @@ class TestHeuristicMiner(unittest.TestCase):
         cnet.add_arc(node_c, node_b, "C->B", 1)
         cnet.add_arc(node_b, node_d, "B->D", 2)
         cnet.add_output_binding(node_a, {node_b}, frequency=2)
-        cnet.add_output_binding(node_b, {node_c}, frequency=1)
-        cnet.add_output_binding(node_b, {node_d}, frequency=2)
+        cnet.add_output_binding(node_b, {node_c, node_d}, frequency=1)
+        cnet.add_output_binding(node_b, {node_d}, frequency=1)
         cnet.add_output_binding(node_c, {node_b}, frequency=1)
-        cnet.add_input_binding(node_b, {node_a}, frequency=2)
-        cnet.add_input_binding(node_b, {node_c}, frequency=1)
+        cnet.add_input_binding(node_b, {node_a}, frequency=1)
+        cnet.add_input_binding(node_b, {node_a, node_c}, frequency=1)
         cnet.add_input_binding(node_c, {node_b}, frequency=1)
         cnet.add_input_binding(node_d, {node_b}, frequency=2)
         return cnet
@@ -110,11 +110,21 @@ class TestHeuristicMiner(unittest.TestCase):
         hm = HeuristicMiner()
         cnet = self.create_cnet()
         mined_cnet = hm.mine_cnets(log, 0, 0.0)[0]
+
+        self.assertTrue(len(cnet.nodes) == len(mined_cnet.nodes))
+        self.assertTrue(len(cnet.arcs) == len(mined_cnet.arcs))
+        self.assertTrue(len(cnet.input_bindings) == len(mined_cnet.input_bindings))
+        self.assertTrue(len(cnet.output_bindings) == len(mined_cnet.output_bindings))
+        '''
         print("======= test_mine_cnets ===========")
         print("===================================")
         print("======= Calculated ================")
         for node in cnet.nodes:
             print "Node: "+str(node.get_json())
+            for bind in node.input_bindings:
+                print "Node InputBind: "+str(bind.get_json())
+            for bind in node.output_bindings:
+                print "Node OutputBind: "+str(bind.get_json())
         for arc in cnet.arcs:
             print "Arc: "+str(arc.get_json())
         print("===================================")
@@ -127,7 +137,7 @@ class TestHeuristicMiner(unittest.TestCase):
                 print "Node OutputBind: "+str(bind.get_json())
         for arc in mined_cnet.arcs:
             print "Arc: "+str(arc)
-        self.assertTrue(True)
+        '''
 
 def suite():
     suite = unittest.TestSuite()
