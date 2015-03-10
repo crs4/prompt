@@ -160,8 +160,8 @@ def _log_fitness(log, net, cost_function, shortest_path, max_depth):
 
 def fitness(events_container, net, cost_function=None, max_depth=30):
     """
-    :param events_container: a Log or Case instance
-    :param net: a net
+    :param events_container: a :class:`pymine.mining.process.eventlog.log.Log` or :class:`pymine.mining.process.eventlog.Case` instance
+    :param net: a :class:`pymine.mining.process.network.Network` instance (or a subclass of it)
     :param cost_function: a function with two parameters, log_move and net_move. It should assign a cost to the tuple
      log_move, net_move. Default: 1 if log_move != net_move else 0
     :param max_depth: the max depth of the alignment, used in case of loop. Default: 30
