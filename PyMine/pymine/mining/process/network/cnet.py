@@ -155,20 +155,6 @@ class _XorBindings(object):
             self.completed_binding = max_one
             logging.debug('******self.completed_binding %s', self.completed_binding)
 
-            # for binding in self.bindings:
-        #     #     obligations_to_remove |= binding.node_set - self.completed_binding.node_set
-        # logging.debug('binding_to_remove %s', binding_to_remove)
-        # binding_completed_or_pending = bindings_completed + bindings_with_node_not_completed_yet
-        # events_pending = set()
-        # for b in binding_completed_or_pending:
-        #     events_pending |= self.bindings[b]
-        #
-        # for binding in binding_to_remove:
-        #     nodes_to_remove = binding.node_set - events_pending
-        #     obligations_to_remove |= nodes_to_remove
-        #     if nodes_to_remove == binding.node_set:
-        #         self.bindings.pop(binding)
-
         return self.completed_binding or None, nodes_to_remove
 
     def is_completed(self):
