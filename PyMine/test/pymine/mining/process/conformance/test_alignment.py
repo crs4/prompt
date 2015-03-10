@@ -40,10 +40,6 @@ class AlignmentTestCase(unittest.TestCase):
         self.loop_net.add_output_binding(c, {d})
         self.loop_net.add_input_binding(d, {b, c})
 
-
-    # def setUp(self):
-    #     self.init_net()
-
     def test_optimal_alignment(self):
 
         case = ['a', 'b', 'c', 'd']
@@ -156,4 +152,3 @@ class AlignmentTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -86,25 +86,27 @@ class _XorBindings(object):
             self.bindings[binding] = tmp_bindings
 
     def has_node(self, node):
-        for binding in self.bindings.values():
-            if node in binding:
+        for binding in self.bindings:
+            if node in binding.node_set:
                 return True
         return False
 
     def remove_node(self, node, input_binding_completed):
+        logging.debug('----------remove node-----------')
         logging.debug('node %s', node)
         logging.debug('input_binding_completed %s', input_binding_completed)
 
         bindings_completed = []
         bindings_with_node_not_completed_yet = []
         binding_to_remove = []
-        obligations_to_remove = set()
         ignore_not_completed = False
+        nodes_to_remove = []
+        if self.is_completed():
+            return None, set()
 
         for binding, node_set in self.bindings.items():
-            logging.debug('binding %s node_set %s', binding, node_set)
-            logging.debug('node %s in node_set %s: %s', node, node_set, node in node_set)
             if node in node_set:
+                logging.debug('node in node_set')
                 node_set.remove(node)
                 if not node_set:
                     bindings_completed.append(binding)
@@ -113,15 +115,30 @@ class _XorBindings(object):
 
             elif input_binding_completed is not None and \
                     input_binding_completed.node_set == binding.node_set and not node_set:
-
+                logging.debug('elif...')
                 bindings_completed.append(binding)
                 ignore_not_completed = True
-            else:
-                binding_to_remove.append(binding)
 
         ignore_not_completed = ignore_not_completed or len(bindings_with_node_not_completed_yet) == 0
         logging.debug('bindings_completed %s ignore_not_completed %s, bindings_with_node_not_completed_yet %s',
                       bindings_completed, ignore_not_completed, bindings_with_node_not_completed_yet)
+
+        if bindings_completed and ignore_not_completed:
+            for b in self.bindings:
+                if b not in bindings_completed:
+                    binding_to_remove.append(b)
+
+        if bindings_with_node_not_completed_yet:
+            for b in self.bindings:
+                for completed_or_pending in bindings_with_node_not_completed_yet:
+                    if not b.node_set & completed_or_pending.node_set:
+                        logging.debug('b.node_set %s, completed_or_pending.node_set %s',
+                                      b.node_set, completed_or_pending.node_set)
+                        binding_to_remove.append(b)
+
+        for b in binding_to_remove:
+            nodes_to_remove += list(self.bindings.pop(b))
+
         if bindings_completed and ignore_not_completed:
 
             # if more than one node_set is completed, let's choose the largest one
@@ -139,20 +156,20 @@ class _XorBindings(object):
             logging.debug('******self.completed_binding %s', self.completed_binding)
 
             # for binding in self.bindings:
-            #     obligations_to_remove |= binding.node_set - self.completed_binding.node_set
-        logging.debug('binding_to_remove %s', binding_to_remove)
-        binding_completed_or_pending = bindings_completed + bindings_with_node_not_completed_yet
-        events_pending = set()
-        for b in binding_completed_or_pending:
-            events_pending |= self.bindings[b]
+        #     #     obligations_to_remove |= binding.node_set - self.completed_binding.node_set
+        # logging.debug('binding_to_remove %s', binding_to_remove)
+        # binding_completed_or_pending = bindings_completed + bindings_with_node_not_completed_yet
+        # events_pending = set()
+        # for b in binding_completed_or_pending:
+        #     events_pending |= self.bindings[b]
+        #
+        # for binding in binding_to_remove:
+        #     nodes_to_remove = binding.node_set - events_pending
+        #     obligations_to_remove |= nodes_to_remove
+        #     if nodes_to_remove == binding.node_set:
+        #         self.bindings.pop(binding)
 
-        for binding in binding_to_remove:
-            nodes_to_remove = binding.node_set - events_pending
-            obligations_to_remove |= nodes_to_remove
-            if nodes_to_remove == binding.node_set:
-                self.bindings.pop(binding)
-
-        return self.completed_binding or None, obligations_to_remove
+        return self.completed_binding or None, nodes_to_remove
 
     def is_completed(self):
         return self.completed_binding is not None
@@ -175,7 +192,7 @@ class CNet(Network):
         self.current_node = None
         self._xor_bindings = []
         initial_nodes = self.get_initial_nodes()
-        self._obligations = {initial_nodes[0]} if initial_nodes else set()
+        self._obligations = {initial_nodes[0]} if initial_nodes else {}
 
     def clone(self):
         clone = CNet()
@@ -190,7 +207,6 @@ class CNet(Network):
         return clone
 
     def reset_frequencies(self):
-        logging.debug('reset')
         for node in self.nodes:
             node.frequency = 0
         for binding in self.bindings:
@@ -349,7 +365,9 @@ class CNet(Network):
         return input_binding_completed
 
     def replay_event(self, event, restart=False):
-        logging.debug('replay event %s', event)
+        logging.debug('------replay event----------')
+        logging.debug('event %s', event)
+        logging.debug('obligations %s', self._obligations)
         if restart:
             self.rewind()
         if self._clean:
@@ -364,7 +382,6 @@ class CNet(Network):
         if event_cnode in self._obligations:
             self.current_node = event_cnode
             event_cnode.frequency += 1
-            logging.debug('event_cnode %s. obligations %s', event_cnode, self._obligations)
             self._obligations.remove(event_cnode)
 
 
@@ -373,31 +390,26 @@ class CNet(Network):
             if input_binding_completed:
                 input_binding_completed.frequency += 1
 
-            logging.debug('_xor_bindings %s', self._xor_bindings)
-            logging.debug('input_binding_completed %s', input_binding_completed)
-            bindings_to_remove = []
-            nodes_to_remove = set()
+            nodes_to_remove = []
 
             for xor_binding in self._xor_bindings:
-                if xor_binding.has_node(event_cnode):
-                    logging.debug('xor_binding %s', xor_binding)
-                    completed_binding, obligations_to_remove = xor_binding.remove_node(event_cnode, input_binding_completed)
-                    logging.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
+                logging.debug('xor_binding %s', xor_binding)
+                logging.debug('obligations %s', self._obligations)
+                completed_binding, obligations_to_remove = xor_binding.remove_node(event_cnode, input_binding_completed)
+                logging.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
 
-                    nodes_to_remove |= obligations_to_remove
+                nodes_to_remove += obligations_to_remove
 
-                    if completed_binding:
-                        logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
-
-                        for b in xor_binding.bindings:
-                            if b != completed_binding:
-                                nodes_to_remove |= b.node_set
-
-                        # in case two bindings share one or more nodes
-                        nodes_to_remove = nodes_to_remove - xor_binding.completed_binding.node_set
-                        bindings_to_remove.append(xor_binding)
-
-            logging.debug("nodes to remove from obligations %s ", nodes_to_remove)
+                # if completed_binding:
+                #     logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
+                #
+                #     for b in xor_binding.bindings:
+                #         if b != completed_binding:
+                #             nodes_to_remove |= b.node_set
+                #
+                #     # in case two bindings share one or more nodes
+                #     nodes_to_remove = nodes_to_remove - xor_binding.completed_binding.node_set
+                #     bindings_to_remove.append(xor_binding)
             for node in nodes_to_remove:
                 try:
                     if node != event_cnode:
@@ -406,11 +418,8 @@ class CNet(Network):
                     logging.debug('unexpected event %s', node)
                     raise UnexpectedEvent(node.label)
 
-            for xor_binding in bindings_to_remove:
-                self._xor_bindings.remove(xor_binding)
-
             for xor_binding in event_cnode.output_bindings:
-                self._obligations |= set([el for el in xor_binding.node_set])
+                self._obligations |= {el for el in xor_binding.node_set}
 
             if event_cnode.output_bindings:
                 self._xor_bindings.append(_XorBindings(event_cnode.output_bindings, self))
@@ -421,7 +430,7 @@ class CNet(Network):
 
     def replay_sequence(self, sequence):
         self.rewind()
-        unexpected_events = set()
+        unexpected_events = []
 
         for index, event in enumerate(sequence):
             logging.debug('-------------------------------')
@@ -431,7 +440,7 @@ class CNet(Network):
                 self.replay_event(event, restart)
             except UnexpectedEvent as ex:
                 logging.debug('unexpected event %s', event)
-                unexpected_events.add(ex.event)
+                unexpected_events.append(ex.event)
 
         return len(self._obligations | set(unexpected_events)) == 0, self._obligations, unexpected_events
     
