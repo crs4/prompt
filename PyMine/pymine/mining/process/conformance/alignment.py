@@ -5,10 +5,11 @@ from pymine.mining.process.eventlog import Case
 import logging
 logger = logging.getLogger('alignment')
 
-
 GRAPH_IMPL = 'nx'
-_default_cost_function = lambda log_move, model_move: 0 if (log_move == model_move) and \
-                                                           (log_move.value is not None) else 1
+
+
+def _default_cost_function(log_move, model_move):
+    return 0 if (log_move == model_move) and (log_move.value is not None) else 1
 
 
 class Alignment(object):
@@ -46,7 +47,7 @@ class Move(object):
 
 def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
 
-    net.rewind() # TODO design a better api for network reset
+    net.rewind()  # TODO design a better api for network reset
 
     class FakeMove(Move):
         pass
