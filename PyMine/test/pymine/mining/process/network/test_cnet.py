@@ -42,6 +42,24 @@ def _create_loop_cnet():
     return loop_net, a, b, c, d
 
 
+def _create_shared_binding_cnet():
+    cnet = CNet()
+    a, b, c, d = cnet.add_nodes('a', 'b', 'c', 'd')
+
+    cnet.add_output_binding(a, {b, c})
+    cnet.add_output_binding(a, {b})
+
+    cnet.add_input_binding(b, {a})
+    cnet.add_output_binding(b, {d})
+
+    cnet.add_input_binding(c, {a})
+    cnet.add_output_binding(c, {d})
+
+    cnet.add_input_binding(d, {b})
+    cnet.add_input_binding(d, {b, c})
+    return cnet, a, b, c, d
+
+
 class CNetTestCase(unittest.TestCase):
 
     def create_cnet(self):
@@ -151,29 +169,16 @@ class CNetTestCase(unittest.TestCase):
         self.assertEqual(e.get_input_bindings_with({d})[0].frequency, 1)
 
     def test_replay_two_bindings_with_same_node(self):
-        cnet = CNet()
-        a, b, c, d = cnet.add_nodes('a', 'b', 'c', 'd')
+        cnet, a, b, c, d = _create_shared_binding_cnet()
 
-        cnet.add_output_binding(a, {b, c})
-        cnet.add_output_binding(a, {b})
+        rep_1 = cnet.replay_sequence(['a', 'b', 'd'])
+        logging.debug('rep_1 %s', rep_1)
+        self.assertTrue(rep_1[0])
 
-        cnet.add_input_binding(b, {a})
-        cnet.add_output_binding(b, {d})
-
-        cnet.add_input_binding(c, {a})
-        cnet.add_output_binding(c, {d})
-
-        cnet.add_input_binding(d, {b})
-        cnet.add_input_binding(d, {b, c})
-
-        # rep_1 = cnet.replay_sequence(['a', 'b', 'd'])
-        # logging.debug('rep_1 %s', rep_1)
-        # self.assertTrue(rep_1[0])
+        rep_2 = cnet.replay_sequence(['a', 'b', 'c', 'd'])
+        logging.debug('rep_2 %s', rep_2)
+        self.assertTrue(rep_2[0])
         #
-        # rep_2 = cnet.replay_sequence(['a', 'b', 'c', 'd'])
-        # logging.debug('rep_2 %s', rep_2)
-        # self.assertTrue(rep_2[0])
-
         rep_3 = cnet.replay_sequence(['a', 'c', 'b', 'd'])
         logging.debug('rep_3 %s', rep_3)
         self.assertTrue(rep_3[0])
@@ -197,7 +202,9 @@ class CNetTestCase(unittest.TestCase):
         cnet.add_input_binding(e, {b, c})
         cnet.add_input_binding(e, {b, d})
 
-        self.assertTrue(cnet.replay_sequence(['a', 'b', 'd', 'e'])[0])
+        rep = cnet.replay_sequence(['a', 'b', 'd', 'e'])
+        logging.debug('rep %s', rep)
+        self.assertTrue(rep[0])
 
     def test_replay_concurrency(self):
         cnet, a, b, c, d, e = _create_cnet()
@@ -225,7 +232,6 @@ class CNetTestCase(unittest.TestCase):
         result_2 = cnet.replay_sequence(['a', 'b', 'b', 'c'])
         self.assertTrue(result_2[0])
 
-
     def test_replay_failing(self):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['a', 'd', 'd'])
@@ -243,14 +249,14 @@ class CNetTestCase(unittest.TestCase):
         replay_result = cnet.replay_sequence(['d', 'e'])
         self.assertFalse(replay_result[0])
         self.assertEqual(replay_result[1], {a})
-        self.assertEqual(replay_result[2], {'d', 'e'})
+        self.assertEqual(replay_result[2], ['d', 'e'])
 
     def test_replay_failing_unknown_events(self):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['a', 'd', 'y', 'e'])
         self.assertFalse(replay_result[0])
         self.assertEqual(len(replay_result[1]), 0)
-        self.assertEqual(replay_result[2], set('y'))
+        self.assertEqual(replay_result[2], ['y'])
 
     def test_shortest_path(self):
         cnet = CNet()
@@ -333,7 +339,6 @@ class CNetTestCase(unittest.TestCase):
         cnet.replay_event('e')
         self.assertEqual(cnet.available_nodes, set([]))
 
-
     def test_available_nodes_loop(self):
         cnet, a, b, c, d = _create_loop_cnet()
         self.assertEqual(cnet.available_nodes, {a})
@@ -346,7 +351,6 @@ class CNetTestCase(unittest.TestCase):
 
         cnet.replay_event('c')
         self.assertEqual(cnet.available_nodes, {b, d})
-
 
     def test_clone(self):
         net = CNet()
