@@ -176,7 +176,6 @@ class CNet(Network):
     def rewind(self):
         """
         Clear current net state: obligations, current node.
-        :return:
         """
         self.events_played = []
         self.current_node = None
@@ -267,14 +266,27 @@ class CNet(Network):
 
     @property
     def bindings(self):
+        """
+
+        :return: all bindings of the net
+        """
         return self._input_bindings + self._output_bindings
 
     @property
     def input_bindings(self):
+        """
+
+        :return: all input bindings of the net
+        """
+
         return self._input_bindings
 
     @property
     def output_bindings(self):
+        """
+
+        :return: all the output bindings of the net
+        """
         return self._output_bindings
 
     def _add_input_binding(self, binding):
@@ -291,10 +303,27 @@ class CNet(Network):
         return binding
 
     def add_node(self, label, frequency=None, attrs=None):
+        """
+        Add a node to the net
+
+        :param label: an object that will be attached to the node (typically a string)
+        :param frequency: initial frequency
+        :param attrs: a dictionary with attributes associated to the node
+        :return: a :class:`pymine.mining.process.network.cnet.CNode` instance
+        """
         self.rewind()
         return super(CNet, self).add_node(label, frequency, attrs)
 
     def add_input_binding(self, node, node_set, label=None, frequency=None):
+        """
+        Add an input binding with the nodes in `node_set` to the given node
+
+        :param node: a :class:`pymine.mining.process.network.cnet.CNode` instance
+        :param node_set: a set of :class:`pymine.mining.process.network.cnet.CNode` instances
+        :param label: a string associated to the binding
+        :param frequency: initial frequency
+        :return: a :class:`pymine.mining.process.network.cnet.InputBinding` instance
+        """
         for n in node_set:
             if n not in node.input_nodes:
                 self.add_arc(n, node)
@@ -304,6 +333,15 @@ class CNet(Network):
         return binding
 
     def add_output_binding(self, node, node_set, label=None, frequency=None):
+        """
+        Add an output binding with the nodes in `node_set` to the given node
+
+        :param node: a :class:`pymine.mining.process.network.cnet.CNode` instance
+        :param node_set: a set of :class:`pymine.mining.process.network.cnet.CNode` instances
+        :param label: a string associated to the binding
+        :param frequency: initial frequency
+        :return: a :class:`pymine.mining.process.network.cnet.OutputBinding` instance
+        """
         for n in node_set:
             if n not in node.output_nodes:
                 self.add_arc(node, n)
@@ -410,7 +448,7 @@ class CNet(Network):
         """
         :param sequence: a list of events to replay
         :return: a tuple containing: a boolean telling if the replay has been completed successfully,
-        a list of obligations and a list of unexpected events.
+            a list of obligations and a list of unexpected events.
         """
         self.rewind()
         unexpected_events = []
@@ -428,6 +466,10 @@ class CNet(Network):
         return len(self._obligations | set(unexpected_events)) == 0, self._obligations, unexpected_events
     
     def get_json(self):
+        """
+
+        :return: a json representing the net
+        """
         json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs],
@@ -437,6 +479,11 @@ class CNet(Network):
 
 
 def get_cnet_from_json(json):
+    """
+
+    :param json: a valid json string
+    :return: a :class:`pymine.mining.process.network.cnet.CNet` instance
+    """
     try:
         origin = json[0]
         label = origin['label']

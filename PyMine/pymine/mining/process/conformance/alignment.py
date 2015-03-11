@@ -165,7 +165,7 @@ def fitness(events_container, net, cost_function=None, max_depth=30):
     :param cost_function: a function with two parameters, log_move and net_move. It should assign a cost to the tuple
      log_move, net_move. Default: 1 if log_move != net_move else 0
     :param max_depth: the max depth of the alignment, used in case of loop. Default: 30
-    :return: fitness of the events_container on the net
+    :return: an integer between 0 an 1 representing the fitness of the events_container on the net
     """
     net.rewind()
     cost_function = cost_function or _default_cost_function
