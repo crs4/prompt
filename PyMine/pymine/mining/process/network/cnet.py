@@ -387,7 +387,7 @@ class CNet(Network):
 
     def replay_event(self, event, restart=False):
         """
-        :param event: a object corrisponding to the label of any net nodes
+        :param event: a object corresponding to the label of any net nodes
         :param restart: set current_node to None and clear obligations
         :raises:
         """
