@@ -1,5 +1,5 @@
 import uuid
-
+import logging
 
 class UnexpectedEvent(Exception):
 
@@ -34,6 +34,7 @@ class LabeledObject(object):
         else:
             return False
 
+
 class BaseElement(LabeledObject):
     def __init__(self, label=None, frequency=None, attrs=None):
         super(BaseElement, self).__init__(label)
@@ -45,6 +46,7 @@ class BaseElement(LabeledObject):
                  'frequency': self.frequency,
                  'attributes': self.attrs}]
         return json
+
 
 class Arc(BaseElement):
     def __init__(self, start_node, end_node, label=None, frequency=None, attrs=None):
@@ -69,6 +71,7 @@ class Arc(BaseElement):
             doc += " freq: %s" % self.frequency
         return doc
     '''
+
 
 class Node(BaseElement):
     def __init__(self, label, net, frequency=None, attrs=None):
@@ -124,10 +127,10 @@ class Network(LabeledObject):
     def arcs(self):
         return self._arcs
 
-    def _create_node(self, label, frequency=None, attrs={}):
+    def _create_node(self, label, frequency=None, attrs=None):
         return Node(label, self, frequency, attrs)
 
-    def add_node(self, label, frequency=None, attrs={}):
+    def add_node(self, label, frequency=None, attrs=None):
         node = self._create_node(label, frequency, attrs)
         self._nodes.append(node)
         return node
@@ -159,7 +162,7 @@ class Network(LabeledObject):
             if arc.label == label:
                 return arc
 
-    def _create_arc(self, node_a, node_b, label=None, frequency=None, attrs={}, **kwargs):
+    def _create_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
         return Arc(node_a, node_b, label, frequency, attrs)
 
     def _add_arc(self, arc, node_a, node_b):
@@ -197,6 +200,5 @@ def get_network_from_json(json):
                                 frequency=arc['frequency'], attrs=arc['attributes'])
         return the_net
     except Exception, e:
-        print("An error occurred while trying to create a Network from a json")
-        print(e.message)
-        return None
+        logging.error("An error occurred while trying to create a Network from a json")
+        logging.error(e)
