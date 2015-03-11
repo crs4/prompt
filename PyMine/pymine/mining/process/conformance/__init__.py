@@ -1,8 +1,21 @@
 def replay_case(case, net):
+    """
+    :param case: a :class:`pymine.mining.process.eventlog.Case` instance
+    :param net: a :class:`pymine.mining.process.network.Network` instance (or a subclass of it)
+    :return: a tuple containing: a boolean telling if the replay has been completed successfully,
+        a list of obligations and a list of unexpected events.
+    """
     return net.replay_sequence([event.activity_name for event in case.events])
 
 
 def simple_fitness(log, net):
+    """
+    Compute the fitness on the given log and net as the fraction of case replayed successfully to the cardinality of log
+
+    :param log: a :class:`pymine.mining.process.eventlog.log.Log` instance
+    :param net: a :class:`pymine.mining.process.network.Network` instance (or a subclass of it)
+    :return: integer between 0 and 1
+    """
     result = FitnessResult(log, net)
     for case in log.cases:
         result_case = replay_case(case, net)

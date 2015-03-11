@@ -174,6 +174,9 @@ class CNet(Network):
         self.rewind()
 
     def rewind(self):
+        """
+        Clear current net state: obligations, current node.
+        """
         self.events_played = []
         self.current_node = None
         self._xor_bindings = []
@@ -181,6 +184,9 @@ class CNet(Network):
         self._obligations = {initial_nodes[0]} if initial_nodes else {}
 
     def clone(self):
+        """
+        :return: a new net with same nodes and arcs/bindings
+        """
         clone = CNet()
         clone.add_nodes(*[n.label for n in self.nodes])
         for binding in self.bindings:
@@ -199,6 +205,12 @@ class CNet(Network):
             binding.frequency = 0
 
     def shortest_path(self, start_node=None, end_node=None, max_level=30):
+        """
+        :param start_node: the initial node of the path
+        :param end_node: the final node of the path
+        :param max_level: max level of depth, used to handle loop. Default: 30
+        :return: a tuple containing the path cost and the path expressed as list of nodes
+        """
 
         class FakeNode(object):
             def __init__(self, node_):
@@ -254,14 +266,27 @@ class CNet(Network):
 
     @property
     def bindings(self):
+        """
+
+        :return: all bindings of the net
+        """
         return self._input_bindings + self._output_bindings
 
     @property
     def input_bindings(self):
+        """
+
+        :return: all input bindings of the net
+        """
+
         return self._input_bindings
 
     @property
     def output_bindings(self):
+        """
+
+        :return: all the output bindings of the net
+        """
         return self._output_bindings
 
     def _add_input_binding(self, binding):
@@ -278,10 +303,27 @@ class CNet(Network):
         return binding
 
     def add_node(self, label, frequency=None, attrs=None):
+        """
+        Add a node to the net
+
+        :param label: an object that will be attached to the node (typically a string)
+        :param frequency: initial frequency
+        :param attrs: a dictionary with attributes associated to the node
+        :return: a :class:`pymine.mining.process.network.cnet.CNode` instance
+        """
         self.rewind()
         return super(CNet, self).add_node(label, frequency, attrs)
 
     def add_input_binding(self, node, node_set, label=None, frequency=None):
+        """
+        Add an input binding with the nodes in `node_set` to the given node
+
+        :param node: a :class:`pymine.mining.process.network.cnet.CNode` instance
+        :param node_set: a set of :class:`pymine.mining.process.network.cnet.CNode` instances
+        :param label: a string associated to the binding
+        :param frequency: initial frequency
+        :return: a :class:`pymine.mining.process.network.cnet.InputBinding` instance
+        """
         for n in node_set:
             if n not in node.input_nodes:
                 self.add_arc(n, node)
@@ -291,6 +333,15 @@ class CNet(Network):
         return binding
 
     def add_output_binding(self, node, node_set, label=None, frequency=None):
+        """
+        Add an output binding with the nodes in `node_set` to the given node
+
+        :param node: a :class:`pymine.mining.process.network.cnet.CNode` instance
+        :param node_set: a set of :class:`pymine.mining.process.network.cnet.CNode` instances
+        :param label: a string associated to the binding
+        :param frequency: initial frequency
+        :return: a :class:`pymine.mining.process.network.cnet.OutputBinding` instance
+        """
         for n in node_set:
             if n not in node.output_nodes:
                 self.add_arc(node, n)
@@ -304,6 +355,9 @@ class CNet(Network):
 
     @property
     def available_nodes(self):
+        """
+        :return: a set of all the nodes available, given the current state of the net
+        """
         if self.current_node is None:
             return set(self.get_initial_nodes())
         available_nodes = set()
@@ -316,25 +370,6 @@ class CNet(Network):
 
         logging.debug('available_nodes %s', available_nodes)
         return available_nodes
-
-        # available_nodes = set()
-        # logging.debug('self._xor_bindings %s', self._xor_bindings)
-        # logging.debug('self.current_node %s', self.current_node)
-        # for xor in self._xor_bindings:
-        #     for orig_bindings, binding in xor.bindings.items():
-        #         for node in binding:
-        #             for input_bindings in node.input_bindings:
-        #                 if input_bindings.node_set <= {self.get_node_by_label(e) for e in self._events_played}:
-        #                     available_nodes.add(node)
-        #
-        # # logging.debug('available_nodes %s', available_nodes)
-        # # for node in self.current_node.output_nodes:
-        # #     logging.debug('node %s', node)
-        # #     for binding in node.input_bindings:
-        # #         if binding.node_set <=
-        # #             available_nodes.add(node)
-        # logging.debug('available_nodes %s', available_nodes)
-        # return available_nodes
 
     def _get_input_binding_completed(self, node):
         logging.debug('_get_input_binding_completed %s', node)
@@ -351,6 +386,12 @@ class CNet(Network):
         return input_binding_completed
 
     def replay_event(self, event, restart=False):
+        """
+        :param event: a object corrisponding to the label of any net nodes
+        :param restart: set current_node to None and clear obligations
+        :raises:
+        """
+
         logging.debug('------replay event----------')
         logging.debug('event %s', event)
         logging.debug('obligations %s', self._obligations)
@@ -370,7 +411,6 @@ class CNet(Network):
             event_cnode.frequency += 1
             self._obligations.remove(event_cnode)
 
-
             # incrementing input_binding_frequency
             input_binding_completed = self._get_input_binding_completed(event_cnode)
             if input_binding_completed:
@@ -386,16 +426,6 @@ class CNet(Network):
 
                 nodes_to_remove += obligations_to_remove
 
-                # if completed_binding:
-                #     logging.debug("************xor_binding.completed_binding %s ", xor_binding.completed_binding)
-                #
-                #     for b in xor_binding.bindings:
-                #         if b != completed_binding:
-                #             nodes_to_remove |= b.node_set
-                #
-                #     # in case two bindings share one or more nodes
-                #     nodes_to_remove = nodes_to_remove - xor_binding.completed_binding.node_set
-                #     bindings_to_remove.append(xor_binding)
             for node in nodes_to_remove:
                 try:
                     if node != event_cnode:
@@ -415,6 +445,11 @@ class CNet(Network):
             raise UnexpectedEvent(event)
 
     def replay_sequence(self, sequence):
+        """
+        :param sequence: a list of events to replay
+        :return: a tuple containing: a boolean telling if the replay has been completed successfully,
+            a list of obligations and a list of unexpected events.
+        """
         self.rewind()
         unexpected_events = []
 
@@ -431,6 +466,10 @@ class CNet(Network):
         return len(self._obligations | set(unexpected_events)) == 0, self._obligations, unexpected_events
     
     def get_json(self):
+        """
+
+        :return: a json representing the net
+        """
         json = [{'label': str(self.label),
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs],
@@ -440,6 +479,11 @@ class CNet(Network):
 
 
 def get_cnet_from_json(json):
+    """
+
+    :param json: a valid json string
+    :return: a :class:`pymine.mining.process.network.cnet.CNet` instance
+    """
     try:
         origin = json[0]
         label = origin['label']
