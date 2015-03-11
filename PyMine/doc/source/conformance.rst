@@ -5,3 +5,8 @@ Conformance Checking
    :show-inheritance:
    :inherited-members:
    :members:
+
+.. automodule:: pymine.mining.process.conformance
+   :show-inheritance:
+   :inherited-members:
+   :members:
