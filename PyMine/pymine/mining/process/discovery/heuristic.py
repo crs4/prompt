@@ -122,8 +122,7 @@ class HeuristicMiner(Miner):
                     try:
                         candidate_input_bind = []
                         candidate_output_bind = []
-                        found = False
-                        #check for multiple instances of the node on the current trace
+                        # check for multiple instances of the node on the current trace
                         node_indexes = [i for i, x in enumerate(case.activity_list) if x == node.label]
                         for node_index in node_indexes:
                             counter = 0
@@ -147,17 +146,15 @@ class HeuristicMiner(Miner):
 
                         # Before inserting the candidate input bind, check if it contains the initial node
                         initial_node = c_net.start_node
-                        if initial_node.label in (i.label for i in candidate_input_bind):
-                            node_to_remove = None
-                            for i in candidate_input_bind:
-                                if initial_node.label == i.label:
-                                    node_to_remove = i
-                            candidate_input_bind.remove(node_to_remove)
-                            frozen_initial_node = frozenset({node_to_remove})
-                            if frozen_initial_node in input_binds:
-                                input_binds[frozen_initial_node] += 1
-                            elif len(frozen_initial_node) > 0:
-                                input_binds[frozen_initial_node] = 1
+                        for i in list(candidate_input_bind):
+                            if initial_node.label == i.label:
+                                candidate_input_bind.remove(i)
+                                frozen_initial_node = frozenset({i})
+                                if frozen_initial_node in input_binds:
+                                    input_binds[frozen_initial_node] += 1
+                                elif len(frozen_initial_node) > 0:
+                                    input_binds[frozen_initial_node] = 1
+
                         frozen_candidate_input_bind = frozenset(candidate_input_bind)
                         if frozen_candidate_input_bind in input_binds:
                             input_binds[frozen_candidate_input_bind] += 1
@@ -168,17 +165,15 @@ class HeuristicMiner(Miner):
                         final_node = c_net.end_node
                         print("Final_node: "+str(final_node.label))
                         print("candidate_output_bind: "+str(candidate_output_bind))
-                        if final_node.label in (i.label for i in candidate_output_bind):
-                            node_to_remove = None
-                            for i in candidate_output_bind:
-                                if final_node.label == i.label:
-                                    node_to_remove = i
-                            candidate_output_bind.remove(node_to_remove)
-                            frozen_final_node = frozenset({node_to_remove})
-                            if frozen_final_node in output_binds:
-                                output_binds[frozen_final_node] += 1
-                            elif len(frozen_final_node) > 0:
-                                output_binds[frozen_final_node] = 1
+                        for i in list(candidate_output_bind):
+                            if final_node.label == i.label:
+                                candidate_output_bind.remove(i)
+                                frozen_final_node = frozenset({i})
+                                if frozen_final_node in output_binds:
+                                    output_binds[frozen_final_node] += 1
+                                elif len(frozen_final_node) > 0:
+                                    output_binds[frozen_final_node] = 1
+
                         frozen_candidate_output_bind = frozenset(candidate_output_bind)
                         if frozen_candidate_output_bind in output_binds:
                             output_binds[frozen_candidate_output_bind] += 1
