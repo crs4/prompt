@@ -135,6 +135,7 @@ class Network(LabeledObject):
     def add_nodes(self, *labels):
         return [self.add_node(label) for label in labels]
 
+
     def get_initial_nodes(self):
         nodes = []
         for node in self.nodes:
