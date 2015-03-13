@@ -112,6 +112,8 @@ class Network(LabeledObject):
         super(Network, self).__init__(label)
         self._nodes = []
         self._arcs = []
+        self.start_node = None
+        self.end_node = None
 
     def has_assigned_values(self):
         pass

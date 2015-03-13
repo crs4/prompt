@@ -25,7 +25,8 @@ class DArc(Arc):
 class DependencyGraph(Network):
     def __init__(self, label=None):
         super(DependencyGraph, self).__init__(label)
-
+        self.start_node = None
+        self.end_node = None
 
     def add_arc(self, node_a, node_b, label=None, frequency=None, dependency=None, attrs={}):
         arc = DArc(node_a, node_b, label, frequency, dependency, attrs)

@@ -51,10 +51,15 @@ class HeuristicMiner(Miner):
         for process in log.processes:
             net = DependencyGraph()
             # for each activity create a graph node
+
             for activity in process.activities:
                 net.add_node(label=activity.name)
 
+            graph_start_node = net.get_node_by_label(process.cases[0].events[0].activity_instance.activity.name)
+            graph_end_node = net.get_node_by_label(process.cases[0].events[-1].activity_instance.activity.name)
             for case in process.cases:
+                # Insert some code here to check if start and end nodes are changing.
+                # If true, an extra fake initial/final node should be added
                 for e_index in xrange(0, len(case.events)-1):
                     start_event = case.events[e_index]
                     start_activity_instance = start_event.activity_instance
@@ -74,7 +79,8 @@ class HeuristicMiner(Miner):
                         start_node = net.get_node_by_label(start_node_name)
                         end_node = net.get_node_by_label(end_node_name)
                         net.add_arc(start_node, end_node, arc_name, 1)
-
+            net.start_node = graph_start_node
+            net.end_node = graph_end_node
             self.calculate_arcs_dependency(net)
 
             if frequency_threshold:
@@ -95,6 +101,8 @@ class HeuristicMiner(Miner):
             c_net = CNet()
             for activity in dep_net.nodes:
                 c_net.add_node(label=activity.label)
+            c_net.start_node = dep_net.start_node
+            c_net.end_node = dep_net.end_node
             for connection in dep_net.arcs:
                 c_net.add_arc(c_net.get_node_by_label(connection.start_node.label),
                               c_net.get_node_by_label(connection.end_node.label),
@@ -115,32 +123,63 @@ class HeuristicMiner(Miner):
                         candidate_input_bind = []
                         candidate_output_bind = []
                         found = False
-                        node_indexes = [i for i,x in enumerate(xs) if x == 'foo']
-                        node_index = case.activity_list.index(node.label)
-                        counter = 0
-                        for event in case.events:
-                            try:
-                                candidate_node = c_net.get_node_by_label(event.activity_name)
-                                if not found:
-                                    if candidate_node.label == node.label:
-                                        found = True
-                                        counter = 0
-                                    else:
-                                        if (candidate_node in node.input_nodes) and ((node_index-counter) < window_size):
+                        #check for multiple instances of the node on the current trace
+                        node_indexes = [i for i, x in enumerate(case.activity_list) if x == node.label]
+                        for node_index in node_indexes:
+                            counter = 0
+                            for event in case.events:
+                                try:
+                                    candidate_node = c_net.get_node_by_label(event.activity_name)
+                                    if counter <= node_index:
+                                        #this is supposed to be before the node
+                                        if not (counter == node_index) and \
+                                                (candidate_node in node.input_nodes) and \
+                                                ((node_index-counter) < window_size) and \
+                                                (candidate_node not in candidate_input_bind):
                                             candidate_input_bind.append(candidate_node)
-                                        counter += 1
-                                else:
-                                    if (candidate_node in node.output_nodes) and (counter < window_size):
-                                        candidate_output_bind.append(candidate_node)
+                                    else:
+                                        #this is supposed to be after the node
+                                        if (candidate_node in node.output_nodes) and ((counter-node_index) < window_size):
+                                            candidate_output_bind.append(candidate_node)
                                     counter += 1
-                            except Exception, e:
-                                print("Cannot compute bindins: "+str(e.message))
+                                except Exception, e:
+                                    print("Cannot compute bindins: "+str(e.message))
+
+                        # Before inserting the candidate input bind, check if it contains the initial node
+                        initial_node = c_net.start_node
+                        if initial_node.label in (i.label for i in candidate_input_bind):
+                            node_to_remove = None
+                            for i in candidate_input_bind:
+                                if initial_node.label == i.label:
+                                    node_to_remove = i
+                            candidate_input_bind.remove(node_to_remove)
+                            frozen_initial_node = frozenset({node_to_remove})
+                            if frozen_initial_node in input_binds:
+                                input_binds[frozen_initial_node] += 1
+                            elif len(frozen_initial_node) > 0:
+                                input_binds[frozen_initial_node] = 1
                         frozen_candidate_input_bind = frozenset(candidate_input_bind)
-                        frozen_candidate_output_bind = frozenset(candidate_output_bind)
                         if frozen_candidate_input_bind in input_binds:
                             input_binds[frozen_candidate_input_bind] += 1
                         elif len(frozen_candidate_input_bind) > 0:
                             input_binds[frozen_candidate_input_bind] = 1
+
+                        # Before inserting the candidate output bind, check if it contains the final node
+                        final_node = c_net.end_node
+                        print("Final_node: "+str(final_node.label))
+                        print("candidate_output_bind: "+str(candidate_output_bind))
+                        if final_node.label in (i.label for i in candidate_output_bind):
+                            node_to_remove = None
+                            for i in candidate_output_bind:
+                                if final_node.label == i.label:
+                                    node_to_remove = i
+                            candidate_output_bind.remove(node_to_remove)
+                            frozen_final_node = frozenset({node_to_remove})
+                            if frozen_final_node in output_binds:
+                                output_binds[frozen_final_node] += 1
+                            elif len(frozen_final_node) > 0:
+                                output_binds[frozen_final_node] = 1
+                        frozen_candidate_output_bind = frozenset(candidate_output_bind)
                         if frozen_candidate_output_bind in output_binds:
                             output_binds[frozen_candidate_output_bind] += 1
                         elif len(frozen_candidate_output_bind) > 0:
@@ -153,6 +192,18 @@ class HeuristicMiner(Miner):
                     c_net.add_output_binding(node, set(binds), frequency=output_binds[binds])
         except Exception, e:
             print("Error: "+str(e))
+
+    def return_allowed_output_binds(self, binds_set):
+        # Check which bind is allowed. TBD
+        for bind in binds_set:
+            pass
+        return binds_set
+
+    def return_allowed_input_binds(self, binds_set):
+        # Check which bind is allowed. TBD
+        for bind in binds_set:
+            pass
+        return binds_set
 
     def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
         dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
