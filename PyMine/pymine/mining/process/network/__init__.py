@@ -116,9 +116,6 @@ class Network(LabeledObject):
         self._nodes = []
         self._arcs = []
 
-    def has_assigned_values(self):
-        pass
-
     @property
     def nodes(self):
         return self._nodes
@@ -183,6 +180,11 @@ class Network(LabeledObject):
 
 
 def get_network_from_json(json):
+    """
+
+    :param json: a valid json string
+    :return: a :class:`pymine.mining.process.network.cnet.CNet` instance
+    """
     try:
         origin = json[0]
         label = origin['label']
