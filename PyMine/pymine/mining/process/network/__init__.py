@@ -34,7 +34,6 @@ class LabeledObject(object):
         else:
             return False
 
-
 class BaseElement(LabeledObject):
     def __init__(self, label=None, frequency=None, attrs=None):
         super(BaseElement, self).__init__(label)
@@ -46,7 +45,6 @@ class BaseElement(LabeledObject):
                  'frequency': self.frequency,
                  'attributes': self.attrs}]
         return json
-
 
 class Arc(BaseElement):
     def __init__(self, start_node, end_node, label=None, frequency=None, attrs=None):
@@ -137,6 +135,7 @@ class Network(LabeledObject):
     def add_nodes(self, *labels):
         return [self.add_node(label) for label in labels]
 
+
     def get_initial_nodes(self):
         nodes = []
         for node in self.nodes:
@@ -160,7 +159,12 @@ class Network(LabeledObject):
         for arc in self.arcs:
             if arc.label == label:
                 return arc
-
+            
+    def get_arc_by_nodes(self, input, output):
+        for arc in self.arcs:
+            if arc.start_node == input and arc.end_node == output:
+                return arc
+            
     def _create_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
         return Arc(node_a, node_b, label, frequency, attrs)
 
@@ -169,6 +173,12 @@ class Network(LabeledObject):
         node_a.output_arcs.append(arc)
         node_b.input_arcs.append(arc)
         return arc
+
+    def remove_arc(self, arc):
+        self._arcs.remove(arc)
+        arc.end_node.input_arcs.remove(arc)
+        arc.start_node.output_arcs.remove(arc)
+
 
     def add_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
         arc = self._create_arc(node_a, node_b, label, frequency, attrs)
