@@ -90,10 +90,10 @@ class HeuristicMiner(Miner):
             graphs.append(net)
         return graphs
 
-    def mine_cnets(self, log, frequency_threshold=0, dependency_threshold=0.0):
+    def mine_cnets(self, dependency_graphs, log):
         log_info_factory = LogInfoFactory(log=log)
         log_info = log_info_factory.create_loginfo()
-        dependency_graphs = self.mine_dependency_graphs(log, frequency_threshold, dependency_threshold)
+        #dependency_graphs = self.mine_dependency_graphs(log, frequency_threshold, dependency_threshold)
         nets = []
         for process_info in log_info.processes_info:
             dep_net = dependency_graphs.pop()
@@ -134,15 +134,21 @@ class HeuristicMiner(Miner):
                                         if not (counter == node_index) and \
                                                 (candidate_node in node.input_nodes) and \
                                                 ((node_index-counter) < window_size) and \
-                                                (candidate_node not in candidate_input_bind):
-                                            candidate_input_bind.append(candidate_node)
+                                                (counter not in candidate_input_bind):
+                                            candidate_input_bind.append(counter)
                                     else:
                                         #this is supposed to be after the node
-                                        if (candidate_node in node.output_nodes) and ((counter-node_index) < window_size):
-                                            candidate_output_bind.append(candidate_node)
+                                        if (candidate_node in node.output_nodes) and \
+                                                ((counter-node_index) < window_size) and \
+                                                (counter not in candidate_output_bind):
+                                            candidate_output_bind.append(counter)
                                     counter += 1
                                 except Exception, e:
                                     print("Cannot compute bindins: "+str(e.message))
+                        for i in xrange(len(candidate_input_bind)):
+                            candidate_input_bind[i] = c_net.get_node_by_label(case.events[candidate_input_bind[i]].activity_name)
+                        for i in xrange(len(candidate_output_bind)):
+                            candidate_output_bind[i] = c_net.get_node_by_label(case.events[candidate_output_bind[i]].activity_name)
 
                         # Before inserting the candidate input bind, check if it contains the initial node
                         initial_node = c_net.start_node
@@ -163,8 +169,6 @@ class HeuristicMiner(Miner):
 
                         # Before inserting the candidate output bind, check if it contains the final node
                         final_node = c_net.end_node
-                        print("Final_node: "+str(final_node.label))
-                        print("candidate_output_bind: "+str(candidate_output_bind))
                         for i in list(candidate_output_bind):
                             if final_node.label == i.label:
                                 candidate_output_bind.remove(i)
@@ -201,8 +205,8 @@ class HeuristicMiner(Miner):
         return binds_set
 
     def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
-        dgraph = self.mine_dependency_graph(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
-        cnets = self.mine_cnets(dgraph, log)
+        dgraphs = self.mine_dependency_graphs(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
+        cnets = self.mine_cnets(dgraphs, log)
         return cnets
 
     def mine_from_csv_file(self, filename, frequency_threshold=0, dependency_threshold=0.0):

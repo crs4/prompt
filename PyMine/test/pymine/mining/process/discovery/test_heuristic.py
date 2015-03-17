@@ -109,7 +109,8 @@ class TestHeuristicMiner(unittest.TestCase):
         log = self.create_log_from_test_data()
         hm = HeuristicMiner()
         cnet = self.create_cnet()
-        mined_cnet = hm.mine_cnets(log, 0, 0.0)[0]
+        mined_graphs = hm.mine_dependency_graphs(log, 0, 0.0)
+        mined_cnet = hm.mine_cnets(mined_graphs, log)[0]
 
         self.assertTrue(len(cnet.nodes) == len(mined_cnet.nodes))
         self.assertTrue(len(cnet.arcs) == len(mined_cnet.arcs))
