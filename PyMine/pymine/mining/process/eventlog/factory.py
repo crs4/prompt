@@ -49,7 +49,7 @@ class LogFactory(object):
 
 class CsvLogFactory(LogFactory):
 
-    TIME_FORMAT = '%Y-%m-%d %H:%M:%S%f'
+    TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
     def __init__(self, input_filename=None):
         super(CsvLogFactory, self).__init__()
@@ -82,6 +82,8 @@ class CsvLogFactory(LogFactory):
                 self._cases[case_id] = case
 
                 self.cases.append(case)
+                process.cases.append(case)
+                #process.add_case(case)
             else:
                 case = self._cases[case_id]
 

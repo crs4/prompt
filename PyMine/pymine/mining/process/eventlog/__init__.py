@@ -113,7 +113,7 @@ class Case(IdObject):
     def activity_list(self):
         activities = []
         for act_instance in self.activity_instances:
-            activities.extend(act_instance.activity.name)
+            activities.append(act_instance.activity.name)
         return activities
 
 
