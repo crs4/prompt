@@ -1,7 +1,23 @@
 from pymine.mining.process.eventlog.exceptions import InvalidProcess
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class ProcessLog(object):
+class BaseLog(object):
+    __metaclass__ = ABCMeta
+
+    @abstractproperty
+    def cases(self):
+        pass
+
+    @abstractmethod
+    def add_case(self, case):
+        pass
+
+
+class ProcessLog(BaseLog):
+    """"
+    A contaneir for :class:`<Cases>pymine.mining.process.eventlog.Case`.They must belong to the same process.
+    """
     def __init__(self, process, cases=None):
         self._process = process
         self._cases = []
@@ -25,7 +41,12 @@ class ProcessLog(object):
         case.log = self  # TODO remove this assignment, I mean why a case should belong to a single log instance?
 
 
-class Log(object):
+class Log(BaseLog):
+    """"
+    A generic contaneir for :class:`<Cases>pymine.mining.process.eventlog.Case`.They can belong to different process.
+    To obtain the cases for a specific process (i.e. the relative
+    :class:`<ProcessLog>pymine.mining.process.eventlog.log.ProcessLog`) just use the Log as dictionary (log[process]).
+    """
 
     def __init__(self, cases=None, process_logs=()):
         self._process_logs = {}
@@ -41,7 +62,6 @@ class Log(object):
             self._process_logs[case.process] = ProcessLog(case.process, [case])
         else:
             self._process_logs[case.process].add_case(case)
-
 
     @property
     def processes(self):
