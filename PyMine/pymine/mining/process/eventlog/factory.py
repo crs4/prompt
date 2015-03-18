@@ -1,5 +1,5 @@
 import csv, sys
-from pymine.mining.process.eventlog.log import Log, LogInfo
+from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
 from pymine.mining.process.eventlog import *
 import datetime
 
@@ -136,19 +136,19 @@ class CsvLogFactory(LogFactory):
         return self.create_loginfo()
 
 
-class DictLogFactory(LogFactory):
+class SimpleProcessLogFactory(LogFactory):
 
-    def __init__(self, processes_dict):
-        self.processes_dict = processes_dict
+    def __init__(self, cases, process=None):
         self.cases = []
+        self.process = process or Process()
+        for case in cases:
 
-        for process_name, cases in processes_dict.items():
-            process = Process(_id=process_name)
-            for case in cases:
-                case_obj = Case(process)
-                for event in case:
-                    activity = process.add_activity(event)
-                    activity_instance = case_obj.add_activity_instance(activity)
-                    event = activity_instance.add_event(activity_instance)
+            case_obj = Case(self.process)
+            for event in case:
+                activity = self.process.add_activity(event)
+                activity_instance = case_obj.add_activity_instance(activity)
+                activity_instance.add_event(activity_instance)
+            self.cases.append(case_obj)
 
-                self.cases.append(case_obj)
+    def create_log(self):
+        return ProcessLog(self.process, self.cases)

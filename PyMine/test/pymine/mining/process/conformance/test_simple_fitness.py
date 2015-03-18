@@ -1,7 +1,7 @@
 import unittest
 
 from pymine.mining.process.conformance import replay_case, simple_fitness
-from pymine.mining.process.eventlog.factory import DictLogFactory
+from pymine.mining.process.eventlog.factory import SimpleProcessLogFactory
 from test.pymine.mining.process.network.test_cnet import _create_cnet
 
 
@@ -10,18 +10,15 @@ class ConformanceTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(ConformanceTestCase, self).__init__(*args, **kwargs)
 
-        correct_log_dict = {
-            'test': [['a', 'b', 'c',  'e']]
-        }
-        wrong_log_dict = {
-            'test': [['a', 'b', 'c']]
-        }
-        half_correct_log_dict = {'test': correct_log_dict['test'] + wrong_log_dict['test']}
+        correct_cases = [['a', 'b', 'c',  'e']]
+        wrong_cases = [['a', 'b', 'c']]
 
-        self.factory = DictLogFactory(correct_log_dict)
+        half_correct_cases = correct_cases + wrong_cases
+
+        self.factory = SimpleProcessLogFactory(correct_cases)
         self.correct_log = self.factory.create_log()
-        self.wrong_log = DictLogFactory(wrong_log_dict).create_log()
-        self.half_correct_log = DictLogFactory(half_correct_log_dict).create_log()
+        self.wrong_log = SimpleProcessLogFactory(wrong_cases).create_log()
+        self.half_correct_log = SimpleProcessLogFactory(half_correct_cases).create_log()
 
     def test_replay_case_on_cnet(self):
         cnet, a, b, c, d, e = _create_cnet()
