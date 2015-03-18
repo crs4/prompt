@@ -1,6 +1,6 @@
 from pymine.mining.process.network.graph import graph_factory
 from pymine.mining.process.network import UnexpectedEvent
-from pymine.mining.process.eventlog.log import Log
+from pymine.mining.process.eventlog.log import ProcessLog
 from pymine.mining.process.eventlog import Case
 import logging
 logger = logging.getLogger('alignment')
@@ -160,7 +160,8 @@ def _log_fitness(log, net, cost_function, shortest_path, max_depth):
 
 def fitness(events_container, net, cost_function=None, max_depth=30):
     """
-    :param events_container: a :class:`pymine.mining.process.eventlog.log.Log` or :class:`pymine.mining.process.eventlog.Case` instance
+    :param events_container: a :class:`pymine.mining.process.eventlog.log.ProcessLog`
+        or :class:`pymine.mining.process.eventlog.Case` instance
     :param net: a :class:`pymine.mining.process.network.Network` instance (or a subclass of it)
     :param cost_function: a function with two parameters, log_move and net_move. It should assign a cost to the tuple
      log_move, net_move. Default: 1 if log_move != net_move else 0
@@ -170,7 +171,7 @@ def fitness(events_container, net, cost_function=None, max_depth=30):
     net.rewind()
     cost_function = cost_function or _default_cost_function
     cost, shortest_path = net.shortest_path()
-    if isinstance(events_container, Log):
+    if isinstance(events_container, ProcessLog):
         return _log_fitness(events_container, net, cost_function, shortest_path, max_depth)
 
     elif isinstance(events_container, Case):
@@ -178,4 +179,4 @@ def fitness(events_container, net, cost_function=None, max_depth=30):
         return 1 - optimal_aln.cost/worst_scenario_cost
 
     else:
-        raise Exception('events_container must be Log or Case instance')
+        raise Exception('events_container must be ProcessLog or Case instance')
