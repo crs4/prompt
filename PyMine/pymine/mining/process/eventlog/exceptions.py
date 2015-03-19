@@ -1,0 +1,2 @@
+class InvalidProcess(Exception):
+    pass

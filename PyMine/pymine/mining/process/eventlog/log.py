@@ -1,20 +1,90 @@
-class Log(object):
+from pymine.mining.process.eventlog.exceptions import InvalidProcess
+from abc import ABCMeta, abstractmethod, abstractproperty
 
-    def __init__(self, cases=None):
-        self._processes = set()
-        self.cases = []
+
+class BaseLog(object):
+    __metaclass__ = ABCMeta
+
+    @abstractproperty
+    def cases(self):
+        pass
+
+    @abstractmethod
+    def add_case(self, case):
+        pass
+
+
+class ProcessLog(BaseLog):
+    """
+    A contaneir for :class:`Case<pymine.mining.process.eventlog.Case>`.They must belong to the same process.
+    """
+    def __init__(self, process, cases=None):
+        self._process = process
+        self._cases = []
+        if cases is not None:
+            for case in cases:
+                self.add_case(case)
+
+    @property
+    def process(self):
+        return self._process
+
+    @property
+    def cases(self):
+        return self._cases
+
+    def add_case(self, case):
+        """
+        :param case: a :class:`Case<pymine.mining.process.eventlog.Case>` instance
+        :return:
+        :raises: :class:`pymine.mining.process.eventlog.exceptions.InvalidProcess`
+        """
+        if case.process != self.process:
+            raise InvalidProcess("cases must belong to process %s, found %s instead" % (self.process, case.process))
+
+        self._cases.append(case)
+        case.log = self  # TODO remove this assignment, I mean why a case should belong to a single log instance?
+
+
+class Log(BaseLog):
+    """
+    A generic contaneir for :class:`Case<pymine.mining.process.eventlog.Case>`.They can belong to different process.
+    To obtain the cases for a specific process (i.e. the relative
+    :class:`<ProcessLog>pymine.mining.process.eventlog.log.ProcessLog`) just use the Log as dictionary (log[process]).
+    """
+
+    def __init__(self, cases=None, process_logs=()):
+        self._process_logs = {}
+        for p_log in process_logs:
+            self._process_logs[p_log.process] = p_log
+
         if cases is not None:
             for case in cases:
                 self.add_case(case)
 
     def add_case(self, case):
-        self.cases.append(case)
-        case.log = self
-        self._processes.add(case.process)
+        """
+        :param case: a :class:`Case<pymine.mining.process.eventlog.Case>` instance
+        :return:
+        """
+        if case.process not in self._process_logs:
+            self._process_logs[case.process] = ProcessLog(case.process, [case])
+        else:
+            self._process_logs[case.process].add_case(case)
 
     @property
     def processes(self):
-        return list(self._processes)
+        return self._process_logs.keys()
+
+    @property
+    def cases(self):
+        cases = []
+        for process_log in self._process_logs.values():
+            cases.extend(process_log.cases)
+        return cases
+
+    def __getitem__(self, item):
+        return self._process_logs[item]
 
     def __eq__(self, other):
         if type(self) == type(other):
