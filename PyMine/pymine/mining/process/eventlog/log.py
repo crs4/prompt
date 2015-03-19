@@ -15,8 +15,8 @@ class BaseLog(object):
 
 
 class ProcessLog(BaseLog):
-    """"
-    A contaneir for :class:`<Cases>pymine.mining.process.eventlog.Case`.They must belong to the same process.
+    """
+    A contaneir for :class:`Case<pymine.mining.process.eventlog.Case>`.They must belong to the same process.
     """
     def __init__(self, process, cases=None):
         self._process = process
@@ -34,6 +34,11 @@ class ProcessLog(BaseLog):
         return self._cases
 
     def add_case(self, case):
+        """
+        :param case: a :class:`Case<pymine.mining.process.eventlog.Case>` instance
+        :return:
+        :raises: :class:`pymine.mining.process.eventlog.exceptions.InvalidProcess`
+        """
         if case.process != self.process:
             raise InvalidProcess("cases must belong to process %s, found %s instead" % (self.process, case.process))
 
@@ -42,8 +47,8 @@ class ProcessLog(BaseLog):
 
 
 class Log(BaseLog):
-    """"
-    A generic contaneir for :class:`<Cases>pymine.mining.process.eventlog.Case`.They can belong to different process.
+    """
+    A generic contaneir for :class:`Case<pymine.mining.process.eventlog.Case>`.They can belong to different process.
     To obtain the cases for a specific process (i.e. the relative
     :class:`<ProcessLog>pymine.mining.process.eventlog.log.ProcessLog`) just use the Log as dictionary (log[process]).
     """
@@ -58,6 +63,10 @@ class Log(BaseLog):
                 self.add_case(case)
 
     def add_case(self, case):
+        """
+        :param case: a :class:`Case<pymine.mining.process.eventlog.Case>` instance
+        :return:
+        """
         if case.process not in self._process_logs:
             self._process_logs[case.process] = ProcessLog(case.process, [case])
         else:

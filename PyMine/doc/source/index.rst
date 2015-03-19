@@ -13,6 +13,7 @@ Contents:
 
    conformance
    networks/index
+   eventlog
 
 Indices and tables
 ==================

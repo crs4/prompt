@@ -90,6 +90,9 @@ class Activity(IdObject):
 
 
 class Case(IdObject):
+    """
+    It represents a sequence of :class:`Event<.Event>`
+    """
 
     def __init__(self, process, _id=None):
         super(Case, self).__init__(_id)
@@ -162,6 +165,11 @@ class Event(IdObject):
     def __init__(self, activity_instance, timestamp=None, resources=None,  attributes=None, _id=None):
         """
 
+        :param activity_instance:
+        :param timestamp: a datetime
+        :param resources: a list of objects
+        :param attributes: a list of :class:`Attribute<pymine.mining.process.eventlog.Attribute>`
+        :param _id: a unique id
         :return:
         """
         super(Event, self).__init__(_id)

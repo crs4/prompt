@@ -12,7 +12,7 @@ def simple_fitness(process_log, net):
     """
     Compute the fitness on the given log and net as the fraction of case replayed successfully to the cardinality of log
 
-    :param process_log: a :class:`pymine.mining.process.eventlog.log.ProcessLog` instance
+    :param process_log: a :class:`ProcessLog <pymine.mining.process.eventlog.log.ProcessLog>` instance
     :param net: a :class:`pymine.mining.process.network.Network` instance (or a subclass of it)
     :return: integer between 0 and 1
     """
