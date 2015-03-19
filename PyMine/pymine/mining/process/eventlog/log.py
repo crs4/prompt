@@ -77,7 +77,7 @@ class Log(BaseLog):
         return self._process_logs.keys()
 
     @property
-    def cases(self):
+    def cases(self):  # TODO: there is no order in the cases returned. Maybe this method is non very useful and can be removed
         cases = []
         for process_log in self._process_logs.values():
             cases.extend(process_log.cases)
