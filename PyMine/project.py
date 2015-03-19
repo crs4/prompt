@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 #from mining.process.discovery import promHeuristicMiner
 from pymine.mining.process.discovery import hm
 

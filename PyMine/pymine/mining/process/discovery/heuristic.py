@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 from pymine.mining.process.discovery import Miner as Miner
 from pymine.mining.process.network.dependency import DependencyGraph as DependencyGraph
 from pymine.mining.process.network.cnet import CNet as CNet

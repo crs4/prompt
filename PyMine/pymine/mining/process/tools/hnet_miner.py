@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 import sys, os
 import networkx as nx
 import matplotlib.pyplot as plt

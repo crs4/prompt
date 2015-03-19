@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 class ProcessInfo(object):
 
     def __init__(self):

@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 #from lxml import etree
 import xml.dom.minidom as minidom
 import xml.etree.cElementTree as ET

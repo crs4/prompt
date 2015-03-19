@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 import unittest, time
 
 import pymine.mining.process.tools.csv2xes as csv2xes

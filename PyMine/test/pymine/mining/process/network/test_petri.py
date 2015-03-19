@@ -1,5 +1,3 @@
-__author__ = 'paolo'
-
 import unittest, os
 
 from pymine.mining.process.network.petrinet import PetriNet, Place, Transition, PetriArc
