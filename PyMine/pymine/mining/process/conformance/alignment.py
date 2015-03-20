@@ -75,13 +75,15 @@ def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
         return log_move, net_move
 
     def add_move(event_index, net_, previous_move=None, depth=0):
+
         if depth > max_depth:
+            logger.debug('exiting, max depth reached')
             return
 
         event = case[event_index] if event_index < len(case) else None
         available_nodes = net_.available_nodes
         available_events = [n.label for n in available_nodes]
-        logger.debug('add_move event %s, available_events %s', event, available_events)
+        logger.debug('add_move event %s, available_events %s, depth %s', event, available_events, depth)
         if event is None and not available_events:
             g.add_edge(previous_move, end, {'cost': 0})
             logger.debug('final node reached')
