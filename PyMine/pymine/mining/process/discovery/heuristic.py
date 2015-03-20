@@ -16,16 +16,25 @@ class HeuristicMiner(Miner):
         for arc in net.arcs:
             a = float(arc.frequency)
             if arc.start_node != arc.end_node:
-                reversed_arc = arc.start_node.label+"->"+arc.end_node.label
+                logger.debug('arc.start_node != arc.end_node')
+                reversed_arc = arc.end_node.label+"->"+arc.start_node.label
                 r_arc = net.get_arc_by_label(reversed_arc)
+                logger.debug('arc %s', arc)
+                logger.debug('r_arc %s', r_arc)
                 if r_arc:
+                    logger.debug('r_arc.frequency %s', r_arc.frequency)
                     b = float(r_arc.frequency)
+                    logger.debug('a=%s, b=%s', a, b)
                     arc.dependency = abs((a-b)/(a+b+1.0))
+                    logger.debug('arc.dependency %s', arc.dependency)
                 else:
                     arc.dependency = abs(a/(a+1.0))
+                    logger.debug('else... arc.dependency %s', arc.dependency)
             else:
+                logger.debug('arc.start_node == arc.end_node')
                 dep = abs(a/(a+1.0))
                 arc.dependency = dep
+            logger.debug('arc %s freq %s', arc, arc.frequency)
 
     def prune_by_frequency(self, net, threshold):
         arcs_to_prune = []
@@ -35,17 +44,19 @@ class HeuristicMiner(Miner):
         self._prune(net, arcs_to_prune)
 
     def prune_by_dependency(self, net, threshold):
+        logger.debug('***********prune_by_dependency')
         arcs_to_prune = []
         for arc in net.arcs:
             if arc.dependency < threshold:
                 arcs_to_prune.append(arc)
+        logger.debug('prune_by_dependency %s', arcs_to_prune)
         self._prune(net, arcs_to_prune)
 
     def _prune(self, net, arcs):
         try:
             for a in list(arcs):
                 #del net.arcs[a]
-                net.arcs.remove(a)
+                net.remove_arc(a)
         except Exception as e:
             logger.exception(e) # FIXME
 
@@ -90,6 +101,7 @@ class HeuristicMiner(Miner):
 
             if frequency_threshold:
                 self.prune_by_frequency(net, frequency_threshold)
+            logger.debug('*** dependency_threshold %s', dependency_threshold)
             if dependency_threshold:
                 self.prune_by_dependency(net, dependency_threshold)
 
@@ -224,6 +236,7 @@ class HeuristicMiner(Miner):
         return binds_set
 
     def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
+        logger.debug('mine dependency_threshold %s', dependency_threshold)
         dgraphs = self.mine_dependency_graphs(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
         cnets = self.mine_cnets(dgraphs, log)
         return cnets
