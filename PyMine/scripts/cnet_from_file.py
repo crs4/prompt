@@ -1,6 +1,6 @@
 from pymine.mining.process.discovery.heuristic import HeuristicMiner
 from pymine.mining.process.eventlog.factory import CsvLogFactory
-#from pmlab.cnet import force_graph
+from pmlab.cnet import force_graph
 from collections import defaultdict
 from pymine.mining.process.conformance.alignment import fitness
 import logging
@@ -10,10 +10,10 @@ logger.setLevel(logging.DEBUG)
 
 
 def main(csv_path, time_format, dep_thr, freq_thr):
-    log_factory = CsvLogFactory(time_format='%d-%m-%Y:%H.%M')
+    log_factory = CsvLogFactory(time_format=time_format)
     log = log_factory.create_log_from_file(csv_path)
     miner = HeuristicMiner()
-    cnet = miner.mine(log, 0, 0)[0]
+    cnet = miner.mine(log, freq_thr, dep_thr)[0]
     inset = defaultdict(set)
     outset = defaultdict(set)
     nodes = []
@@ -33,8 +33,8 @@ def main(csv_path, time_format, dep_thr, freq_thr):
         for op in n.output_bindings:
             outset[n.label].add(frozenset({o_n.label for o_n in op.node_set}))
 
-    # s = force_graph.ForceDirectedGraph(nodes, inset, outset)
-    # s.run()
+    s = force_graph.ForceDirectedGraph(nodes, inset, outset)
+    s.run()
 
     print 'computing fitness...'
     f = fitness(log[log.processes[0]], cnet, max_depth=15)
