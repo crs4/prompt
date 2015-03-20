@@ -41,10 +41,11 @@ class HeuristicMiner(Miner):
                 arcs_to_prune.append(arc)
         self._prune(net, arcs_to_prune)
 
-    def _prune(self, net, arc):
+    def _prune(self, net, arcs):
         try:
-            for a in arc:
-                del net.arcs[a]
+            for a in list(arcs):
+                #del net.arcs[a]
+                net.arcs.remove(a)
         except Exception as e:
             logger.exception(e) # FIXME
 

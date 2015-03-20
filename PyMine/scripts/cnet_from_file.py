@@ -1,6 +1,6 @@
 from pymine.mining.process.discovery.heuristic import HeuristicMiner
 from pymine.mining.process.eventlog.factory import CsvLogFactory
-# from pmlab.cnet import force_graph
+#from pmlab.cnet import force_graph
 from collections import defaultdict
 from pymine.mining.process.conformance.alignment import fitness
 import logging
@@ -13,7 +13,7 @@ def main(csv_path, time_format, dep_thr, freq_thr):
     log_factory = CsvLogFactory(time_format='%d-%m-%Y:%H.%M')
     log = log_factory.create_log_from_file(csv_path)
     miner = HeuristicMiner()
-    cnet = miner.mine(log, 1, 1)[0]
+    cnet = miner.mine(log, 0, 0)[0]
     inset = defaultdict(set)
     outset = defaultdict(set)
     nodes = []
