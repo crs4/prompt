@@ -1,6 +1,7 @@
 from pymine.mining.process.network import Node, Network, LabeledObject, UnexpectedEvent
 from pymine.mining.process.network.graph import graph_factory
 import logging
+logger = logging.getLogger('cnet')
 
 GRAPH_IMPL = 'nx'
 
@@ -92,9 +93,9 @@ class _XorBindings(object):
         return False
 
     def remove_node(self, node, input_binding_completed):
-        logging.debug('----------remove node-----------')
-        logging.debug('node %s', node)
-        logging.debug('input_binding_completed %s', input_binding_completed)
+        logger.debug('----------remove node-----------')
+        logger.debug('node %s', node)
+        logger.debug('input_binding_completed %s', input_binding_completed)
 
         bindings_completed = []
         bindings_with_node_not_completed_yet = []
@@ -106,7 +107,7 @@ class _XorBindings(object):
 
         for binding, node_set in self.bindings.items():
             if node in node_set:
-                logging.debug('node in node_set')
+                logger.debug('node in node_set')
                 node_set.remove(node)
                 if not node_set:
                     bindings_completed.append(binding)
@@ -115,12 +116,12 @@ class _XorBindings(object):
 
             elif input_binding_completed is not None and \
                     input_binding_completed.node_set == binding.node_set and not node_set:
-                logging.debug('elif...')
+                logger.debug('elif...')
                 bindings_completed.append(binding)
                 ignore_not_completed = True
 
         ignore_not_completed = ignore_not_completed or len(bindings_with_node_not_completed_yet) == 0
-        logging.debug('bindings_completed %s ignore_not_completed %s, bindings_with_node_not_completed_yet %s',
+        logger.debug('bindings_completed %s ignore_not_completed %s, bindings_with_node_not_completed_yet %s',
                       bindings_completed, ignore_not_completed, bindings_with_node_not_completed_yet)
 
         if bindings_completed and ignore_not_completed:
@@ -132,12 +133,13 @@ class _XorBindings(object):
             for b in self.bindings:
                 for completed_or_pending in bindings_with_node_not_completed_yet:
                     if not b.node_set & completed_or_pending.node_set:
-                        logging.debug('b.node_set %s, completed_or_pending.node_set %s',
+                        logger.debug('b.node_set %s, completed_or_pending.node_set %s',
                                       b.node_set, completed_or_pending.node_set)
                         binding_to_remove.append(b)
 
         for b in binding_to_remove:
-            nodes_to_remove += list(self.bindings.pop(b))
+            if b in self.bindings:
+                nodes_to_remove += list(self.bindings.pop(b))
 
         if bindings_completed and ignore_not_completed:
 
@@ -149,11 +151,11 @@ class _XorBindings(object):
             #     max_one.frequency = 1
             # else:
             #     max_one.frequency += 1
-            logging.debug('bindings_completed %s', bindings_completed)
+            logger.debug('bindings_completed %s', bindings_completed)
             max_one.frequency += 1
 
             self.completed_binding = max_one
-            logging.debug('******self.completed_binding %s', self.completed_binding)
+            logger.debug('******self.completed_binding %s', self.completed_binding)
 
         return self.completed_binding or None, nodes_to_remove
 
@@ -229,24 +231,28 @@ class CNet(Network):
         graph = graph_factory(GRAPH_IMPL)
         final_nodes = []
 
-        def _add_node(node, level, final_nodes_, end_node_):
-            logging.debug('----------------')
-            logging.debug('node %s level %s', node, level)
+        def _add_node(node, level, final_nodes_, end_node_, node_visited):
+            if node.node in node_visited:
+                return
+
+            node_visited.add(node.node)
+            logger.debug('----------------')
+            logger.debug('node %s level %s', node, level)
             if level == max_level or node.node == end_node_.node:
+                logger.debug('found end node: %s', node)
                 final_nodes_.append(node)
             else:
-
                 for output_binding in node.output_bindings:
                     previous_node_obj = node
-                    logging.debug('node.output_bindings %s', node.output_bindings)
+                    logger.debug('node %s node.output_bindings %s', node, node.output_bindings)
                     for output_node in output_binding.node_set:
-                        logging.debug('output_node %s', output_node)
+                        logger.debug('output_node %s', output_node)
                         output_fake_node = FakeNode(output_node)
                         graph.add_node(output_fake_node)
-                        logging.debug('connecting %s -> %s', previous_node_obj, output_fake_node)
+                        logger.debug('connecting %s -> %s', previous_node_obj, output_fake_node)
                         graph.add_edge(previous_node_obj, output_fake_node)
                         previous_node_obj = output_fake_node
-                    _add_node(output_fake_node, level + 1, final_nodes_, end_node_)
+                    _add_node(output_fake_node, level + 1, final_nodes_, end_node_, node_visited.copy())
                     # TODO it uses only one of the nodes in node_set, so it could fail in some cases...
             return node
 
@@ -254,8 +260,8 @@ class CNet(Network):
         graph.add_node(initial_node)
         final_node = 'end'
         graph.add_node(final_node)
-        _add_node(initial_node, 0, final_nodes, FakeNode(end_node if end_node else self.get_final_nodes()[0]))
-        logging.debug('final_nodes %s', final_nodes)
+        _add_node(initial_node, 0, final_nodes, FakeNode(end_node if end_node else self.get_final_nodes()[0]), set())
+        logger.debug('final_nodes %s', final_nodes)
         for n in final_nodes:
             graph.add_edge(n, final_node)
 
@@ -361,23 +367,23 @@ class CNet(Network):
         if self.current_node is None:
             return set(self.get_initial_nodes())
         available_nodes = set()
-        logging.debug('self._obligations %s', self._obligations)
+        logger.debug('self._obligations %s', self._obligations)
         for obl in self._obligations:
             input_binding_completed = self._get_input_binding_completed(obl)
-            logging.debug("input_binding_completed for node %s: %s", obl, input_binding_completed)
+            logger.debug("input_binding_completed for node %s: %s", obl, input_binding_completed)
             if input_binding_completed:
                 available_nodes.add(obl)
 
-        logging.debug('available_nodes %s', available_nodes)
+        logger.debug('available_nodes %s', available_nodes)
         return available_nodes
 
     def _get_input_binding_completed(self, node):
-        logging.debug('_get_input_binding_completed %s', node)
+        logger.debug('_get_input_binding_completed %s', node)
         input_binding_completed = None
         if node.input_bindings:
             previous_events = set(self.events_played)
             max_arg = [b.node_set_labels() & previous_events for b in node.input_bindings]
-            logging.debug('max_arg %s', max_arg)
+            logger.debug('max_arg %s', max_arg)
             if max_arg:
                 input_binding_completed = max(max_arg)
                 if input_binding_completed:
@@ -392,9 +398,9 @@ class CNet(Network):
         :raises:
         """
 
-        logging.debug('------replay event----------')
-        logging.debug('event %s', event)
-        logging.debug('obligations %s', self._obligations)
+        logger.debug('------replay event----------')
+        logger.debug('event %s', event)
+        logger.debug('obligations %s', self._obligations)
         if restart:
             self.rewind()
         if self._clean:
@@ -405,7 +411,7 @@ class CNet(Network):
         event_cnode = self.get_node_by_label(event)
         if event_cnode is None:
             raise UnexpectedEvent(event)
-        logging.debug('event_cnode %s obligations %s', event_cnode, self._obligations)
+        logger.debug('event_cnode %s obligations %s', event_cnode, self._obligations)
         if event_cnode in self._obligations:
             self.current_node = event_cnode
             event_cnode.frequency += 1
@@ -419,10 +425,10 @@ class CNet(Network):
             nodes_to_remove = []
 
             for xor_binding in self._xor_bindings:
-                logging.debug('xor_binding %s', xor_binding)
-                logging.debug('obligations %s', self._obligations)
+                logger.debug('xor_binding %s', xor_binding)
+                logger.debug('obligations %s', self._obligations)
                 completed_binding, obligations_to_remove = xor_binding.remove_node(event_cnode, input_binding_completed)
-                logging.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
+                logger.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
 
                 nodes_to_remove += obligations_to_remove
 
@@ -431,8 +437,8 @@ class CNet(Network):
                     if node != event_cnode:
                         self._obligations.remove(node)
                 except KeyError:
-                    logging.debug('unexpected event %s', node)
-                    raise UnexpectedEvent(node.label)
+                    logger.debug('unexpected event %s', node)
+                    # raise UnexpectedEvent(node.label)
 
             for xor_binding in event_cnode.output_bindings:
                 self._obligations |= {el for el in xor_binding.node_set}
@@ -440,7 +446,7 @@ class CNet(Network):
             if event_cnode.output_bindings:
                 self._xor_bindings.append(_XorBindings(event_cnode.output_bindings, self))
 
-            logging.debug('obligations %s', self._obligations)
+            logger.debug('obligations %s', self._obligations)
         else:
             raise UnexpectedEvent(event)
 
@@ -454,13 +460,13 @@ class CNet(Network):
         unexpected_events = []
 
         for index, event in enumerate(sequence):
-            logging.debug('-------------------------------')
-            logging.debug('event %s, obligations %s', event, self._obligations)
+            logger.debug('-------------------------------')
+            logger.debug('event %s, obligations %s', event, self._obligations)
             restart = index == 0
             try:
                 self.replay_event(event, restart)
             except UnexpectedEvent as ex:
-                logging.debug('unexpected event %s', event)
+                logger.debug('unexpected event %s', event)
                 unexpected_events.append(ex.event)
 
         return len(self._obligations | set(unexpected_events)) == 0, self._obligations, unexpected_events
@@ -517,5 +523,5 @@ def get_cnet_from_json(json):
                 the_net.add_output_binding(node, node_set, label=binding['label'], frequency=binding['frequency'])
         return the_net
     except Exception, e:
-        logging.error("An error occurred while trying to create a Network from a json")
-        logging.error(e.message)
+        logger.error("An error occurred while trying to create a Network from a json")
+        logger.error(e.message)
