@@ -4,12 +4,12 @@ from pmlab.cnet import force_graph
 from collections import defaultdict
 from pymine.mining.process.conformance.alignment import fitness
 import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.DEBUG)
 logger = logging.getLogger('alignment')
 logger.setLevel(logging.DEBUG)
 
 
-def main(csv_path, time_format, dep_thr, freq_thr):
+def main(csv_path, time_format, freq_thr, dep_thr):
     log_factory = CsvLogFactory(time_format=time_format)
     log = log_factory.create_log_from_file(csv_path)
     miner = HeuristicMiner()
