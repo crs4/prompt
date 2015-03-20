@@ -310,6 +310,24 @@ class CNetTestCase(unittest.TestCase):
         cost, path = cnet.shortest_path()
         self.assertEqual(path, [a, b, c])
 
+    def test_shortest_path_loop_2(self):
+        cnet = CNet()
+        a, b, c, d = cnet.add_nodes('a', 'b', 'c', 'd')
+
+        cnet.add_output_binding(a, {b})
+        cnet.add_input_binding(b, {a})
+
+        cnet.add_output_binding(b, {c})
+        cnet.add_input_binding(c, {b})
+
+        cnet.add_output_binding(c, {b})
+        cnet.add_output_binding(c, {d})
+
+        cnet.add_input_binding(d, {c})
+
+        cost, path = cnet.shortest_path()
+        self.assertEqual(path, [a, b, c, d])
+
     def test_shortest_path_custom_nodes(self):
         cnet, a, b, c, d, e = _create_cnet()
         cost, path = cnet.shortest_path(b, e)

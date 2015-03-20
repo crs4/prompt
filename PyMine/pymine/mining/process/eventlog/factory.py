@@ -2,6 +2,8 @@ import csv, sys
 from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
 from pymine.mining.process.eventlog import *
 import datetime
+import logging
+logger = logging.getLogger('factory')
 
 class LogInfoFactory(object):
 
@@ -51,10 +53,10 @@ class CsvLogFactory(LogFactory):
 
     TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
-    def __init__(self, input_filename=None):
+    def __init__(self, input_filename=None, time_format=TIME_FORMAT):
         super(CsvLogFactory, self).__init__()
+        self.time_format=time_format
         self.indexes = {}
-        self.cases = []
         self._cases = {}
         self.activities = {}
         if input_filename:
@@ -68,9 +70,10 @@ class CsvLogFactory(LogFactory):
                 self.indexes[token.rstrip()] = counter
                 counter += 1
         except Exception, e:
-            print("An error occurred while parsing the field names: "+str(e))
+            logger.error("An error occurred while parsing the field names: "+str(e))
 
     def parse_row(self, row, process):
+        logger.debug('row %s', row)
         case_id = row[self.indexes['case_id']]
         timestamp = row[self.indexes['timestamp']]
         activity_id = row[self.indexes['activity']]
@@ -97,7 +100,7 @@ class CsvLogFactory(LogFactory):
             activity_instance = case.add_activity_instance(activity)
 
             if timestamp:
-                timestamp = datetime.datetime.strptime(timestamp, self.TIME_FORMAT)
+                timestamp = datetime.datetime.strptime(timestamp, self.time_format)
 
             resources = resource.split('|') if resource else None
 
@@ -121,7 +124,8 @@ class CsvLogFactory(LogFactory):
             reader = csv.reader(csvfile, dialect)
             try:
                 for row in reader:
-                    self.parse_row(row, process)
+                    if row:
+                        self.parse_row(row, process)
             except csv.Error as e:
                 sys.exit('file %s, line %d: %s' % (input_filename, reader.line_num, e))
 
