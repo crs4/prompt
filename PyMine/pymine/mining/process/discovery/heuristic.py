@@ -4,6 +4,8 @@ from pymine.mining.process.network.cnet import CNet as CNet
 
 from pymine.mining.process.eventlog.factory import CsvLogFactory as CsvLogFactory
 from pymine.mining.process.eventlog.factory import LogInfoFactory as LogInfoFactory
+import logging
+logger = logging.getLogger('heuristic')
 
 class HeuristicMiner(Miner):
 
@@ -40,8 +42,12 @@ class HeuristicMiner(Miner):
         self._prune(net, arcs_to_prune)
 
     def _prune(self, net, arc):
-        for a in arc:
-            del net.arcs[a]
+        try:
+            for a in arc:
+                del net.arcs[a]
+        except Exception as e:
+            logger.exception(e) # FIXME
+
 
     def mine_dependency_graphs(self, log, frequency_threshold=None, dependency_threshold=None):
         graphs = []
@@ -85,6 +91,20 @@ class HeuristicMiner(Miner):
                 self.prune_by_frequency(net, frequency_threshold)
             if dependency_threshold:
                 self.prune_by_dependency(net, dependency_threshold)
+
+            # final_nodes = net.get_final_nodes()
+            # if len(final_nodes) > 1:
+            #     fake_final = net.add_node('__final')
+            #     for n in final_nodes:
+            #         net.add_arc(n, fake_final, frequency=1000)
+            #
+            # initial_nodes = net.get_initial_nodes()
+            # if len(initial_nodes) > 1:
+            #     fake_initial = net.add_node('__initial')
+            #     for n in initial_nodes:
+            #         net.add_arc(fake_initial, n, frequency=1000)
+
+
             graphs.append(net)
         return graphs
 
