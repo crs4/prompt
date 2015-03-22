@@ -114,7 +114,10 @@ class _XorBindings(object):
                 else:
                     bindings_with_node_not_completed_yet.append(binding)
 
-            elif input_binding_completed is not None and \
+            elif node in self.nodes and node not in binding.node_set: #some other binding wins
+                binding_to_remove.append(binding)
+
+            if input_binding_completed is not None and \
                     input_binding_completed.node_set == binding.node_set and not node_set:
                 logger.debug('elif...')
                 bindings_completed.append(binding)
@@ -137,9 +140,18 @@ class _XorBindings(object):
                                       b.node_set, completed_or_pending.node_set)
                         binding_to_remove.append(b)
 
+        logger.debug('binding_to_remove %s', binding_to_remove)
+
+        nodes_to_maintain = set()
+        for b in bindings_with_node_not_completed_yet:
+            nodes_to_maintain |= b.node_set
+
         for b in binding_to_remove:
             if b in self.bindings:
-                nodes_to_remove += list(self.bindings.pop(b))
+                for n in self.bindings.pop(b):
+                    if n not in nodes_to_maintain:
+                        nodes_to_remove.append(n)
+
 
         if bindings_completed and ignore_not_completed:
 
