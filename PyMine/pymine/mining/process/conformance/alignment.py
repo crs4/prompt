@@ -74,7 +74,8 @@ def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
 
         return log_move, net_move
 
-    def add_move(event_index, net_, previous_move=None, depth=0):
+    def add_move(event_index, net_, previous_move=None, depth=0, visited_nodes=None):
+        visited_nodes = visited_nodes or set()
 
         if depth >= max_depth:
             logger.debug('exiting, max depth %s reached', max_depth)
@@ -98,7 +99,9 @@ def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
             logger.debug('event is None')
             played_events = net_.events_played
             for net_event in available_events:
-                if net_event not in played_events:  # this should avoid useless loop
+                logger.debug('visited_nodes %s', visited_nodes)
+                if net_event not in visited_nodes:
+                    visited_nodes.add(net_event)
                     l_m = None
                     n_m = net_event
                     net_clone = net_.clone()
@@ -106,10 +109,20 @@ def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
                     result, obl, unexpected = net_clone.replay_sequence(played_events)
                     net_clone.replay_event(net_event)
                     log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
-                    add_move(event_index, net_clone, net_move, depth + 1)
-                else:
-                    g.add_edge(previous_move, end, {'cost': 0})
-                    # does not matter if it is not final node, in case of weird net
+                    add_move(event_index, net_clone, net_move, depth + 1, visited_nodes.copy())
+
+                # if net_event not in played_events:  # this should avoid useless loop
+                #     l_m = None
+                #     n_m = net_event
+                #     net_clone = net_.clone()
+                #     logger.debug('replay_sequence %s', played_events)
+                #     result, obl, unexpected = net_clone.replay_sequence(played_events)
+                #     net_clone.replay_event(net_event)
+                #     log_move, net_move = add_moves_to_graph(l_m, n_m, previous_move)
+                #     add_move(event_index, net_clone, net_move, depth + 1)
+                # else:
+                #     g.add_edge(previous_move, end, {'cost': 0})
+                #     # does not matter if it is not final node, in case of weird net
         else:
             logger.debug('else...')
             logger.debug('event %s, available_events %s', event, available_events)
@@ -161,6 +174,7 @@ def _log_fitness(log, net, cost_function, shortest_path, max_depth):
     for case in log.cases:
         logger.debug('alignment for case %s', [e.activity_name for e in case.events])
         optimal_aln, worst_scenario_cost = _case_fitness(case, net, cost_function, shortest_path, max_depth)
+        logger.debug('optimal_aln %s for case %s', optimal_aln, [e.activity_name for e in case.events])
         total_cost += optimal_aln.cost
         total_worst_scenario_cost += worst_scenario_cost
     return 1 - total_cost/total_worst_scenario_cost
