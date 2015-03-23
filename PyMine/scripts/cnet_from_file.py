@@ -9,18 +9,18 @@ logger = logging.getLogger('alignment')
 logger.setLevel(logging.DEBUG)
 
 
-def main(csv_path, time_format, freq_thr, dep_thr):
+def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequency_thr):
     log_factory = CsvLogFactory(time_format=time_format)
     log = log_factory.create_log_from_file(csv_path)
     miner = HeuristicMiner()
-    cnet = miner.mine(log, freq_thr, dep_thr)[0]
+    cnet = miner.mine(log, freq_thr, dep_thr, binding_frequency_thr, window_size)[0]
     inset = defaultdict(set)
     outset = defaultdict(set)
     nodes = []
     print 'nodes', cnet.nodes
     for node in cnet.nodes:
-        print 'node %s: input_bindings %s' % (node, node.input_bindings)
-        print 'node %s: output_bindings %s' % (node, node.output_bindings)
+        print 'node %s: input_bindings %s ' % (node, node.input_bindings)
+        print 'node %s: output_bindings %s ' % (node, node.output_bindings)
 
     print cnet.get_initial_nodes()
     print cnet.get_final_nodes()
@@ -49,8 +49,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Create and show cnet mined from a csv log')
     parser.add_argument('csv_path', type=str, help='the path of the csv file containing the log')
     parser.add_argument('-t', type=str, default='%d-%m-%Y:%H.%M', help="time format")
-    parser.add_argument('--ft', type=float, default=0.0, help="frequency threshold")
+    parser.add_argument('--aft', type=float, default=0.0, help="arc frequency threshold")
+    parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
     parser.add_argument('--dt', type=float, default=0.0, help="dependency threshold")
+    parser.add_argument('-w', type=int, default=None, help="window size")
 
     args = parser.parse_args()
-    main(args.csv_path, args.t, args.ft, args.dt)
+    main(args.csv_path, args.t, args.aft, args.dt, args.w, args.bft)

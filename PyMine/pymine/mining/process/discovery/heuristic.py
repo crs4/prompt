@@ -121,7 +121,8 @@ class HeuristicMiner(Miner):
             graphs.append(net)
         return graphs
 
-    def mine_cnets(self, dependency_graphs, log):
+    def mine_cnets(self, dependency_graphs, log, window_size=None, frequency_thr=0):
+
         log_info_factory = LogInfoFactory(log=log)
         log_info = log_info_factory.create_loginfo()
         #dependency_graphs = self.mine_dependency_graphs(log, frequency_threshold, dependency_threshold)
@@ -129,6 +130,7 @@ class HeuristicMiner(Miner):
         for process_info in log_info.processes_info:
             dep_net = dependency_graphs.pop()
             p_info = log_info.processes_info[process_info]
+            window_size = window_size or int(p_info.average_case_size)
             c_net = CNet()
             for activity in dep_net.nodes:
                 c_net.add_node(label=activity.label)
@@ -139,11 +141,11 @@ class HeuristicMiner(Miner):
                               c_net.get_node_by_label(connection.end_node.label),
                               label=connection.label,
                               frequency=connection.frequency)
-            self.calculate_possible_binds(c_net, p_info.process, int(p_info.average_case_size))
+            self.calculate_possible_binds(c_net, p_info.process, window_size, frequency_thr)
             nets.append(c_net)
         return nets
 
-    def calculate_possible_binds(self, c_net, process, window_size):
+    def calculate_possible_binds(self, c_net, process, window_size, frequency_thr):
         try:
             # for each case in the process log check the activity position
             for node in c_net.nodes:
@@ -217,9 +219,11 @@ class HeuristicMiner(Miner):
                     except ValueError, ve:
                         print("Value error: "+str(ve))
                 for binds in input_binds:
-                    c_net.add_input_binding(node, set(binds), frequency=input_binds[binds])
+                    if input_binds[binds] >= frequency_thr:
+                        c_net.add_input_binding(node, set(binds), frequency=input_binds[binds])
                 for binds in output_binds:
-                    c_net.add_output_binding(node, set(binds), frequency=output_binds[binds])
+                    if output_binds[binds] >= frequency_thr:
+                        c_net.add_output_binding(node, set(binds), frequency=output_binds[binds])
         except Exception, e:
             print("Error: "+str(e))
 
@@ -235,13 +239,13 @@ class HeuristicMiner(Miner):
             pass
         return binds_set
 
-    def mine(self, log, frequency_threshold=0, dependency_threshold=0.0):
-        logger.debug('mine dependency_threshold %s', dependency_threshold)
-        dgraphs = self.mine_dependency_graphs(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
-        cnets = self.mine_cnets(dgraphs, log)
+    def mine(self, log, arc_frequency_thr=0, dependency_thr=0.0, binding_frequency_thr=0, window_size=None):
+        logger.debug('mine dependency_threshold %s', dependency_thr)
+        dgraphs = self.mine_dependency_graphs(log, frequency_threshold=arc_frequency_thr, dependency_threshold=dependency_thr)
+        cnets = self.mine_cnets(dgraphs, log, window_size, binding_frequency_thr)
         return cnets
 
     def mine_from_csv_file(self, filename, frequency_threshold=0, dependency_threshold=0.0):
         log_file = CsvLogFactory(input_filename=filename)
         log = log_file.create_log()
-        return self.mine(log, frequency_threshold=frequency_threshold, dependency_threshold=dependency_threshold)
+        return self.mine(log, arc_frequency_thr=frequency_threshold, dependency_thr=dependency_threshold)
