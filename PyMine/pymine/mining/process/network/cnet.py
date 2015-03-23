@@ -30,12 +30,12 @@ class Binding(LabeledObject):
 
 class InputBinding(Binding):
     def __str__(self):
-        return str([n.label for n in self.node_set]) + "->" + self.node.label
+        return str([n.label for n in self.node_set]) + "->" + self.node.label + ' freq: %s' % self.frequency
 
 
 class OutputBinding(Binding):
     def __str__(self):
-        return self.node.label + "->" + str([n.label for n in self.node_set])
+        return self.node.label + "->" + str([n.label for n in self.node_set]) + ' freq: %s' % self.frequency
 
 
 class CNode(Node):
