@@ -31,7 +31,10 @@ class ConformanceTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         result, obligations, unknown = replay_case(self.wrong_log.cases[0], cnet)
         self.assertFalse(result)
-        self.assertEqual(obligations, set([e]))
+        self.assertEqual(len(obligations), 2)
+        self.assertEqual(obligations[0].node, e)
+        self.assertEqual(obligations[1].node, e)
+
 
     def test_fitness_correct_log(self):
         cnet, a, b, c, d, e = _create_cnet()

@@ -5,6 +5,15 @@ logger = logging.getLogger('cnet')
 
 GRAPH_IMPL = 'nx'
 
+class Obligation(object):
+    def __init__(self, source_binding, node):
+        self.source_binding = source_binding
+        self.source_node = source_binding.node if source_binding else None
+        self.node = node
+
+    def __repr__(self):
+        return "< Obligation node %s, source_binding %s >" % (self.node, self.source_binding)
+
 
 class Binding(LabeledObject):
     def __init__(self, node, node_set, frequency=None, label=None):
@@ -146,11 +155,21 @@ class _XorBindings(object):
         for b in bindings_with_node_not_completed_yet:
             nodes_to_maintain |= b.node_set
 
+        # logger.debug('binding_to_remove %s', binding_to_remove)
+        # for b in binding_to_remove:
+        #     if b in self.bindings:
+        #         for n in self.bindings.pop(b):
+        #             if n not in nodes_to_maintain:
+        #                 nodes_to_remove.append((n, b))
+
+        logger.debug('binding_to_remove %s', binding_to_remove)
         for b in binding_to_remove:
             if b in self.bindings:
-                for n in self.bindings.pop(b):
-                    if n not in nodes_to_maintain:
-                        nodes_to_remove.append(n)
+                self.bindings.pop(b)
+                for n in b.node_set:
+                    nodes_to_remove.append((n, b))
+
+
 
 
         if bindings_completed and ignore_not_completed:
@@ -195,7 +214,7 @@ class CNet(Network):
         self.current_node = None
         self._xor_bindings = []
         initial_nodes = self.get_initial_nodes()
-        self._obligations = {initial_nodes[0]} if initial_nodes else {}
+        self._obligations = [Obligation(None, initial_nodes[0])] if initial_nodes else []
 
     def clone(self):
         """
@@ -211,6 +230,30 @@ class CNet(Network):
             else:
                 clone.add_output_binding(node, node_set)
         return clone
+
+    def _find_obligations(self, node=None, source_node=None, source_binding=None):
+        if node and source_node is None and source_binding is None:
+            return [obl for obl in self._obligations if node == obl.node]
+
+        elif node and source_node and source_binding is None:
+            return [obl for obl in self._obligations if node == obl.node and source_node == obl.source_node]
+
+        elif node and source_node and source_binding:
+            return [obl for obl in self._obligations if node == obl.node and
+                    source_node == obl.source_node and source_binding == obl.source_binding]
+
+        elif node and source_node is None and source_binding:
+            return [obl for obl in self._obligations if node == obl.node and source_binding == obl.source_binding]
+
+
+        elif node is None and source_node and source_binding is None:
+            return [obl for obl in self._obligations if source_node == obl.source_node]
+
+        elif node is None and source_node is None and source_binding:
+            return [obl for obl in self._obligations if source_binding == obl.source_binding]
+        else:
+            return []
+
 
     def reset_frequencies(self):
         for node in self.nodes:
@@ -381,10 +424,10 @@ class CNet(Network):
         available_nodes = set()
         logger.debug('self._obligations %s', self._obligations)
         for obl in self._obligations:
-            input_binding_completed = self._get_input_binding_completed(obl)
+            input_binding_completed = self._get_input_binding_completed(obl.node)
             logger.debug("input_binding_completed for node %s: %s", obl, input_binding_completed)
             if input_binding_completed:
-                available_nodes.add(obl)
+                available_nodes.add(obl.node)
 
         logger.debug('available_nodes %s', available_nodes)
         return available_nodes
@@ -424,15 +467,28 @@ class CNet(Network):
         if event_cnode is None:
             raise UnexpectedEvent(event)
         logger.debug('event_cnode %s obligations %s', event_cnode, self._obligations)
-        if event_cnode in self._obligations:
+        event_obls = self._find_obligations(event_cnode)
+
+        if event_cnode in self.get_initial_nodes():  # FIXME a more elegant way for handling first node is needed
+            if event_obls:
+                self._obligations.remove(event_obls[0])
+            else:
+                raise UnexpectedEvent(event)
+
+        if event_obls:
             self.current_node = event_cnode
             event_cnode.frequency += 1
-            self._obligations.remove(event_cnode)
+
 
             # incrementing input_binding_frequency
             input_binding_completed = self._get_input_binding_completed(event_cnode)
             if input_binding_completed:
                 input_binding_completed.frequency += 1
+                for n in event_cnode.input_nodes:
+                    logger.debug('n %s', n)
+                    obls = self._find_obligations(event_cnode, n)
+                    if obls:
+                        self._obligations.remove(obls[0])
 
             nodes_to_remove = []
 
@@ -441,19 +497,29 @@ class CNet(Network):
                 logger.debug('obligations %s', self._obligations)
                 completed_binding, obligations_to_remove = xor_binding.remove_node(event_cnode, input_binding_completed)
                 logger.debug('completed_binding %s, obligations_to_remove %s', completed_binding, obligations_to_remove)
+                if completed_binding:
+                    obls = self._find_obligations(source_binding=completed_binding)
+                    if obls:
+                        self._obligations.remove(obls[0])
 
                 nodes_to_remove += obligations_to_remove
 
-            for node in nodes_to_remove:
+            for node, binding in nodes_to_remove:
+                logger.debug('node %s, binding %s', node, binding)
                 try:
                     if node != event_cnode:
-                        self._obligations.remove(node)
+                        logger.debug('self._obligations %s', self._obligations)
+                        obls = self._find_obligations(node, source_binding=binding)
+                        logger.debug('obls %s', obls)
+                        if obls:
+                            self._obligations.remove(obls[0])
                 except KeyError:
                     logger.debug('unexpected event %s', node)
                     # raise UnexpectedEvent(node.label)
 
             for xor_binding in event_cnode.output_bindings:
-                self._obligations |= {el for el in xor_binding.node_set}
+                self._obligations += [Obligation(xor_binding, n) for n in xor_binding.node_set]
+
 
             if event_cnode.output_bindings:
                 self._xor_bindings.append(_XorBindings(event_cnode.output_bindings, self))
@@ -481,7 +547,7 @@ class CNet(Network):
                 logger.debug('unexpected event %s', event)
                 unexpected_events.append(ex.event)
 
-        return len(self._obligations | set(unexpected_events)) == 0, self._obligations, unexpected_events
+        return len(self._obligations +  unexpected_events) == 0, self._obligations, unexpected_events
     
     def get_json(self):
         """

@@ -3,7 +3,7 @@ from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, Output
 import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
-# logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
 
 def _create_cnet():
@@ -236,7 +236,8 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['a', 'd', 'd'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(set(replay_result[1]), {e})
+        self.assertEqual(len(replay_result[1]), 1)
+        self.assertEqual(replay_result[1][0].node, e)
         self.assertEqual(set(replay_result[2]), {'d'})
 
     def test_replay_failing_2(self):
@@ -248,7 +249,8 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['d', 'e'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(replay_result[1], {a})
+        self.assertEqual(len(replay_result[1]), 1)
+        self.assertEqual(replay_result[1][0].node, a)
         self.assertEqual(replay_result[2], ['d', 'e'])
 
     def test_replay_failing_unknown_events(self):
