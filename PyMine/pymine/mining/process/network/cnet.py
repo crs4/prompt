@@ -108,7 +108,8 @@ class CNet(Network):
         Clear current net state: obligations, current node.
         """
         self.events_played = []
-        self._pending_output_bindings = []
+        self._pending_obligations = []
+        # self._pending_output_bindings = []
         self.current_node = None
         self._xor_bindings = {}
         initial_nodes = self.get_initial_nodes()
@@ -326,7 +327,7 @@ class CNet(Network):
             if len(completed_bindings[max_index]) == 1:
                 return completed_bindings[max_index][0]
             else:
-                return max(completed_bindings[max_index])
+                return max(completed_bindings[max_index], key=lambda x: len(x.node_set))
 
     def _find_obligations(self, node=None, source_node=None, source_binding=None):
         if node and source_node is None and source_binding is None:
@@ -344,6 +345,10 @@ class CNet(Network):
 
         elif node is None and source_node and source_binding is None:
             return [obl for obl in self._obligations if source_node == obl.source_node]
+
+        elif node is None and source_node and source_binding:
+            return [obl for obl in self._obligations if source_node == obl.source_node and
+                    source_binding == obl.source_binding]
 
         elif node is None and source_node is None and source_binding:
             return [obl for obl in self._obligations if source_binding == obl.source_binding]
@@ -382,7 +387,6 @@ class CNet(Network):
         event_cnode.frequency += 1
         event_obls = self._find_obligations(event_cnode)
 
-
         if not event_obls:
             raise UnexpectedEvent(event)
         if event_cnode in self.get_initial_nodes():
@@ -392,30 +396,32 @@ class CNet(Network):
                 raise UnexpectedEvent(event)
 
         # FIXME code above can be simplified
+
         input_binding_completed = self._get_input_binding_completed(event_cnode)
         logger.debug('input_binding_completed %s', input_binding_completed)
         if input_binding_completed:
             input_binding_completed.frequency += 1
 
             for n in input_binding_completed.node_set:
-                obl = self._find_obligations(event_cnode, n)
-                if obl:
-                    obl = obl[0]
-                    logger.debug('removing  obl %s ', obl)
-                    self._obligations.remove(obl)
-                    obl.source_binding.frequency += 1
-                    logger.debug('obl.source_node.output_bindings %s', obl.source_node.output_bindings)
-                    for xor_b in obl.source_node.output_bindings:
-                        logger.debug('xor_b %s', xor_b)
-                        if event_cnode not in xor_b.node_set:
-                            for n_to_remove in xor_b.node_set:
+                for binding in n.output_bindings:
+                    for node in binding.node_set:
+                        obls = self._find_obligations(node, n, binding)
+                        if obls:
+                            obl = obls[0]
+                            if event_cnode in binding.node_set:
+                                if node == event_cnode:
+                                    obl.source_binding.frequency += 1
+                                    logger.debug('removing obl %s', obl)
+                                    self._obligations.remove(obl)
+                                # else:
+                                #     self._pending_obligations.append(obl)
+                            else:
+                                logger.debug('removing xor obl %s', obl)
+                                self._obligations.remove(obl)
 
-                                obl_ = self._find_obligations(n_to_remove, source_binding=xor_b)
-                                if obl_:
-                                    logger.debug('removing xor obl %s', obl_[0])
-                                    self._obligations.remove(obl_[0])
-
+            logger.debug('removing pending obls')
             for input_node in event_cnode.input_nodes:
+                logger.debug('input_node %s', input_node)
                 pending_obls = self._find_obligations(input_node)
                 if pending_obls:
                     logger.debug('removing pending_obl %s', pending_obls[0])
