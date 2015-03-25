@@ -109,7 +109,6 @@ class CNet(Network):
         """
         self.events_played = []
         self._pending_output_bindings = []
-        self._previous_events = []
         self.current_node = None
         self._xor_bindings = {}
         initial_nodes = self.get_initial_nodes()
@@ -329,27 +328,6 @@ class CNet(Network):
             else:
                 return max(completed_bindings[max_index])
 
-
-        #
-        #
-        # input_binding_completed = None
-        # if node.input_bindings:
-        #     previous_events = set(self._previous_events)
-        #     # FIXME events should be removed once consumed, otherwise it does not work with loops
-        #     max_arg = [b.node_set_labels() & previous_events for b in node.input_bindings]
-        #     logger.debug('max_arg %s', max_arg)
-        #     if max_arg:
-        #         input_binding_completed = max(max_arg)
-        #         if input_binding_completed:
-        #             # if remove_event:
-        #             #     for e in input_binding_completed:
-        #             #         self._previous_events.remove(e)
-        #             input_binding_completed = set([self.get_node_by_label(l) for l in input_binding_completed])
-        #             input_binding_completed = node.get_input_bindings_with(input_binding_completed, True)
-        #
-        #
-        # return input_binding_completed
-
     def _find_obligations(self, node=None, source_node=None, source_binding=None):
         if node and source_node is None and source_binding is None:
             return [obl for obl in self._obligations if node == obl.node]
@@ -371,18 +349,6 @@ class CNet(Network):
             return [obl for obl in self._obligations if source_binding == obl.source_binding]
         else:
             return []
-
-    # def _find_obligations(self, node=None, source_node=None):
-    #     if node and source_node is None:
-    #         return [obl for obl in self._obligations if node == obl.node]
-    #
-    #     elif node and source_node:
-    #         return [obl for obl in self._obligations if node == obl.node and source_node == obl.source_node]
-    #
-    #     elif node is None and source_node:
-    #         return [obl for obl in self._obligations if source_node == obl.source_node]
-    #     else:
-    #         return []
 
     def _rm_input_obligations(self, obls):
         logger.debug('obls %s', obls)
@@ -455,11 +421,8 @@ class CNet(Network):
                     logger.debug('removing pending_obl %s', pending_obls[0])
                     self._obligations.remove(pending_obls[0])
 
-
-
         self.current_node = event_cnode
         self.events_played.append(event)
-        self._previous_events.append(event)
 
         # self._obligations += [Obligation(event_cnode, n) for n in event_cnode.output_nodes]
         logger.debug('self._obligations %s', self._obligations)
