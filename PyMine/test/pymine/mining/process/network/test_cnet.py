@@ -3,7 +3,7 @@ from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, Output
 import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
-# logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 
 
 def _create_cnet():
@@ -169,6 +169,7 @@ class CNetTestCase(unittest.TestCase):
         self.assertEqual(e.get_input_bindings_with({d})[0].frequency, 1)
 
     def test_replay_two_bindings_with_same_node(self):
+        logging.debug('test_replay_two_bindings_with_same_node')
         cnet, a, b, c, d = _create_shared_binding_cnet()
 
         rep_1 = cnet.replay_sequence(['a', 'b', 'd'])
@@ -230,13 +231,15 @@ class CNetTestCase(unittest.TestCase):
         logging.debug('result_1 %s', result_1)
         self.assertTrue(result_1[0])
         result_2 = cnet.replay_sequence(['a', 'b', 'b', 'c'])
+        logging.debug('result_2 %s', result_2)
         self.assertTrue(result_2[0])
 
     def test_replay_failing(self):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['a', 'd', 'd'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(set(replay_result[1]), {e})
+        self.assertEqual(len(replay_result[1]), 1)
+        self.assertEqual(replay_result[1][0].node, e)
         self.assertEqual(set(replay_result[2]), {'d'})
 
     def test_replay_failing_2(self):
@@ -248,7 +251,8 @@ class CNetTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         replay_result = cnet.replay_sequence(['d', 'e'])
         self.assertFalse(replay_result[0])
-        self.assertEqual(replay_result[1], {a})
+        self.assertEqual(len(replay_result[1]), 1)
+        self.assertEqual(replay_result[1][0].node, a)
         self.assertEqual(replay_result[2], ['d', 'e'])
 
     def test_replay_failing_unknown_events(self):
@@ -406,6 +410,157 @@ class CNetTestCase(unittest.TestCase):
         json = orig_net.get_json()
         the_net = pymine.mining.process.network.cnet.get_cnet_from_json(json)
         self.assertTrue(json == the_net.get_json())
+
+    def test_obligations(self):
+        cnet = CNet()
+        a, b, c, d, e, f, g, h, z = cnet.add_nodes('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'z')
+
+        a_o_bd = cnet.add_output_binding(a, {d, b})
+        a_o_cd = cnet.add_output_binding(a, {d, c})
+
+        b_i_a = cnet.add_input_binding(b, {a})
+        b_i_f = cnet.add_input_binding(b, {f})
+        b_o_e = cnet.add_output_binding(b, {e})
+
+        c_i_a = cnet.add_input_binding(c, {a})
+        c_i_f = cnet.add_input_binding(c, {f})
+        c_o_e = cnet.add_output_binding(c, {e})
+
+        d_i_a = cnet.add_input_binding(d, {a})
+        d_i_f = cnet.add_input_binding(d, {f})
+        d_o_e = cnet.add_output_binding(d, {e})
+
+        e_i_db = cnet.add_input_binding(e, {d, b})
+        e_i_dc = cnet.add_input_binding(e, {d, c})
+        e_i_dcb = cnet.add_input_binding(e, {d, c, b})
+        e_o_fg = cnet.add_output_binding(e, {f, g})
+        e_o_h = cnet.add_output_binding(e, {h})
+        e_o_fh = cnet.add_output_binding(e, {f, h})
+        e_o_g = cnet.add_output_binding(e, {g})
+
+        f_i_e = cnet.add_input_binding(f, {e})
+        f_o_db = cnet.add_output_binding(f, {d, b})
+        f_o_dc = cnet.add_output_binding(f, {d, c})
+
+        g_i_e = cnet.add_input_binding(g, {e})
+        g_o_z = cnet.add_output_binding(g, {z})
+
+        h_i_e = cnet.add_input_binding(h, {e})
+        h_o_z = cnet.add_output_binding(h, {z})
+
+        z_i_h = cnet.add_input_binding(z, {h})
+        z_i_g = cnet.add_input_binding(z, {g})
+
+        # replay = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'b', 'd', 'e', 'g', 'z'])
+        # logging.debug('obligations %s', cnet._obligations)
+        # return
+        # replay = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'b'])
+        # print replay, len(replay[1])
+        #
+        #
+
+        #
+        # return
+
+        cnet.replay_event('a')
+        logging.debug('a: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(b, source_binding=a_o_bd))
+        self.assertTrue(cnet._find_obligations(c, source_binding=a_o_cd))
+        self.assertTrue(cnet._find_obligations(d, source_binding=a_o_cd))
+        self.assertTrue(cnet._find_obligations(d, source_binding=a_o_bd))
+        self.assertEqual(len(cnet._obligations), 4)
+
+        cnet.replay_event('c')
+        logging.debug('c: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(d, source_binding=a_o_cd))
+        self.assertTrue(cnet._find_obligations(e, source_binding=c_o_e))
+        self.assertEqual(len(cnet._obligations), 2)
+
+        cnet.replay_event('d')
+        logging.debug('d: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(e, source_binding=d_o_e))
+        self.assertTrue(cnet._find_obligations(e, source_binding=c_o_e))
+        self.assertEqual(len(cnet._obligations), 2)
+
+        cnet.replay_event('e')
+        logging.debug('e: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_h))
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_g))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
+        self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fg))
+        self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fh))
+        self.assertEqual(len(cnet._obligations), 6)
+
+        cnet.replay_event('f')
+        logging.debug('f: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
+        self.assertTrue(cnet._find_obligations(b, source_binding=f_o_db))
+        self.assertTrue(cnet._find_obligations(d, source_binding=f_o_db))
+        self.assertTrue(cnet._find_obligations(c, source_binding=f_o_dc))
+        self.assertTrue(cnet._find_obligations(d, source_binding=f_o_dc))
+        self.assertEqual(len(cnet._obligations), 6)
+
+        cnet.replay_event('b')
+        logging.debug('b: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(e, source_binding=b_o_e))
+        self.assertTrue(cnet._find_obligations(d, source_binding=f_o_db))
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
+        self.assertEqual(len(cnet._obligations), 4)
+
+        cnet.replay_event('d')
+        logging.debug('d: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(e, source_binding=d_o_e))
+        self.assertTrue(cnet._find_obligations(e, source_binding=b_o_e))
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
+        self.assertEqual(len(cnet._obligations), 4)
+
+        cnet.replay_event('e')
+        logging.debug('e: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_h))
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))  # double
+        self.assertEqual(len(cnet._find_obligations(h, source_binding=e_o_fh)), 2)
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_g))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))  # double
+        self.assertEqual(len(cnet._find_obligations(g, source_binding=e_o_fg)), 2)
+        self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fg))
+        self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fh))
+
+        self.assertEqual(len(cnet._obligations), 8)
+
+        # from pmlab.cnet import force_graph
+        # from collections import defaultdict
+        #
+        # inset = defaultdict(set)
+        # outset = defaultdict(set)
+        # nodes = []
+        # for n in cnet.nodes:
+        #     nodes.append(n.label)
+        #     for ip in n.input_bindings:
+        #         inset[n.label].add(frozenset({i_n.label for i_n in ip.node_set}))
+        #
+        #     for op in n.output_bindings:
+        #         outset[n.label].add(frozenset({o_n.label for o_n in op.node_set}))
+        #
+        # s = force_graph.ForceDirectedGraph(nodes, inset, outset)
+        # s.run()
+
+        cnet.replay_event('g')
+        logging.debug('g: obligations %s', cnet._obligations)
+        self.assertTrue(cnet._find_obligations(z, source_binding=g_o_z))
+
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))
+        self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fg))
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
+        self.assertEqual(len(cnet._obligations), 4)
+
+        cnet.replay_event('z')
+        logging.debug('g: obligations %s', cnet._obligations)
+        self.assertTrue(len(cnet._obligations), 1)
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
 
 
 if __name__ == '__main__':

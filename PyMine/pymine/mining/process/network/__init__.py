@@ -107,6 +107,12 @@ class Node(BaseElement):
     def input_nodes(self):
         return {arc.start_node for arc in self.input_arcs}
 
+    def is_split(self):
+        return len(self.output_nodes) > 1
+
+    def is_join(self):
+        return len(self.input_nodes) > 1
+
 
 class Network(LabeledObject):
     def __init__(self, label=None):
