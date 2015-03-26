@@ -451,7 +451,9 @@ class CNetTestCase(unittest.TestCase):
         z_i_h = cnet.add_input_binding(z, {h})
         z_i_g = cnet.add_input_binding(z, {g})
 
-        # replay = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'b', 'd', 'e', 'g' 'z'])
+        # replay = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'b', 'd', 'e', 'g', 'z'])
+        # logging.debug('obligations %s', cnet._obligations)
+        # return
         # replay = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'b'])
         # print replay, len(replay[1])
         #
@@ -550,7 +552,7 @@ class CNetTestCase(unittest.TestCase):
         logging.debug('g: obligations %s', cnet._obligations)
         self.assertTrue(cnet._find_obligations(z, source_binding=g_o_z))
 
-        self.assertEqual(len(cnet._find_obligations(h, source_binding=e_o_fh)), 1)
+        self.assertTrue(cnet._find_obligations(h, source_binding=e_o_fh))
         self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fg))
         self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
         self.assertEqual(len(cnet._obligations), 4)
@@ -558,10 +560,7 @@ class CNetTestCase(unittest.TestCase):
         cnet.replay_event('z')
         logging.debug('g: obligations %s', cnet._obligations)
         self.assertTrue(len(cnet._obligations), 1)
-        self.assertTrue(cnet._find_obligations(f, source_binding=e_o_fg))
-
-
-
+        self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
 
 
 if __name__ == '__main__':

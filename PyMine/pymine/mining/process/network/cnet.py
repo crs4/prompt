@@ -82,7 +82,11 @@ class CNode(Node):
     @property
     def obligations(self):
         return self.output_nodes
-    
+
+    def has_shared_output_bindings(self, node):
+        shared_b =[b for b in self.output_bindings if node in b.node_set]
+        return len(shared_b) > 1
+
     def get_json(self):
         json = [{'label': str(self.label),
                  'input_arcs': [arc.label for arc in self.input_arcs],
@@ -108,8 +112,8 @@ class CNet(Network):
         Clear current net state: obligations, current node.
         """
         self.events_played = []
-        self._pending_obligations = []
-        # self._pending_output_bindings = []
+        # self._pending_obligations = []
+        self._pending_splits = []
         self.current_node = None
         self._xor_bindings = {}
         initial_nodes = self.get_initial_nodes()
@@ -402,39 +406,67 @@ class CNet(Network):
         if input_binding_completed:
             input_binding_completed.frequency += 1
 
-            for n in input_binding_completed.node_set:
-                for binding in n.output_bindings:
+            for input_node in input_binding_completed.node_set:
+                if input_node.has_shared_output_bindings(event_cnode):
+                    if input_node not in self._pending_splits:
+                        self._pending_splits.append(input_node)
+                    shared = True
+                else:
+                    shared = False
+
+                for binding in input_node.output_bindings:
                     for node in binding.node_set:
-                        obls = self._find_obligations(node, n, binding)
+                        obls = self._find_obligations(node, input_node, binding)
                         if obls:
                             obl = obls[0]
                             if event_cnode in binding.node_set:
                                 if node == event_cnode:
-                                    obl.source_binding.frequency += 1
+                                    if not shared:
+                                        obl.source_binding.frequency += 1
                                     logger.debug('removing obl %s', obl)
                                     self._obligations.remove(obl)
-                                # else:
-                                #     self._pending_obligations.append(obl)
+
                             else:
                                 logger.debug('removing xor obl %s', obl)
                                 self._obligations.remove(obl)
 
             logger.debug('removing pending obls')
-            for input_node in event_cnode.input_nodes:
-                logger.debug('input_node %s', input_node)
-                pending_obls = self._find_obligations(input_node)
-                if pending_obls:
-                    logger.debug('removing pending_obl %s', pending_obls[0])
-                    self._obligations.remove(pending_obls[0])
+            if event_cnode.is_join() and self._pending_splits:
+                split_node = self._pending_splits.pop()
+
+                max_index = max([i for i, j in enumerate(self.events_played) if j == split_node.label])
+                candidate_bindings = [ib for ib in split_node.output_bindings
+                                      if ib.node_set_labels() <= set(self.events_played[max_index + 1:])]
+                if candidate_bindings:
+                    binding_completed = max(candidate_bindings, key=lambda x: len(x.node_set))
+                    logger.debug('binding_completed %s', binding_completed)
+                    binding_completed.frequency += 1
+                    for b in split_node.output_bindings:
+                        if b != binding_completed:
+                            for n in b.node_set:
+                                if n not in input_binding_completed.node_set:
+                                    obls = self._find_obligations(n, source_binding=b)
+                                    if obls:
+                                        logger.debug('removing pending obl %s', obls[0])
+                                        self._obligations.remove(obls[0])
+
+
+
+            # for input_node in event_cnode.input_nodes:
+            #     logger.debug('input_node %s', input_node)
+            #     pending_obls = self._find_obligations(input_node)
+            #     if pending_obls:
+            #         logger.debug('removing pending_obl %s', pending_obls[0])
+            #         self._obligations.remove(pending_obls[0])
 
         self.current_node = event_cnode
         self.events_played.append(event)
 
-        # self._obligations += [Obligation(event_cnode, n) for n in event_cnode.output_nodes]
+        # self._obligations += [Obligation(event_cnode, input_node) for input_node in event_cnode.output_nodes]
         logger.debug('self._obligations %s', self._obligations)
 
         for xor_binding in event_cnode.output_bindings:
-            self._obligations += [Obligation(xor_binding, n) for n in xor_binding.node_set]
+            self._obligations += [Obligation(xor_binding, input_node) for input_node in xor_binding.node_set]
         logger.debug('self._obligations %s', self._obligations)
 
     def replay_sequence(self, sequence):
