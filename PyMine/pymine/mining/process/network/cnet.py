@@ -444,13 +444,11 @@ class CNet(Network):
                     for b in split_node.output_bindings:
                         if b != binding_completed:
                             for n in b.node_set:
-                                if n not in input_binding_completed.node_set:
+                                if n.label not in self.events_played[max_index:]:
                                     obls = self._find_obligations(n, source_binding=b)
                                     if obls:
                                         logger.debug('removing pending obl %s', obls[0])
                                         self._obligations.remove(obls[0])
-
-
 
             # for input_node in event_cnode.input_nodes:
             #     logger.debug('input_node %s', input_node)
