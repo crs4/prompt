@@ -112,7 +112,7 @@ class CNet(Network):
         Clear current net state: obligations, current node.
         """
         self.events_played = []
-        # self._pending_obligations = []
+        self._input_bindings_completed_index = defaultdict(list)
         self._pending_splits = []
         self.current_node = None
         self._xor_bindings = {}
@@ -230,15 +230,12 @@ class CNet(Network):
         return self._output_bindings
 
     def _add_input_binding(self, binding):
+        self.rewind()
         self._input_bindings.append(binding)
         return binding
 
-    def _add_binding(self, binding):
-        self.rewind()
-        self._bindings.append(binding)
-        return binding
-
     def _add_output_binding(self, binding):
+        self.rewind()
         self._output_bindings.append(binding)
         return binding
 
@@ -311,7 +308,7 @@ class CNet(Network):
         logger.debug('available_nodes %s', available_nodes)
         return available_nodes
 
-    def _get_input_binding_completed(self, node):
+    def _get_input_binding_completed(self, node, consume_binding=False):
         # logger.debug('_get_input_binding_completed %s', node)
 
         completed_bindings = defaultdict(list)
@@ -321,17 +318,48 @@ class CNet(Network):
             node_set_as_labels = ib.node_set_labels()
             logger.debug('node_set_as_labels %s', node_set_as_labels)
 
-            if node_set_as_labels <= set(self.events_played):
-                indexes = [self.events_played.index(n) for n in node_set_as_labels]
-                completed_bindings[max(indexes)].append(ib)
+            pending_obl = False
+            for n in ib.node_set:
+                if self._find_obligations(node, n):
+                    pending_obl = True
+                    logger.debug('pending obl for node %s, n %s', node, n)
+                    break
+
+            if pending_obl and node_set_as_labels <= set(self.events_played):
+                indexes = []
+                for n in node_set_as_labels:
+                    for idx, e in enumerate(self.events_played):
+                        if n == e and idx not in self._input_bindings_completed_index[node]:
+                            indexes.append(idx)
+
+                # indexes = [self.events_played.index(n) for n in node_set_as_labels
+                #            if self.events_played.index(n) not in self._input_bindings_completed_index[node]]
+                #
+                logger.debug('self._input_bindings_completed_index %s', self._input_bindings_completed_index)
+                logger.debug('indexes %s', indexes)
+
+                if indexes:
+                    completed_bindings[min(indexes)].append(ib)
 
         logger.debug('completed_bindings %s', completed_bindings)
+        logger.debug('self._input_bindings_completed_index %s', self._input_bindings_completed_index)
+
+        # if consume_binding:
+        #     for i in self._input_bindings_completed_index[node]:  # removing previous completed binding
+        #             if i in completed_bindings:
+        #                 completed_bindings.pop(i)
         if completed_bindings:
-            max_index = max(completed_bindings.keys())
-            if len(completed_bindings[max_index]) == 1:
-                return completed_bindings[max_index][0]
+
+            min_index = min(completed_bindings.keys())
+            if consume_binding:
+                self._input_bindings_completed_index[node].append(min_index)
+
+            if len(completed_bindings[min_index]) == 1:
+                binding = completed_bindings[min_index][0]
             else:
-                return max(completed_bindings[max_index], key=lambda x: len(x.node_set))
+                binding = max(completed_bindings[min_index], key=lambda x: len(x.node_set))
+
+            return binding
 
     def _find_obligations(self, node=None, source_node=None, source_binding=None):
         if node and source_node is None and source_binding is None:
@@ -401,7 +429,7 @@ class CNet(Network):
 
         # FIXME code above can be simplified
 
-        input_binding_completed = self._get_input_binding_completed(event_cnode)
+        input_binding_completed = self._get_input_binding_completed(event_cnode, True)
         logger.debug('input_binding_completed %s', input_binding_completed)
         if input_binding_completed:
             input_binding_completed.frequency += 1
@@ -430,13 +458,14 @@ class CNet(Network):
                                 logger.debug('removing xor obl %s', obl)
                                 self._obligations.remove(obl)
 
-            logger.debug('removing pending obls')
             if event_cnode.is_join() and self._pending_splits:
                 split_node = self._pending_splits.pop()
+                logger.debug('removing pending obls split %s', split_node)
 
                 max_index = max([i for i, j in enumerate(self.events_played) if j == split_node.label])
                 candidate_bindings = [ib for ib in split_node.output_bindings
                                       if ib.node_set_labels() <= set(self.events_played[max_index + 1:])]
+                logger.debug('candidate_bindings %s', candidate_bindings)
                 if candidate_bindings:
                     binding_completed = max(candidate_bindings, key=lambda x: len(x.node_set))
                     logger.debug('binding_completed %s', binding_completed)
@@ -487,7 +516,39 @@ class CNet(Network):
                 unexpected_events.append(ex.event)
 
         return len(self._obligations + unexpected_events) == 0, self._obligations, unexpected_events
-    
+
+    def remove_binding(self, binding, remove_wrong_elements=True):
+        logger.debug('removing binding %s', binding)
+        node = binding.node
+        if isinstance(binding, InputBinding):
+            self._input_bindings.remove(binding)
+            node.input_bindings.remove(binding)
+            if remove_wrong_elements:
+                for input_node in node.input_nodes:
+                    if not node.get_input_bindings_with({input_node}):
+                        for b in input_node.get_output_bindings_with({node}):
+                            b.node_set.remove(node)
+                            if not b.node_set:
+                                logger.debug('removing empty binding %s', b)
+                                self.remove_binding(b)
+                        arc_to_rm = self.get_arc_by_nodes(input_node, node)
+                        if arc_to_rm:
+                            self.remove_arc(arc_to_rm)
+        else:
+            self._output_bindings.remove(binding)
+            node.output_bindings.remove(binding)
+            if remove_wrong_elements:
+                for output_node in node.output_nodes:
+                    if not node.get_output_bindings_with({output_node}):
+                        for b in output_node.get_input_bindings_with({node}):
+                            b.node_set.remove(node)
+                            if not b.node_set:
+                                logger.debug('removing empty binding %s', b)
+                                self.remove_binding(b)
+                        arc_to_rm = self.get_arc_by_nodes(node, output_node)
+                        if arc_to_rm:
+                            self.remove_arc(arc_to_rm)
+
     def get_json(self):
         """
 
