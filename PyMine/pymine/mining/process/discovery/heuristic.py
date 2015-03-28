@@ -132,6 +132,20 @@ class HeuristicMiner(Miner):
                           label=connection.label,
                           frequency=connection.frequency)
         self.calculate_possible_binds(c_net, p_info.process, window_size, frequency_thr)
+        # checking c_net sanity
+        logger.debug('checking for pending obligations')
+        for case in p_info.process.cases:
+            passed, obls_to_remove, unexpected = replay_case(case, c_net)
+            logger.debug('case %s, obls_to_remove %s', [e.activity_name for e in case.events], obls_to_remove)
+            for obl in obls_to_remove:
+                obl.source_binding.node_set.remove(obl.node)
+                if not obl.source_binding.node_set:
+                    try:
+                        c_net.remove_binding(obl.source_binding)
+                    except:
+                        pass #  FIXME specialized for exception in case of non existing binding
+
+        
         return c_net
 
     def calculate_possible_binds(self, c_net, process, window_size, frequency_thr):
