@@ -3,8 +3,9 @@ from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, Output
 import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
-logging.basicConfig(level=logging.DEBUG, format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
-
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.DEBUG)
+logger = logging.getLogger('cnet')
+logger.setLevel(logging.DEBUG)
 
 def _create_cnet():
     cnet = CNet()
@@ -562,6 +563,21 @@ class CNetTestCase(unittest.TestCase):
         self.assertTrue(len(cnet._obligations), 1)
         self.assertTrue(cnet._find_obligations(g, source_binding=e_o_fg))
 
+    def test_remove_input_binding(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        binding_to_rm = e.get_input_bindings_with({b, c})[0]
+        cnet.remove_binding(binding_to_rm)
+        self.assertFalse(e.get_input_bindings_with({b, c}))
+        self.assertEqual(len(e.input_bindings), 1)
+        self.assertEqual(e.input_nodes, {d})
+
+    def test_remove_output_binding(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        binding_to_rm = a.get_output_bindings_with({d})[0]
+        cnet.remove_binding(binding_to_rm)
+        self.assertFalse(a.get_output_bindings_with({d}))
+        self.assertEqual(len(d.input_bindings), 0)
+        self.assertEqual(a.output_nodes, {b, c})
 
 if __name__ == '__main__':
     unittest.main()
