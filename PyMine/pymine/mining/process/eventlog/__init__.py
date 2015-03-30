@@ -54,15 +54,18 @@ class Process(IdObject):
 
 class ProcessInfo(object):
 
-    def __init__(self, process=None, activities_number=0, cases_number=0, average_case_size=0, events_number=0,
-                 activity_frequencies=None, event_frequencies=None):
+    def __init__(self, process):
+
         self.process = process
-        self.activities_number = activities_number
-        self.cases_number = cases_number
-        self.average_case_size = average_case_size
+        self.activities_number = len(process.activities)
+        self.cases_number = len(process.cases)
+        events_number = 0
+        for case in process.cases:
+            events_number += len(case.events)
         self.events_number = events_number
-        self.activity_frequencies = activity_frequencies or []
-        self.event_frequencies = event_frequencies or []
+        self.average_case_size = float(events_number/len(process.cases))
+        # self.activity_frequencies = activity_frequencies or []
+        # self.event_frequencies = event_frequencies or []
 
 
 class Activity(IdObject):

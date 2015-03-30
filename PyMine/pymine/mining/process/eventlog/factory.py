@@ -13,17 +13,10 @@ class LogInfoFactory(object):
     def create_loginfo(self):
         loginfo = LogInfo()
         for process in self.processes:
-            process_info = ProcessInfo()
-            process_info.process = process
-            process_info.activities_number = len(process.activities)
-            process_info.cases_number = len(process.cases)
-            events_number = 0
-            for case in process.cases:
-                events_number += len(case.events)
-            process_info.events_number = events_number
-            process_info.average_case_size = float(events_number/len(process.cases))
+            process_info = ProcessInfo(process)
             loginfo.processes_info[process.id] = process_info
         return loginfo
+
 
 class LogFactory(object):
 
@@ -32,21 +25,6 @@ class LogFactory(object):
 
     def create_log(self):
         return Log(self.cases)
-
-    def create_loginfo(self):
-        log_info = LogInfo()
-        for process in self.processes:
-            process_info = ProcessInfo()
-            process_info.process = process
-            process_info.activities_number = len(process.activities)
-            process_info.cases_number = len(process.cases)
-            events_number = 0
-            for case in process.cases:
-                events_number += len(case.events)
-            process_info.events_number = events_number
-            process_info.average_case_size = float(events_number/len(process.cases))
-            log_info.processes_info[process.id] = process_info
-        return log_info
 
 
 class CsvLogFactory(LogFactory):
