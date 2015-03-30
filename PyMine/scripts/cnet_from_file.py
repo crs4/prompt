@@ -38,11 +38,11 @@ def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequenc
     print 'outset', outset
 
     print 'computing fitness...'
-    f = fitness(log[log.processes[0]], cnet, max_depth=15)
+    f = fitness(log, cnet, max_depth=15)
     print 'fitness', f
 
     print 'computing simple fitness...'
-    f = simple_fitness(log[log.processes[0]], cnet)
+    f = simple_fitness(log, cnet)
     print 'fitness', f.fitness
     print 'f.correct_cases', f.correct_cases
     print 'f.failed_cases', f.failed_cases
