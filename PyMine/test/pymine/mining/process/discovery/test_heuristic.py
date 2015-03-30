@@ -129,11 +129,9 @@ class TestHeuristicMiner(unittest.TestCase):
         dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4_label_final_node.csv')
         log = log_factory.create_log_from_file(dataset_path)[0]
         miner = HeuristicMiner()
-        # cnet = miner.mine(log, binding_frequency_thr=0.5)[0]
         cnet = miner.mine(log)
         for case in log.cases:
             passed, obl_pending, unexpected = replay_case(case, cnet)
-            print('passed %s, obl_pending %s, unexpected %s' % (passed, obl_pending, unexpected))
             self.assertFalse(obl_pending)
 
 
