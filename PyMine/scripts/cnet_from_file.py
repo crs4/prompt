@@ -3,10 +3,12 @@ from pymine.mining.process.eventlog.factory import CsvLogFactory
 from pmlab.cnet import force_graph
 from collections import defaultdict
 from pymine.mining.process.conformance.alignment import fitness
+from pymine.mining.process.conformance import simple_fitness
 import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.DEBUG)
-logger = logging.getLogger('alignment')
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logger = logging.getLogger('heuristic')
+# logger = logging.getLogger('cnet')
+# logger.setLevel(logging.DEBUG)
 
 
 def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequency_thr):
@@ -17,13 +19,13 @@ def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequenc
     inset = defaultdict(set)
     outset = defaultdict(set)
     nodes = []
-    print 'nodes', cnet.nodes
-    for node in cnet.nodes:
-        print 'node %s: input_bindings %s ' % (node, node.input_bindings)
-        print 'node %s: output_bindings %s ' % (node, node.output_bindings)
-
-    print cnet.get_initial_nodes()
-    print cnet.get_final_nodes()
+    # print 'nodes', cnet.nodes
+    # for node in cnet.nodes:
+    #     print 'node %s: input_bindings %s ' % (node, node.input_bindings)
+    #     print 'node %s: output_bindings %s ' % (node, node.output_bindings)
+    #
+    # print cnet.get_initial_nodes()
+    # print cnet.get_final_nodes()
 
     for n in cnet.nodes:
         nodes.append(n.label)
@@ -32,13 +34,24 @@ def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequenc
 
         for op in n.output_bindings:
             outset[n.label].add(frozenset({o_n.label for o_n in op.node_set}))
-
-    s = force_graph.ForceDirectedGraph(nodes, inset, outset)
-    s.run()
+    print 'inset', inset
+    print 'outset', outset
 
     print 'computing fitness...'
     f = fitness(log, cnet, max_depth=15)
     print 'fitness', f
+
+    print 'computing simple fitness...'
+    f = simple_fitness(log, cnet)
+    print 'fitness', f.fitness
+    print 'f.correct_cases', f.correct_cases
+    print 'f.failed_cases', f.failed_cases
+    logger.debug('***********************')
+    passed, obls, wat = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'd', 'c', 'e', 'f', 'c', 'd', 'e', 'h', 'z'])
+    print passed, obls, wat
+
+    s = force_graph.ForceDirectedGraph(nodes, inset, outset)
+    s.run()
 
 
 if __name__ == '__main__':

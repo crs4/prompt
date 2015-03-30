@@ -123,6 +123,17 @@ class TestHeuristicMiner(unittest.TestCase):
         self.assertTrue(len(cnet.input_bindings) == len(mined_cnet.input_bindings))
         self.assertTrue(len(cnet.output_bindings) == len(mined_cnet.output_bindings))
 
+    def test_remove_pending_obligations(self):
+        import os
+        log_factory = CsvLogFactory(time_format='%d-%m-%Y:%H.%M')
+        dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4_label_final_node.csv')
+        log = log_factory.create_log_from_file(dataset_path)[0]
+        miner = HeuristicMiner()
+        cnet = miner.mine(log)
+        for case in log.cases:
+            passed, obl_pending, unexpected = replay_case(case, cnet)
+            self.assertFalse(obl_pending)
+
 
 def suite():
     suite = unittest.TestSuite()

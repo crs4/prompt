@@ -185,7 +185,6 @@ class Network(LabeledObject):
         arc.end_node.input_arcs.remove(arc)
         arc.start_node.output_arcs.remove(arc)
 
-
     def add_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
         arc = self._create_arc(node_a, node_b, label, frequency, attrs)
         return self._add_arc(arc, node_a, node_b)

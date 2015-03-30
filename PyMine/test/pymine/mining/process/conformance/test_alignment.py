@@ -6,9 +6,9 @@ from pymine.mining.process.eventlog.factory import SimpleProcessLogFactory
 import pymine.mining.process.conformance.alignment as aln
 from pymine.mining.process.conformance.alignment import Alignment
 
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",)
-logger = logging.getLogger('alignment')
-# logger.setLevel(logging.DEBUG)
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.DEBUG)
+logger = logging.getLogger('cnet')
+logger.setLevel(logging.DEBUG)
 
 
 class AlignmentTestCase(unittest.TestCase):

@@ -1,6 +1,7 @@
 from pymine.mining.process.discovery import Miner as Miner
 from pymine.mining.process.network.dependency import DependencyGraph as DependencyGraph
 from pymine.mining.process.network.cnet import CNet as CNet
+from pymine.mining.process.conformance import replay_case
 
 from pymine.mining.process.eventlog.factory import CsvLogFactory as CsvLogFactory
 from pymine.mining.process.eventlog.factory import ProcessInfo
@@ -131,6 +132,23 @@ class HeuristicMiner(Miner):
                           label=connection.label,
                           frequency=connection.frequency)
         self.calculate_possible_binds(c_net, p_info.process, window_size, frequency_thr)
+        
+        # checking c_net soundness
+        obls_to_rm = set()
+        logger.debug('checking for pending obligations')
+        for case in p_info.process.cases:
+            passed, obls, unexpected = replay_case(case, c_net)
+            logger.debug('case %s, obls %s', [e.activity_name for e in case.events], obls)
+            obls_to_rm |= set(obls)
+
+        for obl in obls_to_rm:
+            try:
+                logger.debug('removing obl %s', obl)
+                c_net.remove_node_from_binding(obl.node, obl.source_binding)
+            except Exception as ex:
+                logger.debug('ex %s', ex)  # FIXME use a specialized exception in case of non existing binding
+
+        
         return c_net
 
     def calculate_possible_binds(self, c_net, process, window_size, frequency_thr):
@@ -212,6 +230,7 @@ class HeuristicMiner(Miner):
                 for binds in output_binds:
                     if output_binds[binds] >= frequency_thr:
                         c_net.add_output_binding(node, set(binds), frequency=output_binds[binds])
+
         except Exception, e:
             print("Error: "+str(e))
 
@@ -229,9 +248,9 @@ class HeuristicMiner(Miner):
 
     def mine(self, process_log, arc_frequency_thr=0, dependency_thr=0.0, binding_frequency_thr=0, window_size=None):
         logger.debug('mine dependency_threshold %s', dependency_thr)
-        dgraphs = self.mine_dependency_graph(process_log, arc_frequency_thr, dependency_thr)
-        cnets = self.mine_cnet(dgraphs, process_log, window_size, binding_frequency_thr)
-        return cnets
+        dgraph = self.mine_dependency_graph(process_log, arc_frequency_thr, dependency_thr)
+        cnet = self.mine_cnet(dgraph, process_log, window_size, binding_frequency_thr)
+        return cnet
 
     def mine_from_csv_file(self, filename, frequency_threshold=0, dependency_threshold=0.0):
         log_file = CsvLogFactory(input_filename=filename)
