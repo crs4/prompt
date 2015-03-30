@@ -1,6 +1,7 @@
 import csv, sys
 from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
 from pymine.mining.process.eventlog import *
+from pymine.mining.process.eventlog.exceptions import InvalidExtension
 import datetime
 import logging
 logger = logging.getLogger('factory')
@@ -134,3 +135,56 @@ class SimpleProcessLogFactory(LogFactory):
 
     def create_log(self):
         return ProcessLog(self.process, self.cases)
+
+
+def create_log_from_csv(file_path, time_format):
+    return CsvLogFactory(file_path, time_format).create_log()
+
+
+def create_log_from_xes(file_path, time_format):
+    import xml.etree.ElementTree as ET
+    ns = {'xes': 'http://www.xes-standard.org/'}
+
+    tree = ET.parse(file_path)
+    xml_log = tree.getroot()
+    process = Process()
+    for trace in xml_log.findall('xes:trace', ns):
+        case = process.add_case()
+        for event in trace.findall('xes:event', ns):
+            timestamp = None
+            attributes = []
+            activity_instance = None
+            resources = []
+            for child in list(event):
+                if child.tag == '{%s}string' % ns['xes']:
+                    if child.attrib['key'] == 'concept:name':
+                        activity = process.add_activity(child.attrib['value'])
+                        activity_instance = case.add_activity_instance(activity)
+                elif child.tag == '{%s}date' % ns['xes']:
+                    value = datetime.datetime.strptime(child.attrib['value'], time_format)
+                    if child.attrib['key'] == 'time:timestamp':
+                        timestamp = value
+                    else:
+                        attributes.append(Attribute(name=child.attrib['key'], value=value))
+                elif child.tag == '{%s}org:resource' % ns['xes']:
+                    resources.append(child.attrib['value'])
+                else:
+                    attributes.append(Attribute(name=child.attrib['key'], value=child.attrib['value']))
+            if activity_instance and timestamp:
+                activity_instance.add_event(timestamp=timestamp, resources=resources, attributes=attributes)
+            else:
+                logger.warning('child %s should have at least concept:name and time:timestamp defined')
+    return Log(process.cases)
+
+
+def create_log_from_file(file_path, time_format='%Y-%m-%d %H:%M:%S.%f'):
+    ext = file_path.split('.')[-1].lower()
+    valid_ext = ('csv', 'xes')
+    if ext not in valid_ext:
+        raise InvalidExtension('Unknown extension %s. Valid ones: %s' % (ext, valid_ext))
+    if ext == 'csv':
+        create_log_from_csv(file_path, time_format)
+    elif ext == 'xes':
+        return create_log_from_xes(file_path, time_format)
+
+
