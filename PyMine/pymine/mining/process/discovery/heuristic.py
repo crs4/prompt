@@ -3,7 +3,7 @@ from pymine.mining.process.network.dependency import DependencyGraph as Dependen
 from pymine.mining.process.network.cnet import CNet as CNet
 
 from pymine.mining.process.eventlog.factory import CsvLogFactory as CsvLogFactory
-from pymine.mining.process.eventlog.factory import LogInfoFactory as LogInfoFactory
+from pymine.mining.process.eventlog.factory import ProcessInfo
 import logging
 logger = logging.getLogger('heuristic')
 
@@ -60,90 +60,78 @@ class HeuristicMiner(Miner):
         except Exception as e:
             logger.exception(e) # FIXME
 
+    def mine_dependency_graph(self, process_log, frequency_threshold=None, dependency_threshold=None):
 
-    def mine_dependency_graphs(self, log, frequency_threshold=None, dependency_threshold=None):
-        graphs = []
-        # for each process create a separate graph
-        for process in log.processes:
-            net = DependencyGraph()
-            # for each activity create a graph node
+        net = DependencyGraph()
+        # for each activity create a graph node
+        process = process_log.process
+        for activity in process.activities:
+            net.add_node(label=activity.name)
 
-            for activity in process.activities:
-                net.add_node(label=activity.name)
+        graph_start_node = net.get_node_by_label(process.cases[0].events[0].activity_instance.activity.name)
+        graph_end_node = net.get_node_by_label(process.cases[0].events[-1].activity_instance.activity.name)
+        for case in process.cases:
+            # Insert some code here to check if start and end nodes are changing.
+            # If true, an extra fake initial/final node should be added
+            for e_index in xrange(0, len(case.events)-1):
+                start_event = case.events[e_index]
+                start_activity_instance = start_event.activity_instance
+                start_activity = start_activity_instance.activity
+                start_node_name = start_activity.name
 
-            graph_start_node = net.get_node_by_label(process.cases[0].events[0].activity_instance.activity.name)
-            graph_end_node = net.get_node_by_label(process.cases[0].events[-1].activity_instance.activity.name)
-            for case in process.cases:
-                # Insert some code here to check if start and end nodes are changing.
-                # If true, an extra fake initial/final node should be added
-                for e_index in xrange(0, len(case.events)-1):
-                    start_event = case.events[e_index]
-                    start_activity_instance = start_event.activity_instance
-                    start_activity = start_activity_instance.activity
-                    start_node_name = start_activity.name
+                end_event = case.events[e_index+1]
+                end_activity_instance = end_event.activity_instance
+                end_activity = end_activity_instance.activity
+                end_node_name = end_activity.name
 
-                    end_event = case.events[e_index+1]
-                    end_activity_instance = end_event.activity_instance
-                    end_activity = end_activity_instance.activity
-                    end_node_name = end_activity.name
+                arc_name = start_node_name+"->"+end_node_name
+                arc = net.get_arc_by_label(arc_name)
+                if arc:
+                    arc.frequency += 1
+                else:
+                    start_node = net.get_node_by_label(start_node_name)
+                    end_node = net.get_node_by_label(end_node_name)
+                    net.add_arc(start_node, end_node, arc_name, 1)
+        net.start_node = graph_start_node
+        net.end_node = graph_end_node
+        self.calculate_arcs_dependency(net)
 
-                    arc_name = start_node_name+"->"+end_node_name
-                    arc = net.get_arc_by_label(arc_name)
-                    if arc:
-                        arc.frequency += 1
-                    else:
-                        start_node = net.get_node_by_label(start_node_name)
-                        end_node = net.get_node_by_label(end_node_name)
-                        net.add_arc(start_node, end_node, arc_name, 1)
-            net.start_node = graph_start_node
-            net.end_node = graph_end_node
-            self.calculate_arcs_dependency(net)
+        if frequency_threshold:
+            self.prune_by_frequency(net, frequency_threshold)
+        logger.debug('*** dependency_threshold %s', dependency_threshold)
+        if dependency_threshold:
+            self.prune_by_dependency(net, dependency_threshold)
 
-            if frequency_threshold:
-                self.prune_by_frequency(net, frequency_threshold)
-            logger.debug('*** dependency_threshold %s', dependency_threshold)
-            if dependency_threshold:
-                self.prune_by_dependency(net, dependency_threshold)
+        # final_nodes = net.get_final_nodes()
+        # if len(final_nodes) > 1:
+        #     fake_final = net.add_node('__final')
+        #     for n in final_nodes:
+        #         net.add_arc(n, fake_final, frequency=1000)
+        #
+        # initial_nodes = net.get_initial_nodes()
+        # if len(initial_nodes) > 1:
+        #     fake_initial = net.add_node('__initial')
+        #     for n in initial_nodes:
+        #         net.add_arc(fake_initial, n, frequency=1000)
 
-            # final_nodes = net.get_final_nodes()
-            # if len(final_nodes) > 1:
-            #     fake_final = net.add_node('__final')
-            #     for n in final_nodes:
-            #         net.add_arc(n, fake_final, frequency=1000)
-            #
-            # initial_nodes = net.get_initial_nodes()
-            # if len(initial_nodes) > 1:
-            #     fake_initial = net.add_node('__initial')
-            #     for n in initial_nodes:
-            #         net.add_arc(fake_initial, n, frequency=1000)
+        return net
 
+    def mine_cnet(self, dep_net, process_log, window_size=None, frequency_thr=0):
+        p_info = ProcessInfo(process_log.process)
 
-            graphs.append(net)
-        return graphs
-
-    def mine_cnets(self, dependency_graphs, log, window_size=None, frequency_thr=0):
-
-        log_info_factory = LogInfoFactory(log=log)
-        log_info = log_info_factory.create_loginfo()
-        #dependency_graphs = self.mine_dependency_graphs(log, frequency_threshold, dependency_threshold)
-        nets = []
-        for process_info in log_info.processes_info:
-            dep_net = dependency_graphs.pop()
-            p_info = log_info.processes_info[process_info]
-            window_size = window_size or int(p_info.average_case_size)
-            c_net = CNet()
-            for activity in dep_net.nodes:
-                c_net.add_node(label=activity.label)
-            c_net.start_node = dep_net.start_node
-            c_net.end_node = dep_net.end_node
-            for connection in dep_net.arcs:
-                c_net.add_arc(c_net.get_node_by_label(connection.start_node.label),
-                              c_net.get_node_by_label(connection.end_node.label),
-                              label=connection.label,
-                              frequency=connection.frequency)
-            self.calculate_possible_binds(c_net, p_info.process, window_size, frequency_thr)
-            nets.append(c_net)
-        return nets
+        window_size = window_size or int(p_info.average_case_size)
+        c_net = CNet()
+        for activity in dep_net.nodes:
+            c_net.add_node(label=activity.label)
+        c_net.start_node = dep_net.start_node
+        c_net.end_node = dep_net.end_node
+        for connection in dep_net.arcs:
+            c_net.add_arc(c_net.get_node_by_label(connection.start_node.label),
+                          c_net.get_node_by_label(connection.end_node.label),
+                          label=connection.label,
+                          frequency=connection.frequency)
+        self.calculate_possible_binds(c_net, p_info.process, window_size, frequency_thr)
+        return c_net
 
     def calculate_possible_binds(self, c_net, process, window_size, frequency_thr):
         try:
@@ -239,10 +227,10 @@ class HeuristicMiner(Miner):
             pass
         return binds_set
 
-    def mine(self, log, arc_frequency_thr=0, dependency_thr=0.0, binding_frequency_thr=0, window_size=None):
+    def mine(self, process_log, arc_frequency_thr=0, dependency_thr=0.0, binding_frequency_thr=0, window_size=None):
         logger.debug('mine dependency_threshold %s', dependency_thr)
-        dgraphs = self.mine_dependency_graphs(log, frequency_threshold=arc_frequency_thr, dependency_threshold=dependency_thr)
-        cnets = self.mine_cnets(dgraphs, log, window_size, binding_frequency_thr)
+        dgraphs = self.mine_dependency_graph(process_log, arc_frequency_thr, dependency_thr)
+        cnets = self.mine_cnet(dgraphs, process_log, window_size, binding_frequency_thr)
         return cnets
 
     def mine_from_csv_file(self, filename, frequency_threshold=0, dependency_threshold=0.0):

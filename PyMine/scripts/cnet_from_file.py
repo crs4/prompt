@@ -11,9 +11,9 @@ logger.setLevel(logging.DEBUG)
 
 def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequency_thr):
     log_factory = CsvLogFactory(time_format=time_format)
-    log = log_factory.create_log_from_file(csv_path)
+    log = log_factory.create_log_from_file(csv_path)[0]
     miner = HeuristicMiner()
-    cnet = miner.mine(log, freq_thr, dep_thr, binding_frequency_thr, window_size)[0]
+    cnet = miner.mine(log, freq_thr, dep_thr, binding_frequency_thr, window_size)
     inset = defaultdict(set)
     outset = defaultdict(set)
     nodes = []
@@ -37,10 +37,8 @@ def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequenc
     s.run()
 
     print 'computing fitness...'
-    f = fitness(log[log.processes[0]], cnet, max_depth=15)
+    f = fitness(log, cnet, max_depth=15)
     print 'fitness', f
-
-
 
 
 if __name__ == '__main__':

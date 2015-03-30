@@ -1,5 +1,6 @@
 from pymine.mining.process.eventlog.exceptions import InvalidProcess
 from abc import ABCMeta, abstractmethod, abstractproperty
+from collections import OrderedDict
 
 
 class BaseLog(object):
@@ -54,7 +55,7 @@ class Log(BaseLog):
     """
 
     def __init__(self, cases=None, process_logs=()):
-        self._process_logs = {}
+        self._process_logs = OrderedDict()
         for p_log in process_logs:
             self._process_logs[p_log.process] = p_log
 
@@ -84,7 +85,11 @@ class Log(BaseLog):
         return cases
 
     def __getitem__(self, item):
-        return self._process_logs[item]
+        process = self._process_logs.keys()[item]
+        return self._process_logs[process]
+
+    def get_process_log(self, process):
+        return self._process_logs[process]
 
     def __eq__(self, other):
         if type(self) == type(other):

@@ -6,6 +6,12 @@ from pymine.mining.process.discovery.heuristic import HeuristicMiner as Heuristi
 from pymine.mining.process.network.dependency import *
 from pymine.mining.process.network.cnet import *
 from pymine.mining.process.eventlog.factory import CsvLogFactory
+from pymine.mining.process.conformance import replay_case
+import logging
+logging.basicConfig(level=logging.DEBUG,format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logger = logging.getLogger('heuristic')
+logger.setLevel(logging.DEBUG)
+
 
 class TestHeuristicMiner(unittest.TestCase):
 
@@ -98,10 +104,10 @@ class TestHeuristicMiner(unittest.TestCase):
         return cnet
 
     def test_mine_dependency_graph(self):
-        log = self.create_log_from_test_data()
+        log = self.create_log_from_test_data()[0]
         hm = HeuristicMiner()
         dgraph = self.create_dependency_graph()
-        mined_graph = hm.mine_dependency_graphs(log, 0, 0.0)[0]
+        mined_graph = hm.mine_dependency_graph(log, 0, 0.0)
         #self.assertEqual(dgraph, mined_graph)
         self.assertTrue(True)
 
@@ -109,36 +115,14 @@ class TestHeuristicMiner(unittest.TestCase):
         log = self.create_log_from_test_data()
         hm = HeuristicMiner()
         cnet = self.create_cnet()
-        mined_graphs = hm.mine_dependency_graphs(log, 0, 0.0)
-        mined_cnet = hm.mine_cnets(mined_graphs, log)[0]
+        mined_graph = hm.mine_dependency_graph(log[0], 0, 0.0)
+        mined_cnet = hm.mine_cnet(mined_graph, log[0])
 
         self.assertTrue(len(cnet.nodes) == len(mined_cnet.nodes))
         self.assertTrue(len(cnet.arcs) == len(mined_cnet.arcs))
         self.assertTrue(len(cnet.input_bindings) == len(mined_cnet.input_bindings))
         self.assertTrue(len(cnet.output_bindings) == len(mined_cnet.output_bindings))
-        '''
-        print("======= test_mine_cnets ===========")
-        print("===================================")
-        print("======= Calculated ================")
-        for node in cnet.nodes:
-            print "Node: "+str(node.get_json())
-            for bind in node.input_bindings:
-                print "Node InputBind: "+str(bind.get_json())
-            for bind in node.output_bindings:
-                print "Node OutputBind: "+str(bind.get_json())
-        for arc in cnet.arcs:
-            print "Arc: "+str(arc.get_json())
-        print("===================================")
-        print("======= Mined =====================")
-        for node in mined_cnet.nodes:
-            print "Node: "+str(node)
-            for bind in node.input_bindings:
-                print "Node InputBind: "+str(bind.get_json())
-            for bind in node.output_bindings:
-                print "Node OutputBind: "+str(bind.get_json())
-        for arc in mined_cnet.arcs:
-            print "Arc: "+str(arc)
-        '''
+
 
 def suite():
     suite = unittest.TestSuite()

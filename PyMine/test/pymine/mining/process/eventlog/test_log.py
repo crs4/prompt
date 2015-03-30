@@ -22,8 +22,8 @@ class LogTest(unittest.TestCase):
         log.add_case(self.case2)
         self.assertEqual(len(log.cases), 2)
         self.assertEqual(log.processes, [self.process])
-        self.assertTrue(isinstance(log[self.process], ProcessLog))
-        self.assertEqual(log[self.process].process, self.process)
+        self.assertTrue(isinstance(log[0], ProcessLog))
+        self.assertEqual(log[0].process, self.process)
 
     def test_process_log(self):
         p_log = ProcessLog(self.process)
