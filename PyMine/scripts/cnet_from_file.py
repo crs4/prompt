@@ -5,7 +5,7 @@ from collections import defaultdict
 from pymine.mining.process.conformance.alignment import fitness
 from pymine.mining.process.conformance import simple_fitness
 import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('heuristic')
 # logger = logging.getLogger('cnet')
 # logger.setLevel(logging.DEBUG)
