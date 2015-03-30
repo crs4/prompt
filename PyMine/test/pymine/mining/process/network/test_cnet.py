@@ -579,5 +579,15 @@ class CNetTestCase(unittest.TestCase):
         self.assertEqual(len(d.input_bindings), 0)
         self.assertEqual(a.output_nodes, {b, c})
 
+    def test_remove_node_from_binding(self):
+        cnet, a, b, c, d, e = _create_cnet()
+        binding_to_rm = a.get_output_bindings_with({d})[0]
+        cnet.remove_node_from_binding(d, binding_to_rm)
+        self.assertFalse(a.get_output_bindings_with({d}))
+        self.assertEqual(len(d.input_bindings), 0)
+        self.assertEqual(a.output_nodes, {b, c})
+
+
+
 if __name__ == '__main__':
     unittest.main()

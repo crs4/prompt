@@ -538,37 +538,36 @@ class CNet(Network):
         if len(binding.node_set) == 0 or duplicated_binding:
             self.remove_binding(binding)
 
-    def remove_binding(self, binding, remove_wrong_elements=True):
+    def remove_binding(self, binding):
         logger.debug('removing binding %s', binding)
         node = binding.node
         if isinstance(binding, InputBinding):
             self._input_bindings.remove(binding)
             node.input_bindings.remove(binding)
-            if remove_wrong_elements:
-                for input_node in node.input_nodes:
-                    if not node.get_input_bindings_with({input_node}):
-                        for b in input_node.get_output_bindings_with({node}):
-                            b.node_set.remove(node)
-                            if not b.node_set:
-                                logger.debug('removing empty binding %s', b)
-                                self.remove_binding(b)
-                        arc_to_rm = self.get_arc_by_nodes(input_node, node)
-                        if arc_to_rm:
-                            self.remove_arc(arc_to_rm)
+            for input_node in node.input_nodes:
+                if not node.get_input_bindings_with({input_node}):
+                    for b in input_node.get_output_bindings_with({node}):
+                        b.node_set.remove(node)
+                        if not b.node_set:
+                            logger.debug('removing empty binding %s', b)
+                            self.remove_binding(b)
+                    arc_to_rm = self.get_arc_by_nodes(input_node, node)
+                    if arc_to_rm:
+                        self.remove_arc(arc_to_rm)
         else:
             self._output_bindings.remove(binding)
             node.output_bindings.remove(binding)
-            if remove_wrong_elements:
-                for output_node in node.output_nodes:
-                    if not node.get_output_bindings_with({output_node}):
-                        for b in output_node.get_input_bindings_with({node}):
-                            b.node_set.remove(node)
-                            if not b.node_set:
-                                logger.debug('removing empty binding %s', b)
-                                self.remove_binding(b)
-                        arc_to_rm = self.get_arc_by_nodes(node, output_node)
-                        if arc_to_rm:
-                            self.remove_arc(arc_to_rm)
+
+            for output_node in node.output_nodes:
+                if not node.get_output_bindings_with({output_node}):
+                    for b in output_node.get_input_bindings_with({node}):
+                        b.node_set.remove(node)
+                        if not b.node_set:
+                            logger.debug('removing empty binding %s', b)
+                            self.remove_binding(b)
+                    arc_to_rm = self.get_arc_by_nodes(node, output_node)
+                    if arc_to_rm:
+                        self.remove_arc(arc_to_rm)
 
     def get_json(self):
         """
