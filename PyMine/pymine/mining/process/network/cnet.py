@@ -517,6 +517,27 @@ class CNet(Network):
 
         return len(self._obligations + unexpected_events) == 0, self._obligations, unexpected_events
 
+    def remove_node_from_binding(self, node, binding):
+        logger.debug('remove_node_from_binding  node %s, binding %s', node, binding)
+        try:
+            binding.node_set.remove(node)
+        except KeyError:
+            logger.warning('node %s not in binding %s', node, binding)
+            return
+
+        duplicated_binding = False
+        source_node = binding.node
+        node_bindings = source_node.input_bindings if isinstance(binding, InputBinding) else source_node.output_bindings
+
+        for b in node_bindings:
+            if b != binding and b.node_set == binding.node_set:
+                duplicated_binding = True
+                break
+
+        logger.debug('binding.node_set %s, duplicated_binding %s', binding.node_set, duplicated_binding)
+        if len(binding.node_set) == 0 or duplicated_binding:
+            self.remove_binding(binding)
+
     def remove_binding(self, binding, remove_wrong_elements=True):
         logger.debug('removing binding %s', binding)
         node = binding.node
