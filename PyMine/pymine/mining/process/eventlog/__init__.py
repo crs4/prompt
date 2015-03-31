@@ -46,7 +46,7 @@ class Process(IdObject):
     def activities(self):
         return self._activities.values()
 
-    def add_case(self, case_id):
+    def add_case(self, case_id=None):
         case = Case(self, _id=case_id)
         self.cases.append(case)
         return case
@@ -123,6 +123,8 @@ class Case(IdObject):
         return activities
 
 
+    def __str__(self):
+        return str([e.activity_name for e in self.events])
 
     # def __eq__(self, other):
     #     if type(self) == type(other):

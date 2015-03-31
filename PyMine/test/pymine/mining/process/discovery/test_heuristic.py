@@ -11,7 +11,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG,format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('heuristic')
 logger.setLevel(logging.DEBUG)
-
+TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
 class TestHeuristicMiner(unittest.TestCase):
 
@@ -29,42 +29,42 @@ class TestHeuristicMiner(unittest.TestCase):
         # Event 1
         activity_a_instance = case1.add_activity_instance(activity_a)
         event1 = activity_a_instance.add_event(activity_a_instance)
-        event1.timestamp = dt.strptime("2014-12-25 00:00:01.0", CsvLogFactory.TIME_FORMAT)
+        event1.timestamp = dt.strptime("2014-12-25 00:00:01.0", TIME_FORMAT)
         event1.resources.append("R1")
         # Event 2
         activity_b_instance = case1.add_activity_instance(activity_b)
         event2 = activity_b_instance.add_event(activity_b_instance)
-        event2.timestamp = dt.strptime("2014-12-25 00:00:02.0", CsvLogFactory.TIME_FORMAT)
+        event2.timestamp = dt.strptime("2014-12-25 00:00:02.0", TIME_FORMAT)
         event2.resources.append("R1")
         # Event 3
         activity_c_instance = case1.add_activity_instance(activity_c)
         event3 = activity_c_instance.add_event(activity_c_instance)
-        event3.timestamp = dt.strptime("2014-12-25 00:00:03.0", CsvLogFactory.TIME_FORMAT)
+        event3.timestamp = dt.strptime("2014-12-25 00:00:03.0", TIME_FORMAT)
         event3.resources.append("R2")
         # Event 4
         activity_b_instance = case1.add_activity_instance(activity_b)
         event4 = activity_b_instance.add_event(activity_b_instance)
-        event4.timestamp = dt.strptime("2014-12-25 00:00:04.0", CsvLogFactory.TIME_FORMAT)
+        event4.timestamp = dt.strptime("2014-12-25 00:00:04.0", TIME_FORMAT)
         event4.resources.append("R2")
         # Event 5
         activity_d_instance = case1.add_activity_instance(activity_d)
         event5 = activity_d_instance.add_event(activity_d_instance)
-        event5.timestamp = dt.strptime("2014-12-25 00:00:05.0", CsvLogFactory.TIME_FORMAT)
+        event5.timestamp = dt.strptime("2014-12-25 00:00:05.0", TIME_FORMAT)
         event5.resources.append("R1")
         # Event 6
         activity_a_instance = case2.add_activity_instance(activity_a)
         event6 = activity_a_instance.add_event(activity_a_instance)
-        event6.timestamp = dt.strptime("2014-12-25 00:00:06.0", CsvLogFactory.TIME_FORMAT)
+        event6.timestamp = dt.strptime("2014-12-25 00:00:06.0", TIME_FORMAT)
         event6.resources.append("R1")
         # Event 7
         activity_b_instance = case2.add_activity_instance(activity_b)
         event7 = activity_b_instance.add_event(activity_b_instance)
-        event7.timestamp = dt.strptime("2014-12-25 00:00:07.0", CsvLogFactory.TIME_FORMAT)
+        event7.timestamp = dt.strptime("2014-12-25 00:00:07.0", TIME_FORMAT)
         event7.resources.append("R1")
         # Event 8
         activity_d_instance = case2.add_activity_instance(activity_d)
         event8 = activity_d_instance.add_event(activity_d_instance)
-        event8.timestamp = dt.strptime("2014-12-25 00:00:08.0", CsvLogFactory.TIME_FORMAT)
+        event8.timestamp = dt.strptime("2014-12-25 00:00:08.0", TIME_FORMAT)
         event8.resources.append("R1")
         log = Log()
         log.add_case(case1)
@@ -125,7 +125,7 @@ class TestHeuristicMiner(unittest.TestCase):
 
     def test_remove_pending_obligations(self):
         import os
-        log_factory = CsvLogFactory(time_format='%d-%m-%Y:%H.%M')
+        log_factory = CsvLogFactory()
         dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4_label_final_node.csv')
         log = log_factory.create_log_from_file(dataset_path)[0]
         miner = HeuristicMiner()

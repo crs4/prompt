@@ -1,19 +1,18 @@
 from pymine.mining.process.discovery.heuristic import HeuristicMiner
-from pymine.mining.process.eventlog.factory import CsvLogFactory
+from pymine.mining.process.eventlog.factory import create_log_from_file
 from pmlab.cnet import force_graph
 from collections import defaultdict
 from pymine.mining.process.conformance.alignment import fitness
 from pymine.mining.process.conformance import simple_fitness
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
-logger = logging.getLogger('heuristic')
-# logger = logging.getLogger('cnet')
-# logger.setLevel(logging.DEBUG)
+# logger = logging.getLogger('heuristic')
+logger = logging.getLogger('cnet')
+logger.setLevel(logging.DEBUG)
 
 
-def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequency_thr):
-    log_factory = CsvLogFactory(time_format=time_format)
-    log = log_factory.create_log_from_file(csv_path)[0]
+def main(csv_path, freq_thr, dep_thr, window_size, binding_frequency_thr):
+    log = create_log_from_file(csv_path)[0]
     miner = HeuristicMiner()
     cnet = miner.mine(log, freq_thr, dep_thr, binding_frequency_thr, window_size)
     inset = defaultdict(set)
@@ -50,8 +49,8 @@ def main(csv_path, time_format, freq_thr, dep_thr, window_size, binding_frequenc
     passed, obls, wat = cnet.replay_sequence(['a', 'c', 'd', 'e', 'f', 'd', 'c', 'e', 'f', 'c', 'd', 'e', 'h', 'z'])
     print passed, obls, wat
 
-    s = force_graph.ForceDirectedGraph(nodes, inset, outset)
-    s.run()
+    # s = force_graph.ForceDirectedGraph(nodes, inset, outset)
+    # s.run()
 
 
 if __name__ == '__main__':
@@ -59,11 +58,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Create and show cnet mined from a csv log')
     parser.add_argument('csv_path', type=str, help='the path of the csv file containing the log')
-    parser.add_argument('-t', type=str, default='%d-%m-%Y:%H.%M', help="time format")
+    # parser.add_argument('-t', type=str, default='%d-%m-%Y:%H.%M', help="time format")
     parser.add_argument('--aft', type=float, default=0.0, help="arc frequency threshold")
     parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
     parser.add_argument('--dt', type=float, default=0.0, help="dependency threshold")
     parser.add_argument('-w', type=int, default=None, help="window size")
 
     args = parser.parse_args()
-    main(args.csv_path, args.t, args.aft, args.dt, args.w, args.bft)
+    main(args.csv_path, args.aft, args.dt, args.w, args.bft)
