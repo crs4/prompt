@@ -5,6 +5,7 @@ from datetime import datetime as dt
 from pymine.mining.process.eventlog.factory import CsvLogFactory, SimpleProcessLogFactory
 from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import *
+TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 # logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
 
 
@@ -45,42 +46,42 @@ class TestFactory(unittest.TestCase):
         # Event 1
         activity_a_instance = case1.add_activity_instance(activity_a)
         event1 = activity_a_instance.add_event(activity_a_instance)
-        event1.timestamp = dt.strptime("2014-12-25 00:00:01", CsvLogFactory.TIME_FORMAT)
+        event1.timestamp = dt.strptime("2014-12-25 00:00:01", TIME_FORMAT)
         event1.resources.append("R1")
         # Event 2
         activity_b_instance = case1.add_activity_instance(activity_b)
         event2 = activity_b_instance.add_event(activity_b_instance)
-        event2.timestamp = dt.strptime("2014-12-25 00:00:02", CsvLogFactory.TIME_FORMAT)
+        event2.timestamp = dt.strptime("2014-12-25 00:00:02", TIME_FORMAT)
         event2.resources.append("R1")
         # Event 3
         activity_c_instance = case1.add_activity_instance(activity_c)
         event3 = activity_c_instance.add_event(activity_c_instance)
-        event3.timestamp = dt.strptime("2014-12-25 00:00:03", CsvLogFactory.TIME_FORMAT)
+        event3.timestamp = dt.strptime("2014-12-25 00:00:03", TIME_FORMAT)
         event3.resources.append("R2")
         # Event 4
         activity_b_instance = case1.add_activity_instance(activity_b)
         event4 = activity_b_instance.add_event(activity_b_instance)
-        event4.timestamp = dt.strptime("2014-12-25 00:00:04", CsvLogFactory.TIME_FORMAT)
+        event4.timestamp = dt.strptime("2014-12-25 00:00:04", TIME_FORMAT)
         event4.resources.append("R2")
         # Event 5
         activity_d_instance = case1.add_activity_instance(activity_d)
         event5 = activity_d_instance.add_event(activity_d_instance)
-        event5.timestamp = dt.strptime("2014-12-25 00:00:05", CsvLogFactory.TIME_FORMAT)
+        event5.timestamp = dt.strptime("2014-12-25 00:00:05", TIME_FORMAT)
         event5.resources.append("R1")
         # Event 6
         activity_a_instance = case2.add_activity_instance(activity_a)
         event6 = activity_a_instance.add_event(activity_a_instance)
-        event6.timestamp = dt.strptime("2014-12-25 00:00:06", CsvLogFactory.TIME_FORMAT)
+        event6.timestamp = dt.strptime("2014-12-25 00:00:06", TIME_FORMAT)
         event6.resources.append("R1")
         # Event 7
         activity_b_instance = case2.add_activity_instance(activity_b)
         event7 = activity_b_instance.add_event(activity_b_instance)
-        event7.timestamp = dt.strptime("2014-12-25 00:00:07", CsvLogFactory.TIME_FORMAT)
+        event7.timestamp = dt.strptime("2014-12-25 00:00:07", TIME_FORMAT)
         event7.resources.append("R1")
         # Event 8
         activity_d_instance = case2.add_activity_instance(activity_d)
         event8 = activity_d_instance.add_event(activity_d_instance)
-        event8.timestamp = dt.strptime("2014-12-25 00:00:08", CsvLogFactory.TIME_FORMAT)
+        event8.timestamp = dt.strptime("2014-12-25 00:00:08", TIME_FORMAT)
         event8.resources.append("R1")
         log = Log()
         log.add_case(case1)
@@ -117,7 +118,7 @@ class TestFactory(unittest.TestCase):
 
         for index,e in enumerate(self.csv_test_data[1:6]):
             data = e.split(',')
-            self.assertEqual(case1.events[index].timestamp, dt.strptime(data[0], CsvLogFactory.TIME_FORMAT))
+            self.assertEqual(case1.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
             self.assertEqual(case1.events[index].activity_name, data[2])
             self.assertEqual(case1.events[index].activity_name, data[2])
             self.assertEqual(case1.events[index].resources, [data[3]])
@@ -126,7 +127,7 @@ class TestFactory(unittest.TestCase):
 
         for index,e in enumerate(self.csv_test_data[6:]):
             data = e.split(',')
-            self.assertEqual(case2.events[index].timestamp, dt.strptime(data[0], CsvLogFactory.TIME_FORMAT))
+            self.assertEqual(case2.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
             self.assertEqual(case2.events[index].activity_name, data[2])
             self.assertEqual(case2.events[index].activity_name, data[2])
             self.assertEqual(case2.events[index].resources, [data[3]])
