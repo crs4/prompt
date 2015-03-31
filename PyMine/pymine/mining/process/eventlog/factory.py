@@ -98,12 +98,13 @@ class CsvLogFactory(LogFactory):
             # read the events data
             csvfile.seek(len(first_line))
             reader = csv.reader(csvfile, dialect)
-            try:
-                for row in reader:
-                    if row:
+
+            for row in reader:
+                if row:
+                    try:
                         self.parse_row(row, process)
-            except csv.Error as e:
-                sys.exit('file %s, line %d: %s' % (input_filename, reader.line_num, e))
+                    except csv.Error as e:
+                        logger.error(e)
 
     def create_log_from_file(self, input_filename):
         if input_filename:
