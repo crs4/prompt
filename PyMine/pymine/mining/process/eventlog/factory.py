@@ -2,7 +2,7 @@ import csv, sys
 from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
 from pymine.mining.process.eventlog import *
 from pymine.mining.process.eventlog.exceptions import InvalidExtension
-import datetime
+from mx.DateTime.Parser import DateTimeFromString
 import logging
 logger = logging.getLogger('factory')
 
@@ -30,11 +30,8 @@ class LogFactory(object):
 
 class CsvLogFactory(LogFactory):
 
-    TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
-
-    def __init__(self, input_filename=None, time_format=TIME_FORMAT):
+    def __init__(self, input_filename=None):
         super(CsvLogFactory, self).__init__()
-        self.time_format=time_format
         self.indexes = {}
         self._cases = {}
         self.activities = {}
@@ -79,7 +76,7 @@ class CsvLogFactory(LogFactory):
             activity_instance = case.add_activity_instance(activity)
 
             if timestamp:
-                timestamp = datetime.datetime.strptime(timestamp, self.time_format)
+                timestamp = DateTimeFromString(timestamp)
 
             resources = resource.split('|') if resource else None
 
@@ -137,11 +134,11 @@ class SimpleProcessLogFactory(LogFactory):
         return ProcessLog(self.process, self.cases)
 
 
-def create_log_from_csv(file_path, time_format):
-    return CsvLogFactory(file_path, time_format).create_log()
+def create_log_from_csv(file_path):
+    return CsvLogFactory(file_path).create_log()
 
 
-def create_log_from_xes(file_path, time_format):
+def create_log_from_xes(file_path):
     import xml.etree.ElementTree as ET
     ns = {'xes': 'http://www.xes-standard.org/'}
 
@@ -161,7 +158,7 @@ def create_log_from_xes(file_path, time_format):
                         activity = process.add_activity(child.attrib['value'])
                         activity_instance = case.add_activity_instance(activity)
                 elif child.tag == '{%s}date' % ns['xes']:
-                    value = datetime.datetime.strptime(child.attrib['value'], time_format)
+                    value = DateTimeFromString(child.attrib['value'])
                     if child.attrib['key'] == 'time:timestamp':
                         timestamp = value
                     else:
@@ -177,14 +174,14 @@ def create_log_from_xes(file_path, time_format):
     return Log(process.cases)
 
 
-def create_log_from_file(file_path, time_format='%Y-%m-%d %H:%M:%S.%f'):
+def create_log_from_file(file_path):
     ext = file_path.split('.')[-1].lower()
     valid_ext = ('csv', 'xes')
     if ext not in valid_ext:
         raise InvalidExtension('Unknown extension %s. Valid ones: %s' % (ext, valid_ext))
     if ext == 'csv':
-        create_log_from_csv(file_path, time_format)
+        return create_log_from_csv(file_path)
     elif ext == 'xes':
-        return create_log_from_xes(file_path, time_format)
+        return create_log_from_xes(file_path)
 
 
