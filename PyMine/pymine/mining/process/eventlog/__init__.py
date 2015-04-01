@@ -91,6 +91,8 @@ class Activity(IdObject):
     def __str__(self):
         return self.name
 
+    def __hash__(self):
+        return hash(self.name)
 
 class Case(IdObject):
     """
@@ -121,6 +123,11 @@ class Case(IdObject):
         for act_instance in self.activity_instances:
             activities.append(act_instance.activity.name)
         return activities
+
+    def add_event(self, activity_name, timestamp=None, resources=None, attributes=None):
+        activity = self.process.add_activity(activity_name)
+        activity_instance = self.add_activity_instance(activity)
+        return activity_instance.add_event(timestamp, resources, attributes)
 
 
     def __str__(self):
@@ -186,6 +193,10 @@ class Event(IdObject):
     @property
     def activity_name(self):
         return self.activity_instance.activity.name
+
+    @property
+    def activity(self):
+        return self.activity_instance.activity
 
     @property
     def case(self):
