@@ -587,6 +587,17 @@ class CNetTestCase(unittest.TestCase):
         self.assertEqual(len(d.input_bindings), 0)
         self.assertEqual(a.output_nodes, {b, c})
 
+    def test_remove_node_from_binding_with_loop(self):
+        cnet = CNet()
+        a, b, c = cnet.add_nodes('a', 'b', 'c',)
+        cnet.add_output_binding(a, {b})
+        cnet.add_input_binding(b, {a})
+        b_b_c = cnet.add_output_binding(b, {b, c})
+        cnet.add_input_binding(c, {b})
+        cnet.remove_node_from_binding(b, b_b_c)
+        replay = cnet.replay_sequence(['a', 'b',  'c'])
+        logger.debug('replay %s', replay)
+        self.assertTrue(replay[0])
 
 
 if __name__ == '__main__':
