@@ -16,6 +16,9 @@ class Obligation(object):
     def __repr__(self):
         return "< Obligation node %s, binding %s >" % (self.node, self.source_binding)
 
+    def __hash__(self):
+        return hash(self.node.label) + hash(self.source_node.label) + hash(frozenset(self.source_binding.node_set))
+
 # class Obligation(object):
 #     def __init__(self, source_node, node):
 #         self.source_node = source_node
@@ -553,6 +556,7 @@ class CNet(Network):
                             self.remove_binding(b)
                     arc_to_rm = self.get_arc_by_nodes(input_node, node)
                     if arc_to_rm:
+                        logger.debug('arc_to_rm %s', arc_to_rm)
                         self.remove_arc(arc_to_rm)
         else:
             self._output_bindings.remove(binding)
@@ -567,6 +571,7 @@ class CNet(Network):
                             self.remove_binding(b)
                     arc_to_rm = self.get_arc_by_nodes(node, output_node)
                     if arc_to_rm:
+                        logger.debug('arc_to_rm %s', arc_to_rm)
                         self.remove_arc(arc_to_rm)
 
     def get_json(self):

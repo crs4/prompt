@@ -2,12 +2,14 @@ import unittest
 import os
 import logging
 from datetime import datetime as dt
-from pymine.mining.process.eventlog.factory import CsvLogFactory, SimpleProcessLogFactory
+from pymine.mining.process.eventlog.factory import CsvLogFactory, SimpleProcessLogFactory, create_log_from_xes, \
+    create_log_from_file, FAKE_START, FAKE_END
 from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import *
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 # logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
-
+XES_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/reviewing_short.xes')
+CSV_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4.csv')
 
 class TestFactory(unittest.TestCase):
 
@@ -134,23 +136,6 @@ class TestFactory(unittest.TestCase):
             self.assertEqual(len(case2.events[index].attributes), 1)
             self.assertEqual(case2.events[index].attributes[0].name, 'operator')
 
-        # for event in case1.events:
-        #     self.assertEqual(event.timestamp, dt.strptime())
-
-
-
-
-
-    '''
-    def test_create_loginfo(self):
-        test_log = self.create_log_from_test_data()
-        file_path = self.create_csv_test_file()
-        log_factory = CsvLogFactory(file_path)
-        file_log = log_factory.create_log()
-        log_info = log_factory.create_loginfo()
-        self.assertEqual(test_log,file_log)
-    '''
-
     def test_process_log_factory(self):
 
         test_case = [['A', 'B'], ['A']]
@@ -171,6 +156,26 @@ class TestFactory(unittest.TestCase):
         self.assertEqual(len(process.get_activity_by_name('A').activity_instances[1].events), 1)
 
         self.assertEqual(len(process.get_activity_by_name('B').activity_instances[0].events), 1)
+
+    def test_create_log_from_xes_(self):
+        log = create_log_from_xes(XES_PATH)
+        self.assertEqual(len(log.cases), 5)
+
+    def test_create_log_from_file(self):
+        log = create_log_from_file(XES_PATH, True, True)
+        self.assertEqual(len(log.cases), 5)
+        case0 = log.cases[0]
+        self.assertEqual(case0.events[0].activity_name, FAKE_START)
+        self.assertEqual(case0.events[-1].activity_name, FAKE_END)
+
+    def test_create_log_from_file_2(self):
+        log = create_log_from_file(CSV_PATH, True, True)
+        self.assertEqual(len(log.cases), 6)
+        case0 = log.cases[0]
+        self.assertEqual(case0.events[0].activity_name, FAKE_START)
+        self.assertEqual(case0.events[-1].activity_name, FAKE_END)
+
+
 
 
 

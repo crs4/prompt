@@ -62,13 +62,8 @@ class Arc(BaseElement):
                  'attributes': self.attrs}]
         return json
 
-    '''
     def __str__(self):
-        doc = "label %s %s -> %s" % (self.label, self.input_node, self.output_node)
-        if self.frequency is not None:
-            doc += " freq: %s" % self.frequency
-        return doc
-    '''
+        return self.label or "%s->%s" % (self.start_node.label, self.end_node.label)
 
 
 class Node(BaseElement):
