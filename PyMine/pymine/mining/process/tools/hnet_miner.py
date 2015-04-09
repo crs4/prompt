@@ -1,8 +1,11 @@
-import sys, os
+import sys
+import os
+
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from pymine.mining.process.discovery.heuristic import HeuristicMiner as HeuristicMiner
+from pymine.mining.process.discovery.heuristics.window import HeuristicMiner as HeuristicMiner
+
 
 def draw_net_graph(net, output_filename):
     g=nx.MultiDiGraph()

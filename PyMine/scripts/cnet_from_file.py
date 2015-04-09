@@ -1,10 +1,11 @@
-from pymine.mining.process.discovery.heuristic import HeuristicMiner
-from pymine.mining.process.eventlog.factory import create_log_from_file
-from pmlab.cnet import force_graph
 from collections import defaultdict
+import logging
+
+from pymine.mining.process.discovery.heuristics.window import HeuristicMiner
+from pymine.mining.process.eventlog.factory import create_log_from_file
 from pymine.mining.process.conformance.alignment import fitness
 from pymine.mining.process.conformance import simple_fitness
-import logging
+
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 # logger = logging.getLogger('heuristic')
 logger = logging.getLogger('cnet')
@@ -36,9 +37,9 @@ def main(csv_path, freq_thr, dep_thr, window_size, binding_frequency_thr):
     print 'inset', inset
     print 'outset', outset
 
-    print 'computing fitness...'
-    f = fitness(log, cnet, max_depth=15)
-    print 'fitness', f
+    # print 'computing fitness...'
+    # f = fitness(log, cnet, max_depth=15)
+    # print 'fitness', f
 
     print 'computing simple fitness...'
     f = simple_fitness(log, cnet)

@@ -1,13 +1,15 @@
 import unittest
 from datetime import datetime as dt
+import logging
+
 from pymine.mining.process.eventlog.log import Log as Log
 from pymine.mining.process.eventlog import *
-from pymine.mining.process.discovery.heuristic import HeuristicMiner as HeuristicMiner
+from pymine.mining.process.discovery.heuristics.window import HeuristicMiner as HeuristicMiner
 from pymine.mining.process.network.dependency import *
 from pymine.mining.process.network.cnet import *
 from pymine.mining.process.eventlog.factory import CsvLogFactory
 from pymine.mining.process.conformance import replay_case
-import logging
+
 logging.basicConfig(level=logging.DEBUG,format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('heuristic')
 logger.setLevel(logging.DEBUG)
