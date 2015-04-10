@@ -123,7 +123,6 @@ class HeuristicMiner(object):
                 node = self.cnet.get_node_by_label(l)
                 self.cnet.add_arc(node, node)
 
-
     def _compute_binding(self, binding_type, and_thr):
         for node in self.cnet.nodes:
             if binding_type == 'input':
@@ -131,25 +130,28 @@ class HeuristicMiner(object):
             else:
                 nodes = list(node.output_nodes)
 
-            logger.debug('node %s, nodes %s', node, nodes)
+            logger.debug('binding type %s, node %s, nodes %s',binding_type, node, nodes)
             tmp_bindings = []
-            for idx, o1 in enumerate(nodes):
-                for o2 in nodes[idx + 1:]:  # computing and_dependency
-                    o1_o2 = self._precede_matrix[o1.label][o2.label]
-                    o2_o1 = self._precede_matrix[o2.label][o1.label]
-                    n_o1 = self._precede_matrix[node.label][o1.label]
-                    n_o2 = self._precede_matrix[node.label][o2.label]
-                    and_dep = (o1_o2 + o2_o1)/(n_o1 + n_o2 + 1)
-                    logger.debug('------------')
-                    logger.debug('node %s, o1 %s o2 %s', node, o1, o2)
-                    logger.debug('o1_o2 %s, o2_o1 %s, n_o1 %s, n_o2 %s, and_dep %s', o1_o2, o2_o1, n_o1, n_o2, and_dep)
+            if len(nodes) == 1:
+                tmp_bindings.append({nodes[0]})
+            else:
+                for idx, o1 in enumerate(nodes):
+                    for o2 in nodes[idx + 1:]:  # computing and_dependency
+                        o1_o2 = self._precede_matrix[o1.label][o2.label]
+                        o2_o1 = self._precede_matrix[o2.label][o1.label]
+                        n_o1 = self._precede_matrix[node.label][o1.label]
+                        n_o2 = self._precede_matrix[node.label][o2.label]
+                        and_dep = (o1_o2 + o2_o1)/(n_o1 + n_o2 + 1)
+                        logger.debug('------------')
+                        logger.debug('node %s, o1 %s o2 %s', node, o1, o2)
+                        logger.debug('o1_o2 %s, o2_o1 %s, n_o1 %s, n_o2 %s, and_dep %s', o1_o2, o2_o1, n_o1, n_o2, and_dep)
 
-                    if and_dep >= and_thr:
-                        binding = {o1, o2}
-                        tmp_bindings.append(binding)
-                    else:
-                        tmp_bindings.append({o1})
-                        tmp_bindings.append({o2})
+                        if and_dep >= and_thr:
+                            binding = {o1, o2}
+                            tmp_bindings.append(binding)
+                        else:
+                            tmp_bindings.append({o1})
+                            tmp_bindings.append({o2})
             logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
             for idx, b in enumerate(tmp_bindings):
                 candidate_bindings = []
