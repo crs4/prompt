@@ -14,9 +14,9 @@ from pymine.mining.process.eventlog.factory import ProcessInfo
 from pymine.mining.process.tools.hnet_miner import draw_net_graph
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
-                    level=logging.DEBUG
+                    # level=logging.DEBUG
                     )
-logger = logging.getLogger('heuristic')
+logger = logging.getLogger('all_connected')
 # logger = logging.getLogger('cnet')
 logger.setLevel(logging.DEBUG)
 
@@ -62,8 +62,10 @@ class Matrix(object):
         return self._matrix[item]
 
     def __str__(self):
-       return str(self._matrix)
+        return str(self._matrix)
 
+    def __nonzero__(self):
+        return bool(self._matrix)
 
 class HeuristicMiner(object):
     def __init__(self, log):
@@ -99,7 +101,7 @@ class HeuristicMiner(object):
                     p_b_a = self._precede_matrix[next_event][event]
                     self._dependency_matrix[event][next_event] = (p_b_a - p_a_b )/(p_a_b + p_b_a + 1)
 
-    def mine_dependency_graph(self, dep_thr):
+    def _mine_dependency_graph(self, dep_thr):
         self.cnet = CNet()
         self.cnet.add_nodes(*[e for e in self._events])
         logger.debug('self._events %s', self._events)
@@ -130,7 +132,15 @@ class HeuristicMiner(object):
             else:
                 nodes = list(node.output_nodes)
 
-            logger.debug('binding type %s, node %s, nodes %s',binding_type, node, nodes)
+            logger.debug('binding type %s, node %s, nodes %s', binding_type, node, nodes)
+            if node in nodes:
+                logger.debug('one loop found %s', node)
+                nodes.remove(node)
+                if binding_type == 'input':
+                    self.cnet.add_input_binding(node, {node})
+                else:
+                    self.cnet.add_output_binding(node, {node})
+
             tmp_bindings = []
             if len(nodes) == 1:
                 tmp_bindings.append({nodes[0]})
@@ -167,21 +177,26 @@ class HeuristicMiner(object):
                     if intersection and b < intersection:
                         b |= intersection
 
-            logger.debug('node %s, output_bindings %s', node, tmp_bindings)
+            logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
             for b in tmp_bindings:
                 if binding_type == 'input':
+                    logger.debug('add_input_binding(%s, %s)', node, b)
                     self.cnet.add_input_binding(node, b)
                 else:
+                    logger.debug('add_output_binding(%s, %s)', node, b)
                     self.cnet.add_output_binding(node, b)
 
-    def mine_cnet(self, and_thr=0.5):
+    def _mine_cnet(self, and_thr=0.5):
         self._compute_binding('input', and_thr)
         self._compute_binding('output', and_thr)
 
-    def mine(self, dependency_thr):
-        self._compute_precede_matrix()
+    def mine(self, dependency_thr=0.5, and_thr=0.5):
+        if not self._precede_matrix:
+            self._compute_precede_matrix()
         self._compute_dependency_matrix()
-        self.mine_dependency_graph(dependency_thr)
+        self._mine_dependency_graph(dependency_thr)
+        self._mine_cnet(and_thr)
+        return self.cnet
 
 
 def main(file_path, dependency_thr):
@@ -189,27 +204,29 @@ def main(file_path, dependency_thr):
     from pymine.mining.process.tools.drawing.draw_cnet import draw
     log = create_log_from_file(file_path)[0]
     hm = HeuristicMiner(log)
-    hm.mine(dependency_thr)
+    cnet = hm.mine(dependency_thr)
 
-    # for n in hm.dep_graph.nodes:
-    #     print n.label, n.input_nodes, n.output_nodes
+
+
+    # for n in cnet.nodes:
+        # print n.label, n.input_nodes, n.output_nodes
+        # print n.label
 
     draw_net_graph(hm.cnet)
-    hm.mine_cnet()
     draw(hm.cnet)
     for n in hm.cnet.nodes:
+        logger.debug('n %s, input_b %s', n, n.input_bindings)
         logger.debug('n %s, output_b %s', n, n.output_bindings)
 
 
 if __name__ == '__main__':
     import argparse
-    logger.setLevel(logging.DEBUG)
     parser = argparse.ArgumentParser()
     parser.add_argument('file_path', type=str, help='the path of the file containing the log')
 
     parser.add_argument('--aft', type=float, default=0.0, help="arc frequency threshold")
     parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
-    parser.add_argument('--dt', type=float, default=0.0, help="dependency threshold")
+    parser.add_argument('--dt', type=float, default=0.5, help="dependency threshold")
     parser.add_argument('-w', type=int, default=None, help="window size")
 
     args = parser.parse_args()
