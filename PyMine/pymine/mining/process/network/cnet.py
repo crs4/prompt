@@ -102,6 +102,9 @@ class CNode(Node):
 
 
 class CNet(Network):
+    fake_start_label = '_start'
+    fake_end_label = '_end'
+
     def __init__(self, label=None):
         super(CNet,  self).__init__(label)
         self._input_bindings = []
@@ -109,6 +112,7 @@ class CNet(Network):
         self._bindings = []
         self._clean = True
         self.rewind()
+        self.has_fake_start = self.has_fake_end = False
 
     def rewind(self):
         """
@@ -507,6 +511,10 @@ class CNet(Network):
         """
         self.rewind()
         unexpected_events = []
+        if self.has_fake_start:
+            sequence.insert(0, self.fake_start_label)
+        if self.has_fake_end:
+            sequence.append(self.fake_end_label)
 
         for index, event in enumerate(sequence):
             logger.debug('-------------------------------')
