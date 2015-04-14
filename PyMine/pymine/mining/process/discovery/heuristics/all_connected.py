@@ -78,6 +78,12 @@ class Matrix(object):
     def __getattr__(self, item):
         return getattr(self._matrix, item)
 
+    def get_column(self, item):
+        cells = []
+        for e in self._matrix:
+            cells.append(Matrix.Cell(e, self._matrix[e][item]))
+        return cells
+
 
 class HeuristicMiner(object):
 
@@ -128,7 +134,31 @@ class HeuristicMiner(object):
                     p_b_a = self._precede_matrix[next_e][e]
                     self._dependency_matrix[e][next_e] = (p_b_a - p_a_b)/(p_a_b + p_b_a + 1)
 
-    def _mine_dependency_graph(self, dep_thr):
+    def _mine_dependency(self, event, dep_type, dep_thr, relative_to_best):
+        if dep_type == 'input':
+            cells = self._dependency_matrix[event].cells
+        else:
+            cells = self._dependency_matrix.get_column(event)
+
+        logger.debug('cells of %s = %s', event, cells)
+        max_dep = max(cells, key=lambda x: x.value)
+        candidate_dep = [c.key for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
+        logger.debug('candidate_dep %s of %s = %s', dep_type, event, candidate_dep)
+
+        if not candidate_dep:
+            if max_dep.value > 0:
+                candidate_dep.append(max_dep.key)
+
+        for c in candidate_dep:
+            logger.debug('event %s, candidate_dep %s', event, candidate_dep)
+            c_node = self.cnet.get_node_by_label(c)
+            event_node = self.cnet.get_node_by_label(event)
+            if dep_type == 'input':
+                self.cnet.add_arc(c_node, event_node)
+            else:
+                self.cnet.add_arc(event_node, c_node)
+
+    def _mine_dependency_graph(self, dep_thr, relative_to_best):
         self.cnet = CNet()
         self.cnet.add_nodes(*[e for e in self._events])
         logger.debug('self._events %s', self._events)
@@ -144,20 +174,9 @@ class HeuristicMiner(object):
             # for c in l2_cells:
             #     if c.value >= dep_thr:
             #         self.cnet.add_arc(self.cnet.get_node_by_label(event), self.cnet.get_node_by_label(c.key))
+            self._mine_dependency(event, 'input', dep_thr, relative_to_best)
+            self._mine_dependency(event, 'output', dep_thr, relative_to_best)
 
-            cells = self._dependency_matrix[event].cells
-            logger.debug('cells of %s = %s', event, cells)
-            candidate_dep = [c.key for c in cells if c.value >= dep_thr]
-            logger.debug('candidate_dep of %s = %s', event, candidate_dep)
-
-            if not candidate_dep:
-                max_dep = max(cells, key=lambda x: x.value)
-                if max_dep.value > 0:
-                    candidate_dep.append(max_dep.key)
-
-            for c in candidate_dep:
-                logger.debug('event %s, candidate_dep %s', event, candidate_dep)
-                self.cnet.add_arc(self.cnet.get_node_by_label(c), self.cnet.get_node_by_label(event))
 
         start_nodes = self.cnet.get_initial_nodes()
         if not start_nodes or len(start_nodes) > 1:  # let's add a fake start
@@ -244,11 +263,11 @@ class HeuristicMiner(object):
             self._comput_node_bindings(node, 'input', and_thr)
             self._comput_node_bindings(node, 'output', and_thr)
 
-    def mine(self, dependency_thr=0.5, and_thr=0.5):
+    def mine(self, dependency_thr=0.5, and_thr=0.5, relative_to_best=0.1):
         if not self._precede_matrix:
             self._compute_precede_matrix()
         self._compute_dependency_matrix()
-        self._mine_dependency_graph(dependency_thr)
+        self._mine_dependency_graph(dependency_thr, relative_to_best)
         self._mine_cnet(and_thr)
         return self.cnet
 
