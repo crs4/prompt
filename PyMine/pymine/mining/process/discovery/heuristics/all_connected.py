@@ -221,8 +221,13 @@ class HeuristicMiner(object):
                 for o2 in nodes[idx + 1:]:  # computing and_dependency
                     o1_o2 = self._precede_matrix[o1.label][o2.label]
                     o2_o1 = self._precede_matrix[o2.label][o1.label]
-                    n_o1 = self._precede_matrix[node.label][o1.label]
-                    n_o2 = self._precede_matrix[node.label][o2.label]
+                    if binding_type == 'input':
+                        n_o1 = self._precede_matrix[o1.label][node.label]
+                        n_o2 = self._precede_matrix[o2.label][node.label]
+                    else:
+                        n_o1 = self._precede_matrix[node.label][o1.label]
+                        n_o2 = self._precede_matrix[node.label][o2.label]
+                    logger.debug('o1_o2 %s, o2_o1 %s, n_o1 %s, n_o2 %s', o1_o2, o2_o1, n_o1, n_o2)
                     and_dep = (o1_o2 + o2_o1)/(n_o1 + n_o2 + 1)
                     logger.debug('------------')
                     logger.debug('node %s, o1 %s o2 %s', node, o1, o2)
@@ -272,13 +277,15 @@ class HeuristicMiner(object):
         return self.cnet
 
 
-def main(file_path, dependency_thr):
+def main(file_path, dependency_thr, and_thr, relative_to_best):
     from pymine.mining.process.eventlog.factory import create_log_from_file
     from pymine.mining.process.tools.drawing.draw_cnet import draw
     from pymine.mining.process.conformance import simple_fitness
     log = create_log_from_file(file_path)[0]
+    for c in log.cases:
+        print c
     hm = HeuristicMiner(log)
-    cnet = hm.mine(dependency_thr)
+    cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
     f = simple_fitness(log, cnet)
     print 'fitness', f.fitness
     print 'correct_cases', f.correct_cases
@@ -302,11 +309,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('file_path', type=str, help='the path of the file containing the log')
 
-    parser.add_argument('--aft', type=float, default=0.0, help="arc frequency threshold")
+    parser.add_argument('--rtb', type=float, default=0.1, help="relative to best")
     parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
     parser.add_argument('--dt', type=float, default=0.5, help="dependency threshold")
-    parser.add_argument('-w', type=int, default=None, help="window size")
+
 
     args = parser.parse_args()
-    main(args.file_path, args.dt)
+    main(args.file_path, args.dt, args.bft, args.rtb)
 
