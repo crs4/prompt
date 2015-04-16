@@ -197,6 +197,30 @@ class HeuristicMiner(object):
                 node = self.cnet.get_node_by_label(e)
                 self._dependency_matrix[fake_end][node] = 1
                 self.cnet.add_arc(node, fake_end)
+    def _merge_ands(self, bindings, length=2):
+        tmp_bindings = list(bindings)
+        merged = 0
+        merged_b = []
+        for idx, b in enumerate(tmp_bindings):
+            if len(b) == length and b not in merged_b:
+                candidate_bindings = []
+                for other_b in tmp_bindings[idx + 1:]:
+                    logger.debug('b %s, other_b %s', b, other_b)
+                    if b & other_b:
+                        candidate_bindings.append(other_b)
+
+                for idx_c, cb in enumerate(candidate_bindings):
+                    for other_cb in candidate_bindings[idx_c + 1:]:
+                        intersection = cb & other_cb
+                        if intersection:
+                            b |= intersection
+                            merged += 1
+                            merged_b.append(cb)
+                            merged_b.append(other_cb)
+                            bindings.remove(cb)
+                            bindings.remove(other_cb)
+        if merged >= length + 1:
+            self._merge_ands(bindings, length +1)
 
     def _comput_node_bindings(self, node, binding_type, and_thr):
         if binding_type == 'input':
@@ -239,22 +263,32 @@ class HeuristicMiner(object):
                     else:
                         tmp_bindings.append({o1})
                         tmp_bindings.append({o2})
-        logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
-        for idx, b in enumerate(tmp_bindings):
-            candidate_bindings = []
-            for other_b in tmp_bindings[idx + 1:]:
-                logger.debug('b %s, other_b %s', b, other_b)
-                if b & other_b:
-                    candidate_bindings.append(other_b)
-
-            logger.debug('node %s, candidate_bindings %s', node, candidate_bindings)
-            if candidate_bindings:
-                intersection = set.intersection(*candidate_bindings)
-                logger.debug('b %s, intersection of %s: %s', b, candidate_bindings, intersection)
-                if intersection and b < intersection:
-                    b |= intersection
-
-        logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
+        # logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
+        # final_bindings = set()
+        # for idx, b in enumerate(tmp_bindings):
+        #     candidate_bindings = [b]
+        #     for other_b in tmp_bindings[idx + 1:]:
+        #         logger.debug('b %s, other_b %s', b, other_b)
+        #         if b & other_b:
+        #             candidate_bindings.append(other_b)
+        #
+        #     logger.debug('node %s, candidate_bindings %s', node, candidate_bindings)
+        #     if candidate_bindings:
+        #         new_el = set()
+        #         for idx1, b1 in enumerate(candidate_bindings):
+        #             for b2 in candidate_bindings[idx1 + 1:]:
+        #                 new_el |= b2 & b1
+        #         final_bindings.add(frozenset(b | new_el))
+        #
+        #
+        #         # intersection = set.intersection(*candidate_bindings)
+        #         # logger.debug('b %s, intersection of %s: %s', b, candidate_bindings, intersection)
+        #         # if intersection and b < intersection:
+        #         #     b |= intersection
+        #         #     logger.debug('tmp_bindings %s', tmp_bindings)
+        #
+        # logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
+        self._merge_ands(tmp_bindings)
         for b in tmp_bindings:
             if binding_type == 'input':
                 logger.debug('add_input_binding(%s, %s)', node, b)
@@ -279,18 +313,30 @@ class HeuristicMiner(object):
 
 def main(file_path, dependency_thr, and_thr, relative_to_best):
     from pymine.mining.process.eventlog.factory import create_log_from_file
+    from pymine.mining.process.eventlog.factory import SimpleProcessLogFactory
     from pymine.mining.process.tools.drawing.draw_cnet import draw
     from pymine.mining.process.conformance import simple_fitness
     log = create_log_from_file(file_path)[0]
     for c in log.cases:
         print c
+
+
+    # log = SimpleProcessLogFactory([
+    #     ['a', 'b', 'c', 'd', 'e'],
+    #     ['a', 'b', 'd', 'c', 'e'],
+    #     ['a', 'c', 'b', 'd', 'e'],
+    #     ['a', 'c', 'd', 'b', 'e'],
+    #     ['a', 'd', 'b', 'c', 'e'],
+    #     ['a', 'd', 'c', 'b', 'e']
+    # ]
+    # )
     hm = HeuristicMiner(log)
     cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
     f = simple_fitness(log, cnet)
     print 'fitness', f.fitness
     print 'correct_cases', f.correct_cases
     print 'failed_cases', f.failed_cases
-    print replay_case(log.cases[1], cnet)
+    print replay_case(log.cases[0], cnet)
 
 
 
