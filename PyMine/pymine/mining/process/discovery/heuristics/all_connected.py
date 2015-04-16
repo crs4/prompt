@@ -259,35 +259,18 @@ class HeuristicMiner(object):
 
                     if and_dep >= and_thr:
                         binding = {o1, o2}
+                        if {o1} in tmp_bindings:
+                            tmp_bindings.remove({o1})
+                        if {o2} in tmp_bindings:
+                            tmp_bindings.remove({o2})
                         tmp_bindings.append(binding)
                     else:
-                        tmp_bindings.append({o1})
-                        tmp_bindings.append({o2})
-        # logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
-        # final_bindings = set()
-        # for idx, b in enumerate(tmp_bindings):
-        #     candidate_bindings = [b]
-        #     for other_b in tmp_bindings[idx + 1:]:
-        #         logger.debug('b %s, other_b %s', b, other_b)
-        #         if b & other_b:
-        #             candidate_bindings.append(other_b)
-        #
-        #     logger.debug('node %s, candidate_bindings %s', node, candidate_bindings)
-        #     if candidate_bindings:
-        #         new_el = set()
-        #         for idx1, b1 in enumerate(candidate_bindings):
-        #             for b2 in candidate_bindings[idx1 + 1:]:
-        #                 new_el |= b2 & b1
-        #         final_bindings.add(frozenset(b | new_el))
-        #
-        #
-        #         # intersection = set.intersection(*candidate_bindings)
-        #         # logger.debug('b %s, intersection of %s: %s', b, candidate_bindings, intersection)
-        #         # if intersection and b < intersection:
-        #         #     b |= intersection
-        #         #     logger.debug('tmp_bindings %s', tmp_bindings)
-        #
-        # logger.debug('node %s, tmp_bindings %s', node, tmp_bindings)
+                        all_b = set.union(*tmp_bindings) if tmp_bindings else set()
+                        if o1 not in all_b:
+                            tmp_bindings.append({o1})
+                        if o2 not in all_b:
+                            tmp_bindings.append({o2})
+
         self._merge_ands(tmp_bindings)
         for b in tmp_bindings:
             if binding_type == 'input':
@@ -321,15 +304,31 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
         print c
 
 
-    # log = SimpleProcessLogFactory([
-    #     ['a', 'b', 'c', 'd', 'e'],
-    #     ['a', 'b', 'd', 'c', 'e'],
-    #     ['a', 'c', 'b', 'd', 'e'],
-    #     ['a', 'c', 'd', 'b', 'e'],
-    #     ['a', 'd', 'b', 'c', 'e'],
-    #     ['a', 'd', 'c', 'b', 'e']
-    # ]
-    # )
+    log = SimpleProcessLogFactory([
+        ['a', 'b', 'c', 'd', 'e'],
+        ['a', 'b', 'c', 'd', 'e'],
+        ['a', 'b', 'd', 'c', 'e'],
+        ['a', 'b', 'd', 'c', 'e'],
+        ['a', 'c', 'b', 'd', 'e'],
+        ['a', 'c', 'b', 'd', 'e'],
+        ['a', 'c', 'd', 'b', 'e'],
+        ['a', 'd', 'b', 'c', 'e'],
+        ['a', 'd', 'c', 'b', 'e'],
+        ['a', 'd', 'c', 'e'],
+        ['a', 'c', 'd', 'e'],
+        # ['a', 'd', 'c', 'e'],
+        # ['a', 'c', 'd', 'e'],
+        # ['a', 'd', 'c', 'e'],
+        # ['a', 'c', 'd', 'e'],
+        # ['a', 'd', 'c', 'e'],
+        # ['a', 'c', 'd', 'e'],
+        # ['a', 'd', 'c', 'e'],
+        # ['a', 'c', 'd', 'e'],
+        # ['a', 'd', 'c', 'e'],
+        # ['a', 'c', 'd', 'e'],
+
+    ]
+    )
     hm = HeuristicMiner(log)
     cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
     f = simple_fitness(log, cnet)
