@@ -198,96 +198,6 @@ class HeuristicMiner(object):
                 self._dependency_matrix[fake_end][node] = 1
                 self.cnet.add_arc(node, fake_end)
 
-    def _merge_ands(self, bindings, length=2):
-        tmp_bindings = list(bindings)
-        merged = 0
-        merged_b = []
-        for idx, b in enumerate(tmp_bindings):
-            if len(b) == length and b not in merged_b:
-                candidate_bindings = []
-                for other_b in tmp_bindings[idx + 1:]:
-                    logger.debug('b %s, other_b %s', b, other_b)
-                    if b & other_b:
-                        candidate_bindings.append(other_b)
-
-                for idx_c, cb in enumerate(candidate_bindings):
-                    for other_cb in candidate_bindings[idx_c + 1:]:
-                        intersection = cb & other_cb
-                        if intersection:
-                            b |= intersection
-                            merged += 1
-                            merged_b.append(cb)
-                            merged_b.append(other_cb)
-                            bindings.remove(cb)
-                            bindings.remove(other_cb)
-        if merged >= length + 1:
-            self._merge_ands(bindings, length +1)
-
-
-
-    def _comput_node_bindings(self, node, binding_type, and_thr):
-        if binding_type == 'input':
-                nodes = list(node.input_nodes)
-        else:
-            nodes = list(node.output_nodes)
-
-        logger.debug('binding type %s, node %s, nodes %s', binding_type, node, nodes)
-        if node in nodes:
-            logger.debug('one loop found %s', node)
-            nodes.remove(node)
-            if binding_type == 'input':
-                self.cnet.add_input_binding(node, {node})
-            else:
-                self.cnet.add_output_binding(node, {node})
-
-        tmp_bindings = []
-        if len(nodes) == 1:
-            tmp_bindings.append({nodes[0]})
-        else:
-            for idx, o1 in enumerate(nodes):
-                for o2 in nodes[idx + 1:]:  # computing and_dependency
-                    o1_o2 = self._precede_matrix[o1.label][o2.label]
-                    o2_o1 = self._precede_matrix[o2.label][o1.label]
-                    if binding_type == 'input':
-                        n_o1 = self._precede_matrix[o1.label][node.label]
-                        n_o2 = self._precede_matrix[o2.label][node.label]
-                    else:
-                        n_o1 = self._precede_matrix[node.label][o1.label]
-                        n_o2 = self._precede_matrix[node.label][o2.label]
-                    logger.debug('o1_o2 %s, o2_o1 %s, n_o1 %s, n_o2 %s', o1_o2, o2_o1, n_o1, n_o2)
-                    and_dep = (o1_o2 + o2_o1)/(n_o1 + n_o2 + 1)
-                    logger.debug('------------')
-                    logger.debug('node %s, o1 %s o2 %s', node, o1, o2)
-                    logger.debug('o1_o2 %s, o2_o1 %s, n_o1 %s, n_o2 %s, and_dep %s', o1_o2, o2_o1, n_o1, n_o2, and_dep)
-
-                    if and_dep >= and_thr:
-                        binding = {o1, o2}
-                        if {o1} in tmp_bindings:
-                            tmp_bindings.remove({o1})
-                        if {o2} in tmp_bindings:
-                            tmp_bindings.remove({o2})
-                        tmp_bindings.append(binding)
-                    else:
-                        all_b = set.union(*tmp_bindings) if tmp_bindings else set()
-                        if o1 not in all_b:
-                            tmp_bindings.append({o1})
-                        if o2 not in all_b:
-                            tmp_bindings.append({o2})
-
-        self._merge_ands(tmp_bindings)
-        for b in tmp_bindings:
-            if binding_type == 'input':
-                logger.debug('add_input_binding(%s, %s)', node, b)
-                self.cnet.add_input_binding(node, b)
-            else:
-                logger.debug('add_output_binding(%s, %s)', node, b)
-                self.cnet.add_output_binding(node, b)
-
-    def _mine_cnet_old(self, and_thr=0.5):
-        for node in self.cnet.nodes:
-            self._comput_node_bindings(node, 'input', and_thr)
-            self._comput_node_bindings(node, 'output', and_thr)
-
     def _mine_cnet(self, thr):
         output_bindings = Matrix()
         input_bindings = Matrix()
@@ -433,9 +343,8 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
 
 
     for n in cnet.nodes:
-        print n.label, 'input_b', n.input_bindings
-        print n.label, 'output_b', n.output_bindings
-
+        print n.label, 'input_nodes', n.input_nodes
+        print n.label, 'output_nodes', n.output_nodes
 
     draw_net_graph(hm.cnet)
     draw(hm.cnet)
