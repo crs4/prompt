@@ -272,11 +272,14 @@ class HeuristicMiner(object):
                         logger.debug('incrementing input_binding %s, node %s', input_binding, node)
                         input_bindings[node][frozenset(input_binding)] += 1
 
+        # TODO: duplicated code...
         for n in self.cnet.nodes:
             total = sum(output_bindings[n].values())
             nodes_binded = set()
             for b, v in output_bindings[n].items():
                 if v/total >= thr:
+                    if len(b) > 1:
+                        b = b - set(self.cnet.get_final_nodes())
                     self.cnet.add_output_binding(n, b)
                     nodes_binded |= b
 
@@ -289,6 +292,8 @@ class HeuristicMiner(object):
 
             for b, v in input_bindings[n].items():
                 if v/total >= thr:
+                    if len(b) > 1:
+                        b = b - set(self.cnet.get_initial_nodes())
                     self.cnet.add_input_binding(n, b)
                     nodes_binded |= b
             nodes_not_binded = n.input_nodes - nodes_binded
