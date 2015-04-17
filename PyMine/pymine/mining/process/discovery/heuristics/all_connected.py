@@ -96,6 +96,7 @@ class HeuristicMiner(object):
         self._2_step_loop_freq = Matrix()
         self._events = set()
         self._loop = defaultdict(int)
+        self._self_loop = []
         self.cnet = None
         self._start_events = set()
         self._end_events = set()
@@ -162,12 +163,11 @@ class HeuristicMiner(object):
         self.cnet = CNet()
         self.cnet.add_nodes(*[e for e in self._events])
         logger.debug('self._events %s', self._events)
-        self_loops = []
         for l, v in self._loop.items():
             if v >= dep_thr:
                 node = self.cnet.get_node_by_label(l)
                 self.cnet.add_arc(node, node)
-                self_loops.append(node)
+                self._self_loop.append(node)
 
         for event in self._events:
             # l2_cells = self._2_step_loop_matrix[event].cells
@@ -197,6 +197,7 @@ class HeuristicMiner(object):
                 node = self.cnet.get_node_by_label(e)
                 self._dependency_matrix[fake_end][node] = 1
                 self.cnet.add_arc(node, fake_end)
+
     def _merge_ands(self, bindings, length=2):
         tmp_bindings = list(bindings)
         merged = 0
@@ -291,8 +292,17 @@ class HeuristicMiner(object):
         output_bindings = Matrix()
         input_bindings = Matrix()
 
+        for l in self._self_loop:
+            self.cnet.add_input_binding(l, {l})
+            self.cnet.add_output_binding(l, {l})
+
         for c in self.log.cases:
             events = [e.activity_name for e in c.events]
+            if self.cnet.has_fake_start:
+                events.insert(0, self.cnet.fake_start_label)
+            if self.cnet.has_fake_end:
+                events.append(self.cnet.fake_end_label)
+
             logger.debug('events %s', events)
 
             for node in self.cnet.nodes:
@@ -306,8 +316,10 @@ class HeuristicMiner(object):
                     logger.debug('node %s, idx_n_indexes %s, idx %s, n_indexes %s', node, idx_n_indexes, idx, n_indexes)
                     logger.debug('node %s, outputs %s', node, outputs)
                     for output in outputs:
-                        next_idx = n_indexes[idx_n_indexes + 1] if idx_n_indexes < len(n_indexes) - 1 else len(events)
+                        if output == node:
+                            continue
 
+                        next_idx = n_indexes[idx_n_indexes + 1] if idx_n_indexes < len(n_indexes) - 1 else len(events)
                         try:
                             o_idx = events[idx:next_idx].index(output.label)
                             logger.debug('o_idx %s, value %s', o_idx, events[idx:next_idx][o_idx])
@@ -325,6 +337,9 @@ class HeuristicMiner(object):
 
                     logger.debug('node %s, inputs %s', node, inputs)
                     for input_ in inputs:
+                        if input_ == node:
+                            continue
+
                         logger.debug('node %s, input %s', node, input_)
                         logger.debug('idx_n_indexes %s, n_indexes %s', idx_n_indexes, n_indexes)
                         previous_id = 0 if idx_n_indexes == 0 else n_indexes[idx_n_indexes - 1]
@@ -347,72 +362,27 @@ class HeuristicMiner(object):
                         logger.debug('input_binding %s, node %s', input_binding, node)
                         input_bindings[node][frozenset(input_binding)] += 1
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            #
-            # for e_idx, e in enumerate(events):
-            #     node = self.cnet.get_node_by_label(e)
-            #     output_binding = set()
-            #     input_binding = set()
-            #     inputs = node.input_nodes
-            #     outputs = node.output_nodes
-            #
-            #     for output in outputs:
-            #         try:
-            #             o_idx = events[e_idx:].index(output.label)
-            #         except ValueError:
-            #             continue
-            #         o_idx += e_idx  # absolute index
-            #         inputs_indexes = [(idx_n_indexes, j) for idx_n_indexes, j in enumerate(events[:o_idx]) if j == e]
-            #         if inputs_indexes:
-            #             nearest_input_idx = max(inputs_indexes, key=lambda x: x[0])[0]
-            #             if nearest_input_idx == e_idx:
-            #                 output_binding.add(output)
-            #
-            #     if output_binding:
-            #         output_bindings[node][frozenset(output_binding)] += 1
-            #
-            #     for input_ in inputs:
-            #         try:
-            #             # i_idx = events[:e_idx].index(input_.label)
-            #             i_idx = max([idx_n_indexes for idx_n_indexes, j in enumerate(events[:e_idx]) if j == input_.label])
-            #         except ValueError:
-            #             continue
-            #         try:
-            #             nearest_output_idx = events[i_idx:].index(input_.label)
-            #         except ValueError:
-            #             continue
-            #         if nearest_output_idx == 0:
-            #             input_binding.add(input_)
-            #
-            #     if input_binding:
-            #         input_bindings[node][frozenset(input_binding)] += 1
-            #
-
         for n in self.cnet.nodes:
             total = sum(output_bindings[n].values())
+            nodes_binded = set()
             for b, v in output_bindings[n].items():
                 if v/total >= thr:
                     self.cnet.add_output_binding(n, b)
+                    nodes_binded |= b
+
+            nodes_not_binded = n.output_nodes - nodes_binded
+            for unlucky_node in nodes_not_binded:
+                self.cnet.add_output_binding(n, {unlucky_node})
+
+            total = sum(input_bindings[n].values())
+            nodes_binded = set()
 
             for b, v in input_bindings[n].items():
-                total = sum(input_bindings[n].values())
                 if v/total >= thr:
                     self.cnet.add_input_binding(n, b)
+            nodes_not_binded = n.input_nodes - nodes_binded
+            for unlucky_node in nodes_not_binded:
+                self.cnet.add_input_binding(n, {unlucky_node})
 
 
     def mine(self, dependency_thr=0.5, and_thr=0.5, relative_to_best=0.1):
@@ -434,18 +404,18 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
         print c
 
     # log = SimpleProcessLogFactory([
-    #     ['a', 'b', 'c', 'd'],
-    #     ['a', 'c', 'b', 'd'],
-    #     ['a', 'c', 'e', 'd'],
-    #     ['a', 'e', 'c', 'd'],
-    #     ['a', 'b', 'e', 'd'],
-    #     ['a', 'e', 'b', 'd'],
-    #     # ['a', 'b', 'c', 'd', 'e'],
-    #     # ['a', 'b', 'd', 'c', 'e'],
-    #     # ['a', 'c', 'b', 'd', 'e'],
-    #     # ['a', 'c', 'd', 'b', 'e'],
-    #     # ['a', 'd', 'b', 'c', 'e'],
-    #     # ['a', 'd', 'c', 'b', 'e'],
+    #     # ['a', 'b', 'c', 'd'],
+    #     # ['a', 'c', 'b', 'd'],
+    #     # ['a', 'c', 'e', 'd'],
+    #     # ['a', 'e', 'c', 'd'],
+    #     # ['a', 'b', 'e', 'd'],
+    #     # ['a', 'e', 'b', 'd'],
+    #     ['a', 'b', 'c', 'd', 'e'],
+    #     ['a', 'b', 'd', 'c', 'e'],
+    #     ['a', 'c', 'b', 'd', 'e'],
+    #     ['a', 'c', 'd', 'b', 'e'],
+    #     ['a', 'd', 'b', 'c', 'e'],
+    #     ['a', 'd', 'c', 'b', 'e'],
     #
     #
     # ]
