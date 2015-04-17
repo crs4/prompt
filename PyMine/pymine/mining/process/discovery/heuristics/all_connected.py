@@ -222,6 +222,8 @@ class HeuristicMiner(object):
         if merged >= length + 1:
             self._merge_ands(bindings, length +1)
 
+
+
     def _comput_node_bindings(self, node, binding_type, and_thr):
         if binding_type == 'input':
                 nodes = list(node.input_nodes)
@@ -280,10 +282,138 @@ class HeuristicMiner(object):
                 logger.debug('add_output_binding(%s, %s)', node, b)
                 self.cnet.add_output_binding(node, b)
 
-    def _mine_cnet(self, and_thr=0.5):
+    def _mine_cnet_old(self, and_thr=0.5):
         for node in self.cnet.nodes:
             self._comput_node_bindings(node, 'input', and_thr)
             self._comput_node_bindings(node, 'output', and_thr)
+
+    def _mine_cnet(self, thr):
+        output_bindings = Matrix()
+        input_bindings = Matrix()
+
+        for c in self.log.cases:
+            events = [e.activity_name for e in c.events]
+            logger.debug('events %s', events)
+
+            for node in self.cnet.nodes:
+                n_indexes = [idx_n_indexes for idx_n_indexes, j in enumerate(events) if j == node.label]
+                inputs = node.input_nodes
+                outputs = node.output_nodes
+                for idx_n_indexes, idx in enumerate(n_indexes):
+                    output_binding = set()
+                    input_binding = set()
+
+                    logger.debug('node %s, idx_n_indexes %s, idx %s, n_indexes %s', node, idx_n_indexes, idx, n_indexes)
+                    logger.debug('node %s, outputs %s', node, outputs)
+                    for output in outputs:
+                        next_idx = n_indexes[idx_n_indexes + 1] if idx_n_indexes < len(n_indexes) - 1 else len(events)
+
+                        try:
+                            o_idx = events[idx:next_idx].index(output.label)
+                            logger.debug('o_idx %s, value %s', o_idx, events[idx:next_idx][o_idx])
+                        except ValueError:
+                            continue
+                        # o_idx += idx  # absolute index
+                        # inputs_indexes = [(idx_n_indexes, j) for idx_n_indexes, j in enumerate(events[:o_idx]) if j == node.label]
+                        # if inputs_indexes:
+                        #     nearest_input_idx = max(inputs_indexes, key=lambda x: x[0])[0]
+                        #     if nearest_input_idx == idx:
+                        output_binding.add(output)
+
+                    if output_binding:
+                        output_bindings[node][frozenset(output_binding)] += 1
+
+                    logger.debug('node %s, inputs %s', node, inputs)
+                    for input_ in inputs:
+                        logger.debug('node %s, input %s', node, input_)
+                        logger.debug('idx_n_indexes %s, n_indexes %s', idx_n_indexes, n_indexes)
+                        previous_id = 0 if idx_n_indexes == 0 else n_indexes[idx_n_indexes - 1]
+
+                        try:
+                            i_idx = events[previous_id:idx].index(input_.label)
+                            logger.debug('i_idx %s value %s',i_idx, events[previous_id:idx][i_idx])
+                            # i_idx = max([k for k, j in enumerate(events[previous_id:idx]) if j == input_.label])
+                        except ValueError:
+                            continue
+                        # try:
+                        #     nearest_output_idx = events[i_idx:].index(input_.label)
+                        # except ValueError:
+                        #     continue
+                        # if nearest_output_idx == 0:
+                        logger.debug('addings input %s to node %s', input_, node)
+                        input_binding.add(input_)
+
+                    if input_binding:
+                        logger.debug('input_binding %s, node %s', input_binding, node)
+                        input_bindings[node][frozenset(input_binding)] += 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            #
+            # for e_idx, e in enumerate(events):
+            #     node = self.cnet.get_node_by_label(e)
+            #     output_binding = set()
+            #     input_binding = set()
+            #     inputs = node.input_nodes
+            #     outputs = node.output_nodes
+            #
+            #     for output in outputs:
+            #         try:
+            #             o_idx = events[e_idx:].index(output.label)
+            #         except ValueError:
+            #             continue
+            #         o_idx += e_idx  # absolute index
+            #         inputs_indexes = [(idx_n_indexes, j) for idx_n_indexes, j in enumerate(events[:o_idx]) if j == e]
+            #         if inputs_indexes:
+            #             nearest_input_idx = max(inputs_indexes, key=lambda x: x[0])[0]
+            #             if nearest_input_idx == e_idx:
+            #                 output_binding.add(output)
+            #
+            #     if output_binding:
+            #         output_bindings[node][frozenset(output_binding)] += 1
+            #
+            #     for input_ in inputs:
+            #         try:
+            #             # i_idx = events[:e_idx].index(input_.label)
+            #             i_idx = max([idx_n_indexes for idx_n_indexes, j in enumerate(events[:e_idx]) if j == input_.label])
+            #         except ValueError:
+            #             continue
+            #         try:
+            #             nearest_output_idx = events[i_idx:].index(input_.label)
+            #         except ValueError:
+            #             continue
+            #         if nearest_output_idx == 0:
+            #             input_binding.add(input_)
+            #
+            #     if input_binding:
+            #         input_bindings[node][frozenset(input_binding)] += 1
+            #
+
+        for n in self.cnet.nodes:
+            total = sum(output_bindings[n].values())
+            for b, v in output_bindings[n].items():
+                if v/total >= thr:
+                    self.cnet.add_output_binding(n, b)
+
+            for b, v in input_bindings[n].items():
+                total = sum(input_bindings[n].values())
+                if v/total >= thr:
+                    self.cnet.add_input_binding(n, b)
+
 
     def mine(self, dependency_thr=0.5, and_thr=0.5, relative_to_best=0.1):
         if not self._precede_matrix:
@@ -303,32 +433,23 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
     for c in log.cases:
         print c
 
-
-    log = SimpleProcessLogFactory([
-        ['a', 'b', 'c', 'd', 'e'],
-        ['a', 'b', 'c', 'd', 'e'],
-        ['a', 'b', 'd', 'c', 'e'],
-        ['a', 'b', 'd', 'c', 'e'],
-        ['a', 'c', 'b', 'd', 'e'],
-        ['a', 'c', 'b', 'd', 'e'],
-        ['a', 'c', 'd', 'b', 'e'],
-        ['a', 'd', 'b', 'c', 'e'],
-        ['a', 'd', 'c', 'b', 'e'],
-        ['a', 'd', 'c', 'e'],
-        ['a', 'c', 'd', 'e'],
-        # ['a', 'd', 'c', 'e'],
-        # ['a', 'c', 'd', 'e'],
-        # ['a', 'd', 'c', 'e'],
-        # ['a', 'c', 'd', 'e'],
-        # ['a', 'd', 'c', 'e'],
-        # ['a', 'c', 'd', 'e'],
-        # ['a', 'd', 'c', 'e'],
-        # ['a', 'c', 'd', 'e'],
-        # ['a', 'd', 'c', 'e'],
-        # ['a', 'c', 'd', 'e'],
-
-    ]
-    )
+    # log = SimpleProcessLogFactory([
+    #     ['a', 'b', 'c', 'd'],
+    #     ['a', 'c', 'b', 'd'],
+    #     ['a', 'c', 'e', 'd'],
+    #     ['a', 'e', 'c', 'd'],
+    #     ['a', 'b', 'e', 'd'],
+    #     ['a', 'e', 'b', 'd'],
+    #     # ['a', 'b', 'c', 'd', 'e'],
+    #     # ['a', 'b', 'd', 'c', 'e'],
+    #     # ['a', 'c', 'b', 'd', 'e'],
+    #     # ['a', 'c', 'd', 'b', 'e'],
+    #     # ['a', 'd', 'b', 'c', 'e'],
+    #     # ['a', 'd', 'c', 'b', 'e'],
+    #
+    #
+    # ]
+    # )
     hm = HeuristicMiner(log)
     cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
     f = simple_fitness(log, cnet)
@@ -340,9 +461,10 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
 
 
 
-    # for n in cnet.nodes:
-        # print n.label, n.input_nodes, n.output_nodes
-        # print n.label
+    for n in cnet.nodes:
+        print n.label, 'input_b', n.input_bindings
+        print n.label, 'output_b', n.output_bindings
+
 
     draw_net_graph(hm.cnet)
     draw(hm.cnet)
