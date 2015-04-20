@@ -68,6 +68,12 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c, d})})
         self.assertTrue(get_binding_set(e.input_bindings), {frozenset({b, c, d})})
 
+        a_b_c_d_bin = a.get_output_bindings_with({b, c, d}, True)
+        self.assertEqual(a_b_c_d_bin.frequency, 6)
+
+        e_b_c_d_bin = e.get_input_bindings_with({b, c, d}, True)
+        self.assertEqual(e_b_c_d_bin.frequency, 6)
+
     def test_3_and_couple(self):
         log = create_process_log_from_list([
             ['a', 'b', 'c', 'd'],
@@ -185,6 +191,10 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(c.output_bindings), {frozenset({d})})
 
         self.assertEqual(get_binding_set(d.input_bindings), {frozenset({c})})
+
         b_b = cnet.get_arc_by_nodes(b, b)
+        self.assertEqual(b_b.frequency, 4)
+
+        b_b_bin = b.get_input_bindings_with({b}, True)
         self.assertEqual(b_b.frequency, 4)
 
