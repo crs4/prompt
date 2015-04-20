@@ -1,5 +1,4 @@
 from pymine.mining.process.eventlog.factory import create_process_log_from_list, create_log_from_file
-from pymine.mining.process.conformance import simple_fitness
 import unittest
 import os
 
@@ -26,8 +25,8 @@ class BackendTests(object):
         a, b, c, d, e = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [e])
-        self.assertTrue(a.output_bindings, {frozenset({b, c}), frozenset({d})})
-        self.assertTrue(e.input_bindings, {frozenset({b, c}), frozenset({d})})
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c}), frozenset({d})})
+        self.assertEqual(get_binding_set(e.input_bindings), {frozenset({b, c}), frozenset({d})})
 
     def test_triple_and(self):
         log = create_process_log_from_list([
@@ -43,8 +42,8 @@ class BackendTests(object):
         a, b, c, d, e = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [e])
-        self.assertEqual({bi.node_set for bi in a.output_bindings}, {frozenset({b, c, d})})
-        self.assertTrue({bi.node for bi in e.input_bindings}, {frozenset({b, c, d})})
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c, d})})
+        self.assertTrue(get_binding_set(e.input_bindings), {frozenset({b, c, d})})
 
     def test_3_and_couple(self):
         log = create_process_log_from_list([
@@ -60,10 +59,8 @@ class BackendTests(object):
         a, b, c, d, e = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [d])
-        self.assertEqual({frozenset(bi.node_set) for bi in a.output_bindings},
-                         {frozenset({b, c}), frozenset({b, e}), frozenset({c, e})})
-        self.assertEqual({frozenset(bi.node_set) for bi in d.input_bindings},
-                         {frozenset({b, c}), frozenset({b, e}), frozenset({c, e})})
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c}), frozenset({b, e}), frozenset({c, e})})
+        self.assertEqual(get_binding_set(d.input_bindings), {frozenset({b, c}), frozenset({b, e}), frozenset({c, e})})
 
     def test_2_groups_and(self):
         log = create_process_log_from_list([
@@ -81,10 +78,10 @@ class BackendTests(object):
         a, b1, b2, tb1, tb2,  d = [cnet.get_node_by_label(n) for n in ['a', 'b1', 'b2', 'tb1', 'tb2', 'd']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [d])
-        self.assertEqual({frozenset(bi.node_set) for bi in a.output_bindings},
-                        {frozenset({b1, b2}), frozenset({b1, tb2}), frozenset({b2, tb1}), frozenset({tb1, tb2})})
-        self.assertEqual({frozenset(bi.node_set) for bi in d.input_bindings},
-                        {frozenset({b1, b2}), frozenset({b1, tb2}), frozenset({b2, tb1}), frozenset({tb1, tb2})})
+        self.assertEqual(get_binding_set(a.output_bindings),
+                         {frozenset({b1, b2}), frozenset({b1, tb2}), frozenset({b2, tb1}), frozenset({tb1, tb2})})
+        self.assertEqual(get_binding_set(d.input_bindings),
+                         {frozenset({b1, b2}), frozenset({b1, tb2}), frozenset({b2, tb1}), frozenset({tb1, tb2})})
 
     def test_pg_4_dataset(self):
         dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../../dataset/pg_4_label_final_node.csv')
