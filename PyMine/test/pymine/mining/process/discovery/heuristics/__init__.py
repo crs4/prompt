@@ -67,14 +67,14 @@ class BackendTests(object):
 
     def test_2_groups_and(self):
         log = create_process_log_from_list([
-        ['a', 'b1', 'b2', 'd'],
-        ['a', 'b2', 'b1', 'd'],
-        ['a', 'tb1', 'tb2', 'd'],
-        ['a', 'tb2', 'tb1', 'd'],
-        ['a', 'b1', 'tb2', 'd'],
-        ['a', 'tb2', 'b1', 'd'],
-        ['a', 'tb1', 'b2', 'd'],
-        ['a', 'b2', 'tb1', 'd'],
+            ['a', 'b1', 'b2', 'd'],
+            ['a', 'b2', 'b1', 'd'],
+            ['a', 'tb1', 'tb2', 'd'],
+            ['a', 'tb2', 'tb1', 'd'],
+            ['a', 'b1', 'tb2', 'd'],
+            ['a', 'tb2', 'b1', 'd'],
+            ['a', 'tb1', 'b2', 'd'],
+            ['a', 'b2', 'tb1', 'd'],
         ])
         miner = self.create_miner(log)
         cnet = miner.mine(and_thr=0.2)
@@ -120,7 +120,26 @@ class BackendTests(object):
 
         self.assertEqual(get_binding_set(z.input_bindings), {frozenset({g}), frozenset({h})})
 
+    def test_2_step_loop(self):
+        log = create_process_log_from_list([
+            ['a', 'b', 'c', 'd'],
+            ['a', 'b', 'c', 'b', 'c', 'd'],
+            ['a', 'b', 'c', 'b', 'c', 'b', 'c', 'd'],
 
+        ])
+        miner = self.create_miner(log)
+        cnet = miner.mine(and_thr=0.2)
+        a, b, c, d = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd']]
+        self.assertEqual(cnet.get_initial_nodes(), [a])
+        self.assertEqual(cnet.get_final_nodes(), [d])
 
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b})})
 
+        self.assertEqual(get_binding_set(b.input_bindings), {frozenset({a}), frozenset({c})})
+        self.assertEqual(get_binding_set(b.output_bindings), {frozenset({c})})
+
+        self.assertEqual(get_binding_set(c.input_bindings), {frozenset({b})})
+        self.assertEqual(get_binding_set(c.output_bindings), {frozenset({b}), frozenset({d})})
+
+        self.assertEqual(get_binding_set(d.input_bindings), {frozenset({c})})
 

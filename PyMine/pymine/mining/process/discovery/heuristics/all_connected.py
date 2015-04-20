@@ -18,7 +18,7 @@ logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
                     )
 logger = logging.getLogger('all_connected')
 # logger = logging.getLogger('cnet')
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 
 class Matrix(object):
@@ -94,6 +94,7 @@ class HeuristicMiner(object):
         self._dependency_matrix = Matrix()
         self._2_step_loop_matrix = Matrix()
         self._2_step_loop_freq = Matrix()
+        self._2_step_loop = set()
         self._events = set()
         self._loop = defaultdict(int)
         self._self_loop = []
@@ -170,13 +171,24 @@ class HeuristicMiner(object):
                 self._self_loop.append(node)
 
         for event in self._events:
-            # l2_cells = self._2_step_loop_matrix[event].cells
-            # for c in l2_cells:
-            #     if c.value >= dep_thr:
-            #         self.cnet.add_arc(self.cnet.get_node_by_label(event), self.cnet.get_node_by_label(c.key))
             self._mine_dependency(event, 'input', dep_thr, relative_to_best)
             self._mine_dependency(event, 'output', dep_thr, relative_to_best)
 
+            # 2 step loops
+            cells = self._2_step_loop_matrix[event].cells
+            max_dep = max(cells, key=lambda x: x.value)
+            candidate_dep = [c.key for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
+            if not candidate_dep:
+                if max_dep.value > 0:
+                    candidate_dep.append(max_dep.key)
+
+            for c in candidate_dep:
+                c_node = self.cnet.get_node_by_label(c)
+                event_node = self.cnet.get_node_by_label(event)
+                self._2_step_loop.add(frozenset({c_node, event_node}))
+
+                self.cnet.add_arc(c_node, event_node)
+                self.cnet.add_arc(event_node, c_node)
 
         start_nodes = self.cnet.get_initial_nodes()
         if not start_nodes or len(start_nodes) > 1:  # let's add a fake start
@@ -198,6 +210,9 @@ class HeuristicMiner(object):
                 self._dependency_matrix[fake_end][node] = 1
                 self.cnet.add_arc(node, fake_end)
 
+        for l in self._self_loop:
+            self.cnet.add_arc(l, l)
+
     def _mine_cnet(self, thr):
         output_bindings = Matrix()
         input_bindings = Matrix()
@@ -205,6 +220,10 @@ class HeuristicMiner(object):
         for l in self._self_loop:
             self.cnet.add_input_binding(l, {l})
             self.cnet.add_output_binding(l, {l})
+
+        for n1, n2 in self._2_step_loop:
+            self.cnet.add_input_binding(n1, {n2})
+            self.cnet.add_output_binding(n2, {n1})
 
         for c in self.log.cases:
             events = [e.activity_name for e in c.events]
@@ -300,8 +319,7 @@ class HeuristicMiner(object):
             for unlucky_node in nodes_not_binded:
                 self.cnet.add_input_binding(n, {unlucky_node})
 
-
-    def mine(self, dependency_thr=0.5, and_thr=0.5, relative_to_best=0.1):
+    def mine(self, dependency_thr=0.5, and_thr=0.2, relative_to_best=0.1):
         if not self._precede_matrix:
             self._compute_precede_matrix()
         self._compute_dependency_matrix()
@@ -319,23 +337,31 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
     for c in log.cases:
         print c
 
-    # log = SimpleProcessLogFactory([
-    #     # ['a', 'b', 'c', 'd'],
-    #     # ['a', 'c', 'b', 'd'],
-    #     # ['a', 'c', 'e', 'd'],
-    #     # ['a', 'e', 'c', 'd'],
-    #     # ['a', 'b', 'e', 'd'],
-    #     # ['a', 'e', 'b', 'd'],
-    #     ['a', 'b', 'c', 'd', 'e'],
-    #     ['a', 'b', 'd', 'c', 'e'],
-    #     ['a', 'c', 'b', 'd', 'e'],
-    #     ['a', 'c', 'd', 'b', 'e'],
-    #     ['a', 'd', 'b', 'c', 'e'],
-    #     ['a', 'd', 'c', 'b', 'e'],
-    #
-    #
-    # ]
-    # )
+    log = SimpleProcessLogFactory([
+        ['a', 'b', 'c', 'd'],
+        ['a', 'c', 'b', 'd'],
+        ['a', 'c', 'e', 'd'],
+        ['a', 'e', 'c', 'd'],
+        ['a', 'b', 'e', 'd'],
+        ['a', 'e', 'b', 'd'],
+        # ['a', 'b', 'c', 'd', 'e'],
+        # ['a', 'b', 'd', 'c', 'e'],
+        # ['a', 'c', 'b', 'd', 'e'],
+        # ['a', 'c', 'd', 'b', 'e'],
+        # ['a', 'd', 'b', 'c', 'e'],
+        # ['a', 'd', 'c', 'b', 'e'],
+        # ['a', 'b1', 'b2', 'd'],
+        # ['a', 'b2', 'b1', 'd'],
+        # ['a', 'tb1', 'tb2', 'd'],
+        # ['a', 'tb2', 'tb1', 'd'],
+        # ['a', 'b1', 'tb2', 'd'],
+        # ['a', 'tb2', 'b1', 'd'],
+        # ['a', 'tb1', 'b2', 'd'],
+        # ['a', 'b2', 'tb1', 'd'],
+        #
+
+    ]
+    )
     hm = HeuristicMiner(log)
     cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
     f = simple_fitness(log, cnet)
