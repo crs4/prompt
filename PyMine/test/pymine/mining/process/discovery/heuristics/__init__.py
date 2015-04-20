@@ -34,6 +34,13 @@ class BackendTests(object):
         self.assertEqual(d.frequency, 1)
         self.assertEqual(e.frequency, 3)
 
+        a_b = cnet.get_arc_by_nodes(a, b)
+        self.assertEqual(a_b.frequency, 1)
+        a_c = cnet.get_arc_by_nodes(a, c)
+        self.assertEqual(a_c.frequency, 1)
+        a_d = cnet.get_arc_by_nodes(a, d)
+        self.assertEqual(a_d.frequency, 1)
+
     def test_triple_and(self):
         log = create_process_log_from_list([
         ['a', 'b', 'c', 'd', 'e'],
@@ -145,4 +152,29 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(c.output_bindings), {frozenset({b}), frozenset({d})})
 
         self.assertEqual(get_binding_set(d.input_bindings), {frozenset({c})})
+
+    def test_self_loop(self):
+        log = create_process_log_from_list([
+            ['a', 'b', 'c', 'd'],
+            ['a', 'b', 'b', 'c', 'd'],
+            ['a', 'b', 'b', 'b', 'b', 'c', 'd'],
+
+        ])
+        miner = self.create_miner(log)
+        cnet = miner.mine(and_thr=0.2)
+        a, b, c, d = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd']]
+        self.assertEqual(cnet.get_initial_nodes(), [a])
+        self.assertEqual(cnet.get_final_nodes(), [d])
+
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b})})
+
+        self.assertEqual(get_binding_set(b.input_bindings), {frozenset({a}), frozenset({b})})
+        self.assertEqual(get_binding_set(b.output_bindings), {frozenset({c}), frozenset({b})})
+
+        self.assertEqual(get_binding_set(c.input_bindings), {frozenset({b})})
+        self.assertEqual(get_binding_set(c.output_bindings), {frozenset({d})})
+
+        self.assertEqual(get_binding_set(d.input_bindings), {frozenset({c})})
+        b_b = cnet.get_arc_by_nodes(b, b)
+        self.assertEqual(b_b.frequency, 4)
 

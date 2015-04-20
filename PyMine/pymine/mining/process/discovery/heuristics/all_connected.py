@@ -3,23 +3,12 @@ Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wv
 """
 # FIXME add reference to flexible cnet
 
-from pymine.mining.process.discovery import Miner as Miner
-from numpy.matrixlib import matrix
 from collections import defaultdict
-from pymine.mining.process.network.dependency import DependencyGraph as DependencyGraph
 from pymine.mining.process.network.cnet import CNet as CNet
 from pymine.mining.process.conformance import replay_case
-
-from pymine.mining.process.eventlog.factory import CsvLogFactory as CsvLogFactory
-from pymine.mining.process.eventlog.factory import ProcessInfo
 from pymine.mining.process.tools.hnet_miner import draw_net_graph
 import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
-                    # level=logging.DEBUG
-                    )
 logger = logging.getLogger('all_connected')
-# logger = logging.getLogger('cnet')
-# logger.setLevel(logging.DEBUG)
 
 
 class Matrix(object):
@@ -94,14 +83,16 @@ class HeuristicMiner(object):
         self._2_step_loop_matrix = Matrix()
         self._2_step_loop_freq = Matrix()
         self._2_step_loop = set()
-        self._events = set()
         self._loop = defaultdict(int)
         self._self_loop = []
-        self.cnet = None
         self._start_events = set()
         self._end_events = set()
         self.has_fake_start = self.has_fake_end = False
         self._events_freq = defaultdict(int)
+
+    @property
+    def _events(self):
+        return self._events_freq.keys()
 
     def _compute_precede_matrix(self):
         for case in self.log.cases:
@@ -112,8 +103,6 @@ class HeuristicMiner(object):
                     self._start_events.add(event.activity_name)
                 elif i == len_events - 1:
                     self._end_events.add(event.activity_name)
-
-                self._events.add(event.activity_name)
                 if i < len_events - 1:
                     self._precede_matrix[case.events[i].activity_name][case.events[i+1].activity_name] += 1
                 if i < len_events - 2 and case.events[i].activity_name == case.events[i + 2].activity_name:
@@ -137,7 +126,7 @@ class HeuristicMiner(object):
                     p_b_a = self._precede_matrix[next_e][e]
                     self._dependency_matrix[e][next_e] = (p_b_a - p_a_b)/(p_a_b + p_b_a + 1)
 
-    def _mine_dependency(self, event, dep_type, dep_thr, relative_to_best):
+    def _mine_dependency(self, event, dep_type, dep_thr, relative_to_best, cnet):
         if dep_type == 'input':
             cells = self._dependency_matrix[event].cells
         else:
@@ -154,89 +143,85 @@ class HeuristicMiner(object):
 
         for c in candidate_dep:
             logger.debug('event %s, candidate_dep %s', event, candidate_dep)
-            c_node = self.cnet.get_node_by_label(c)
-            event_node = self.cnet.get_node_by_label(event)
+            c_node = cnet.get_node_by_label(c)
+            event_node = cnet.get_node_by_label(event)
+
             if dep_type == 'input':
-                self.cnet.add_arc(c_node, event_node)
+                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c][event])
             else:
-                self.cnet.add_arc(event_node, c_node)
+                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c])
 
     def _mine_dependency_graph(self, dep_thr, relative_to_best):
-        self.cnet = CNet()
-        self.cnet.add_nodes(*[e for e in self._events])
+        cnet = CNet()
+        cnet.add_nodes(*[e for e in self._events])
         logger.debug('self._events %s', self._events)
         for l, v in self._loop.items():
             if v >= dep_thr:
-                node = self.cnet.get_node_by_label(l)
-                self.cnet.add_arc(node, node)
+                node = cnet.get_node_by_label(l)
+                cnet.add_arc(node, node, frequency=self._precede_matrix[l][l])
                 self._self_loop.append(node)
 
         for event in self._events:
-            self._mine_dependency(event, 'input', dep_thr, relative_to_best)
-            self._mine_dependency(event, 'output', dep_thr, relative_to_best)
-            event_node = self.cnet.get_node_by_label(event)
+            self._mine_dependency(event, 'input', dep_thr, relative_to_best, cnet)
+            self._mine_dependency(event, 'output', dep_thr, relative_to_best, cnet)
+            event_node = cnet.get_node_by_label(event)
             event_node.frequency = self._events_freq[event]
 
             # 2 step loops
             cells = self._2_step_loop_matrix[event].cells
             max_dep = max(cells, key=lambda x: x.value)
-            candidate_dep = [c.key for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
-            if not candidate_dep:
-                if max_dep.value > 0:
-                    candidate_dep.append(max_dep.key)
+            candidate_dep = [c.key for c in cells if c.value >= dep_thr and c.key != event]
 
             for c in candidate_dep:
-                c_node = self.cnet.get_node_by_label(c)
+                c_node = cnet.get_node_by_label(c)
                 self._2_step_loop.add(frozenset({c_node, event_node}))
 
-                self.cnet.add_arc(c_node, event_node)
-                self.cnet.add_arc(event_node, c_node)
+                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c][event])
+                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c])
 
-        start_nodes = self.cnet.get_initial_nodes()
+        start_nodes = cnet.get_initial_nodes()
         if not start_nodes or len(start_nodes) > 1:  # let's add a fake start
-            fake_start = self.cnet.add_node(self.cnet.fake_start_label)
-            self.cnet.has_fake_start = True
+            fake_start = cnet.add_node(cnet.fake_start_label)
+            cnet.has_fake_start = True
 
             for e in self._start_events:
-                node = self.cnet.get_node_by_label(e)
+                node = cnet.get_node_by_label(e)
                 self._dependency_matrix[node][fake_start] = 1
-                self.cnet.add_arc(fake_start, node)
+                cnet.add_arc(fake_start, node)
 
-        end_nodes = self.cnet.get_final_nodes()
+        end_nodes = cnet.get_final_nodes()
         if not end_nodes or len(end_nodes) > 1:
-            fake_end = self.cnet.add_node(self.cnet.fake_end_label)
-            self.cnet.has_fake_end = True
+            fake_end = cnet.add_node(cnet.fake_end_label)
+            cnet.has_fake_end = True
 
             for e in self._end_events:
-                node = self.cnet.get_node_by_label(e)
+                node = cnet.get_node_by_label(e)
                 self._dependency_matrix[fake_end][node] = 1
-                self.cnet.add_arc(node, fake_end)
+                cnet.add_arc(node, fake_end)
 
-        for l in self._self_loop:
-            self.cnet.add_arc(l, l)
+        return cnet
 
-    def _mine_cnet(self, thr):
+    def _mine_bindings(self, cnet, thr):
         output_bindings = Matrix()
         input_bindings = Matrix()
 
         for l in self._self_loop:
-            self.cnet.add_input_binding(l, {l})
-            self.cnet.add_output_binding(l, {l})
+            cnet.add_input_binding(l, {l})
+            cnet.add_output_binding(l, {l})
 
+        logger.debug('self._2_step_loop %s', self._2_step_loop)
         for n1, n2 in self._2_step_loop:
-            self.cnet.add_input_binding(n1, {n2})
-            self.cnet.add_output_binding(n2, {n1})
+            cnet.add_input_binding(n1, {n2})
+            cnet.add_output_binding(n2, {n1})
 
         for c in self.log.cases:
             events = [e.activity_name for e in c.events]
-            if self.cnet.has_fake_start:
-                events.insert(0, self.cnet.fake_start_label)
-            if self.cnet.has_fake_end:
-                events.append(self.cnet.fake_end_label)
+            if cnet.has_fake_start:
+                events.insert(0, cnet.fake_start_label)
+            if cnet.has_fake_end:
+                events.append(cnet.fake_end_label)
 
-            logger.debug('events %s', events)
-
-            for node in self.cnet.nodes:
+            for node in cnet.nodes:
                 n_indexes = [idx_n_indexes for idx_n_indexes, j in enumerate(events) if j == node.label]
                 inputs = node.input_nodes
                 outputs = node.output_nodes
@@ -272,7 +257,7 @@ class HeuristicMiner(object):
 
                         try:
                             i_idx = events[previous_id:idx].index(input_.label)
-                            logger.debug('i_idx %s value %s',i_idx, events[previous_id:idx][i_idx])
+                            logger.debug('i_idx %s value %s', i_idx, events[previous_id:idx][i_idx])
                         except ValueError:
                             continue
                         logger.debug('addings input %s to node %s', input_, node)
@@ -283,19 +268,19 @@ class HeuristicMiner(object):
                         input_bindings[node][frozenset(input_binding)] += 1
 
         # TODO: duplicated code...
-        for n in self.cnet.nodes:
+        for n in cnet.nodes:
             total = sum(output_bindings[n].values())
             nodes_binded = set()
             for b, v in output_bindings[n].items():
                 if v/total >= thr:
                     if len(b) > 1:
-                        b = b - set(self.cnet.get_final_nodes())
-                    self.cnet.add_output_binding(n, b)
+                        b = b - set(cnet.get_final_nodes())
+                    cnet.add_output_binding(n, b)
                     nodes_binded |= b
 
             nodes_not_binded = n.output_nodes - nodes_binded
             for unlucky_node in nodes_not_binded:
-                self.cnet.add_output_binding(n, {unlucky_node})
+                cnet.add_output_binding(n, {unlucky_node})
 
             total = sum(input_bindings[n].values())
             nodes_binded = set()
@@ -303,20 +288,22 @@ class HeuristicMiner(object):
             for b, v in input_bindings[n].items():
                 if v/total >= thr:
                     if len(b) > 1:
-                        b = b - set(self.cnet.get_initial_nodes())
-                    self.cnet.add_input_binding(n, b)
+                        b = b - set(cnet.get_initial_nodes())
+                    cnet.add_input_binding(n, b)
                     nodes_binded |= b
             nodes_not_binded = n.input_nodes - nodes_binded
             for unlucky_node in nodes_not_binded:
-                self.cnet.add_input_binding(n, {unlucky_node})
+                cnet.add_input_binding(n, {unlucky_node})
 
     def mine(self, dependency_thr=0.5, and_thr=0.2, relative_to_best=0.1):
         if not self._precede_matrix:
             self._compute_precede_matrix()
-        self._compute_dependency_matrix()
-        self._mine_dependency_graph(dependency_thr, relative_to_best)
-        self._mine_cnet(and_thr)
-        return self.cnet
+        if not self._dependency_matrix:
+            self._compute_dependency_matrix()
+
+        cnet = self._mine_dependency_graph(dependency_thr, relative_to_best)
+        self._mine_bindings(cnet, and_thr)
+        return cnet
 
 
 def main(file_path, dependency_thr, and_thr, relative_to_best):
