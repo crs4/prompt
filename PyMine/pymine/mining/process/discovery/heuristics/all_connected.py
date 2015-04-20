@@ -105,7 +105,8 @@ class HeuristicMiner(object):
                     self._end_events.add(event.activity_name)
                 if i < len_events - 1:
                     self._precede_matrix[case.events[i].activity_name][case.events[i+1].activity_name] += 1
-                if i < len_events - 2 and case.events[i].activity_name == case.events[i + 2].activity_name:
+                if i < len_events - 2 and case.events[i].activity_name == case.events[i + 2].activity_name and \
+                                case.events[i].activity_name != case.events[i + 1].activity_name:
                     self._2_step_loop_freq[case.events[i].activity_name][case.events[i+1].activity_name] += 1
 
     def _compute_dependency_matrix(self):
@@ -115,9 +116,10 @@ class HeuristicMiner(object):
         """
         for e in self._events:
             for next_e in self._events:
-                l2_a_b = self._2_step_loop_freq[e][next_e]
-                l2_b_a = self._2_step_loop_freq[next_e][e]
-                self._2_step_loop_matrix[e][next_e] = (l2_b_a + l2_a_b)/(l2_a_b + l2_b_a + 1)
+                if e != next_e:
+                    l2_a_b = self._2_step_loop_freq[e][next_e]
+                    l2_b_a = self._2_step_loop_freq[next_e][e]
+                    self._2_step_loop_matrix[e][next_e] = (l2_b_a + l2_a_b)/(l2_a_b + l2_b_a + 1)
 
                 p_a_b = self._precede_matrix[e][next_e]
                 if e == next_e:
@@ -169,7 +171,6 @@ class HeuristicMiner(object):
 
             # 2 step loops
             cells = self._2_step_loop_matrix[event].cells
-            max_dep = max(cells, key=lambda x: x.value)
             candidate_dep = [c.key for c in cells if c.value >= dep_thr and c.key != event]
 
             for c in candidate_dep:
@@ -233,13 +234,19 @@ class HeuristicMiner(object):
         input_bindings = Matrix()
 
         for l in self._self_loop:
-            cnet.add_input_binding(l, {l})
-            cnet.add_output_binding(l, {l})
+            freq = cnet.get_arc_by_nodes(l, l).frequency
+            cnet.add_input_binding(l, {l}, frequency=freq)
+            cnet.add_output_binding(l, {l}, frequency=freq)
 
         logger.debug('self._2_step_loop %s', self._2_step_loop)
         for n1, n2 in self._2_step_loop:
-            cnet.add_input_binding(n1, {n2})
-            cnet.add_output_binding(n2, {n1})
+            freq_n1_n2 = cnet.get_arc_by_nodes(n1, n2).frequency
+            freq_n2_n1 = cnet.get_arc_by_nodes(n2, n1).frequency
+            cnet.add_input_binding(n1, {n2}, frequency=freq_n2_n1)
+            cnet.add_output_binding(n1, {n2}, frequency=freq_n1_n2)
+
+            cnet.add_input_binding(n2, {n1}, frequency=freq_n1_n2)
+            cnet.add_output_binding(n2, {n1}, frequency=freq_n2_n1)
 
         for c in self.log.cases:
             events = [e.activity_name for e in c.events]
@@ -320,26 +327,9 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
         print c
 
     log = SimpleProcessLogFactory([
-        ['a', 'b', 'c', 'd'],
-        ['a', 'c', 'b', 'd'],
-        ['a', 'c', 'e', 'd'],
-        ['a', 'e', 'c', 'd'],
-        ['a', 'b', 'e', 'd'],
-        ['a', 'e', 'b', 'd'],
-        # ['a', 'b', 'c', 'd', 'e'],
-        # ['a', 'b', 'd', 'c', 'e'],
-        # ['a', 'c', 'b', 'd', 'e'],
-        # ['a', 'c', 'd', 'b', 'e'],
-        # ['a', 'd', 'b', 'c', 'e'],
-        # ['a', 'd', 'c', 'b', 'e'],
-        # ['a', 'b1', 'b2', 'd'],
-        # ['a', 'b2', 'b1', 'd'],
-        # ['a', 'tb1', 'tb2', 'd'],
-        # ['a', 'tb2', 'tb1', 'd'],
-        # ['a', 'b1', 'tb2', 'd'],
-        # ['a', 'tb2', 'b1', 'd'],
-        # ['a', 'tb1', 'b2', 'd'],
-        # ['a', 'b2', 'tb1', 'd'],
+      ['a', 'b', 'c', 'd'],
+            ['a', 'b', 'c', 'b', 'c', 'd'],
+            ['a', 'b', 'c', 'b', 'c', 'b', 'c', 'd'],
         #
 
     ]
@@ -352,15 +342,12 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
     print 'failed_cases', f.failed_cases
     print replay_case(log.cases[0], cnet)
 
-
-
-
     for n in cnet.nodes:
         print n.label, 'input_nodes', n.input_nodes
         print n.label, 'output_nodes', n.output_nodes
 
-    draw_net_graph(hm.cnet)
-    draw(hm.cnet)
+    draw_net_graph(cnet)
+    draw(cnet)
 
 
 

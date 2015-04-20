@@ -4,7 +4,7 @@ from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMi
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('all_connected')
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 
 class TestAllConnected(BackendTests, unittest.TestCase):

@@ -145,7 +145,7 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(h.output_bindings), {frozenset({z})})
 
         self.assertEqual(get_binding_set(z.input_bindings), {frozenset({g}), frozenset({h})})
-
+    #
     def test_2_step_loop(self):
         log = create_process_log_from_list([
             ['a', 'b', 'c', 'd'],
@@ -168,6 +168,18 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(c.output_bindings), {frozenset({b}), frozenset({d})})
 
         self.assertEqual(get_binding_set(d.input_bindings), {frozenset({c})})
+
+        b_c_bin = b.get_output_bindings_with({c}, True)
+        self.assertEqual(b_c_bin.frequency, 6)
+
+        b_c_bin = b.get_input_bindings_with({c}, True)
+        self.assertEqual(b_c_bin.frequency, 3)
+
+        c_b_bin = c.get_output_bindings_with({b}, True)
+        self.assertEqual(c_b_bin.frequency, 3)
+
+        c_b_bin = c.get_input_bindings_with({b}, True)
+        self.assertEqual(c_b_bin.frequency, 6)
 
     def test_self_loop(self):
         log = create_process_log_from_list([
@@ -196,5 +208,5 @@ class BackendTests(object):
         self.assertEqual(b_b.frequency, 4)
 
         b_b_bin = b.get_input_bindings_with({b}, True)
-        self.assertEqual(b_b.frequency, 4)
+        self.assertEqual(b_b_bin.frequency, 4)
 
