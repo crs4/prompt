@@ -1,6 +1,7 @@
 """
 Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
 """
+# FIXME add reference to flexible cnet
 
 from pymine.mining.process.discovery import Miner as Miner
 from numpy.matrixlib import matrix
@@ -29,10 +30,10 @@ class Matrix(object):
             self.value = value
 
         def __str__(self):
-            return '%s: %s' %(self.key, self.value)
+            return '%s: %s' % (self.key, self.value)
 
         def __repr__(self):
-            return '%s: %s' %(self.key, self.value)
+            return '%s: %s' % (self.key, self.value)
 
     class Column(object):
         def __init__(self):
@@ -40,7 +41,7 @@ class Matrix(object):
 
         @property
         def cells(self):
-            return [Matrix.Cell(k, v) for k,v in self._column.items()]
+            return [Matrix.Cell(k, v) for k, v in self._column.items()]
 
         def __getitem__(self, item):
             return self._column[item]
@@ -86,8 +87,6 @@ class Matrix(object):
 
 
 class HeuristicMiner(object):
-
-
     def __init__(self, log):
         self.log = log
         self._precede_matrix = Matrix()
@@ -102,11 +101,13 @@ class HeuristicMiner(object):
         self._start_events = set()
         self._end_events = set()
         self.has_fake_start = self.has_fake_end = False
+        self._events_freq = defaultdict(int)
 
     def _compute_precede_matrix(self):
         for case in self.log.cases:
             len_events = len(case.events)
             for i, event in enumerate(case.events):
+                self._events_freq[event.activity_name] += 1
                 if i == 0:
                     self._start_events.add(event.activity_name)
                 elif i == len_events - 1:
@@ -173,6 +174,8 @@ class HeuristicMiner(object):
         for event in self._events:
             self._mine_dependency(event, 'input', dep_thr, relative_to_best)
             self._mine_dependency(event, 'output', dep_thr, relative_to_best)
+            event_node = self.cnet.get_node_by_label(event)
+            event_node.frequency = self._events_freq[event]
 
             # 2 step loops
             cells = self._2_step_loop_matrix[event].cells
@@ -184,7 +187,6 @@ class HeuristicMiner(object):
 
             for c in candidate_dep:
                 c_node = self.cnet.get_node_by_label(c)
-                event_node = self.cnet.get_node_by_label(event)
                 self._2_step_loop.add(frozenset({c_node, event_node}))
 
                 self.cnet.add_arc(c_node, event_node)
@@ -254,11 +256,6 @@ class HeuristicMiner(object):
                             logger.debug('o_idx %s, value %s', o_idx, events[idx:next_idx][o_idx])
                         except ValueError:
                             continue
-                        # o_idx += idx  # absolute index
-                        # inputs_indexes = [(idx_n_indexes, j) for idx_n_indexes, j in enumerate(events[:o_idx]) if j == node.label]
-                        # if inputs_indexes:
-                        #     nearest_input_idx = max(inputs_indexes, key=lambda x: x[0])[0]
-                        #     if nearest_input_idx == idx:
                         output_binding.add(output)
 
                     if output_binding:
@@ -276,14 +273,8 @@ class HeuristicMiner(object):
                         try:
                             i_idx = events[previous_id:idx].index(input_.label)
                             logger.debug('i_idx %s value %s',i_idx, events[previous_id:idx][i_idx])
-                            # i_idx = max([k for k, j in enumerate(events[previous_id:idx]) if j == input_.label])
                         except ValueError:
                             continue
-                        # try:
-                        #     nearest_output_idx = events[i_idx:].index(input_.label)
-                        # except ValueError:
-                        #     continue
-                        # if nearest_output_idx == 0:
                         logger.debug('addings input %s to node %s', input_, node)
                         input_binding.add(input_)
 

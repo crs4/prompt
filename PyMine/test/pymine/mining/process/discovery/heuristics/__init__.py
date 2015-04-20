@@ -28,6 +28,12 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c}), frozenset({d})})
         self.assertEqual(get_binding_set(e.input_bindings), {frozenset({b, c}), frozenset({d})})
 
+        self.assertEqual(a.frequency, 3)
+        self.assertEqual(b.frequency, 2)
+        self.assertEqual(c.frequency, 2)
+        self.assertEqual(d.frequency, 1)
+        self.assertEqual(e.frequency, 3)
+
     def test_triple_and(self):
         log = create_process_log_from_list([
         ['a', 'b', 'c', 'd', 'e'],
