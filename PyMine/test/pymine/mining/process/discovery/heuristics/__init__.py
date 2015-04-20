@@ -41,6 +41,16 @@ class BackendTests(object):
         a_d = cnet.get_arc_by_nodes(a, d)
         self.assertEqual(a_d.frequency, 1)
 
+        a_b_c_bin = a.get_output_bindings_with({b, c}, True)
+        a_d_bin = a.get_output_bindings_with({d}, True)
+        self.assertEqual(a_b_c_bin.frequency, 2)
+        self.assertEqual(a_d_bin.frequency, 1)
+
+        e_b_c_bin = e.get_input_bindings_with({b, c}, True)
+        e_d_bin = e.get_input_bindings_with({d}, True)
+        self.assertEqual(e_b_c_bin.frequency, 2)
+        self.assertEqual(e_d_bin.frequency, 1)
+
     def test_triple_and(self):
         log = create_process_log_from_list([
         ['a', 'b', 'c', 'd', 'e'],

@@ -201,6 +201,33 @@ class HeuristicMiner(object):
 
         return cnet
 
+    @staticmethod
+    def _create_bindings(type_, node, bindings, cnet, thr):
+        total = sum(bindings[node].values())
+        nodes_binded = set()
+
+        for b, v in bindings[node].items():
+            if v/total >= thr:
+
+                if type_ == 'output':
+                    if len(b) > 1:
+                        b = b - set(cnet.get_final_nodes())
+                    cnet.add_output_binding(node, b, frequency=v)
+                else:
+                    if len(b) > 1:
+                        b = b - set(cnet.get_initial_nodes())
+                    cnet.add_input_binding(node, b, frequency=v)
+                nodes_binded |= b
+
+        nodes_not_binded = node.output_nodes - nodes_binded if type_ == 'output' else node.input_nodes - nodes_binded
+        for unlucky_node in nodes_not_binded:
+            if type_ == 'output':
+                arc = cnet.get_arc_by_nodes(node, unlucky_node)
+                cnet.add_output_binding(node, {unlucky_node}, frequency=arc.frequency)
+            else:
+                arc = cnet.get_arc_by_nodes(unlucky_node, node)
+                cnet.add_input_binding(node, {unlucky_node}, frequency=arc.frequency)
+
     def _mine_bindings(self, cnet, thr):
         output_bindings = Matrix()
         input_bindings = Matrix()
@@ -269,31 +296,8 @@ class HeuristicMiner(object):
 
         # TODO: duplicated code...
         for n in cnet.nodes:
-            total = sum(output_bindings[n].values())
-            nodes_binded = set()
-            for b, v in output_bindings[n].items():
-                if v/total >= thr:
-                    if len(b) > 1:
-                        b = b - set(cnet.get_final_nodes())
-                    cnet.add_output_binding(n, b)
-                    nodes_binded |= b
-
-            nodes_not_binded = n.output_nodes - nodes_binded
-            for unlucky_node in nodes_not_binded:
-                cnet.add_output_binding(n, {unlucky_node})
-
-            total = sum(input_bindings[n].values())
-            nodes_binded = set()
-
-            for b, v in input_bindings[n].items():
-                if v/total >= thr:
-                    if len(b) > 1:
-                        b = b - set(cnet.get_initial_nodes())
-                    cnet.add_input_binding(n, b)
-                    nodes_binded |= b
-            nodes_not_binded = n.input_nodes - nodes_binded
-            for unlucky_node in nodes_not_binded:
-                cnet.add_input_binding(n, {unlucky_node})
+            self._create_bindings('input', n, input_bindings, cnet, thr)
+            self._create_bindings('output', n, output_bindings, cnet, thr)
 
     def mine(self, dependency_thr=0.5, and_thr=0.2, relative_to_best=0.1):
         if not self._precede_matrix:
