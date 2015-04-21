@@ -88,25 +88,38 @@ class HeuristicMiner(object):
         self._end_events = set()
         self.has_fake_start = self.has_fake_end = False
         self._events_freq = defaultdict(int)
+        self._long_distance_freq = Matrix()
+        self._long_distance_matrix = Matrix()
 
     @property
     def _events(self):
         return self._events_freq.keys()
 
     def _compute_precede_matrix(self):
+
         for case in self.log.cases:
-            len_events = len(case.events)
-            for i, event in enumerate(case.events):
-                self._events_freq[event.activity_name] += 1
+            events = [e.activity_name for e in case.events]
+            len_events = len(events)
+            for i, event in enumerate(events):
+                self._events_freq[event] += 1
                 if i == 0:
-                    self._start_events.add(event.activity_name)
+                    self._start_events.add(event)
                 elif i == len_events - 1:
-                    self._end_events.add(event.activity_name)
+                    self._end_events.add(event)
                 if i < len_events - 1:
-                    self._precede_matrix[case.events[i].activity_name][case.events[i+1].activity_name] += 1
-                if i < len_events - 2 and case.events[i].activity_name == case.events[i + 2].activity_name and \
-                                case.events[i].activity_name != case.events[i + 1].activity_name:
-                    self._2_step_loop_freq[case.events[i].activity_name][case.events[i+1].activity_name] += 1
+                    self._precede_matrix[events[i]][events[i+1]] += 1
+                if i < len_events - 2 and events[i] == events[i + 2] and events[i] != events[i + 1]:
+                    self._2_step_loop_freq[events[i]][events[i+1]] += 1
+
+                # long distance dependencies
+                events_seen = set()
+                for ld_event in events[i + 2:]:
+                    if event == ld_event:
+                        break
+                    if ld_event in events_seen:
+                        break
+                    events_seen.add(ld_event)
+                    self._long_distance_freq[event][ld_event] += 1
 
     def _compute_dependency_matrix(self):
         """
@@ -116,9 +129,16 @@ class HeuristicMiner(object):
         for e in self._events:
             for next_e in self._events:
                 if e != next_e:
+                    # 2 step loops
                     l2_a_b = self._2_step_loop_freq[e][next_e]
                     l2_b_a = self._2_step_loop_freq[next_e][e]
                     self._2_step_loop_matrix[e][next_e] = (l2_b_a + l2_a_b)/(l2_a_b + l2_b_a + 1)
+
+                    # long distance dependencies
+                    card_a = self._events_freq[e]
+                    card_b = self._events_freq[next_e]
+                    a_ll_b = self._long_distance_freq[e][next_e]
+                    self._long_distance_matrix[e][next_e] = 2*(a_ll_b - abs(card_a - card_b))/(card_a + card_b + 1)
 
                 p_a_b = self._precede_matrix[e][next_e]
                 if e == next_e:
@@ -152,12 +172,14 @@ class HeuristicMiner(object):
             else:
                 cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c.key], dependency=c.value)
 
-    def _mine_dependency_graph(self, dep_thr, relative_to_best):
+    def _mine_dependency_graph(self, dep_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr):
         cnet = CNet()
         cnet.add_nodes(*[e for e in self._events])
         logger.debug('self._events %s', self._events)
+
+        # self loop
         for l, v in self._loop.items():
-            if v >= dep_thr:
+            if v >= self_loop_thr:
                 node = cnet.get_node_by_label(l)
                 cnet.add_arc(node, node, frequency=self._precede_matrix[l][l])
                 self._self_loop.append(node)
@@ -170,7 +192,7 @@ class HeuristicMiner(object):
 
             # 2 step loops
             cells = self._2_step_loop_matrix[event].cells
-            candidate_dep = [c for c in cells if c.value >= dep_thr and c.key != event]
+            candidate_dep = [c for c in cells if c.value >= two_step_loop_thr and c.key != event]
 
             for c in candidate_dep:
                 c_node = cnet.get_node_by_label(c.key)
@@ -198,6 +220,33 @@ class HeuristicMiner(object):
                 node = cnet.get_node_by_label(e)
                 self._dependency_matrix[fake_end][node] = 1
                 cnet.add_arc(node, fake_end)
+
+        # long distance dependencies
+
+        def _find_path_without_node(net, start_node, without_node, nodes_banned=None):
+            logger.debug('start_node %s, without_node %s, nodes_banned %s', start_node, without_node, nodes_banned)
+            nodes_banned = nodes_banned or {start_node, without_node}
+            for output_n in start_node.output_nodes:
+                    if output_n in nodes_banned:
+                        continue
+                    nodes_banned.add(output_n)
+                    if output_n in net.get_final_nodes():
+                        return True
+
+                    if _find_path_without_node(net, output_n, without_node, nodes_banned):
+                        return True
+
+            return False
+
+        for event in self._events:
+            node = cnet.get_node_by_label(event)
+            cells = self._long_distance_matrix[event].cells
+            candidate_dep = [c for c in cells if c.value >= long_distance_thr]
+
+            for c in candidate_dep:
+                c_node = cnet.get_node_by_label(c.key)
+                if _find_path_without_node(cnet, node, c_node):
+                    cnet.add_arc(node, c_node, frequency=self._long_distance_freq[event][c], dependency=c.value)
 
         return cnet
 
@@ -305,36 +354,44 @@ class HeuristicMiner(object):
             self._create_bindings('input', n, input_bindings, cnet, thr)
             self._create_bindings('output', n, output_bindings, cnet, thr)
 
-    def mine(self, dependency_thr=0.5, and_thr=0.2, relative_to_best=0.1):
+    def mine(self,
+             dependency_thr=0.5,
+             and_thr=0.2,
+             relative_to_best=0.1,
+             self_loop_thr=None,
+             two_step_loop_thr=None,
+             long_distance_thr=None):
+        self_loop_thr = self_loop_thr if self_loop_thr is not None else dependency_thr
+        two_step_loop_thr = two_step_loop_thr if two_step_loop_thr is not None else dependency_thr
+        long_distance_thr = long_distance_thr if long_distance_thr is not None else dependency_thr
+
         if not self._precede_matrix:
             self._compute_precede_matrix()
         if not self._dependency_matrix:
             self._compute_dependency_matrix()
 
-        cnet = self._mine_dependency_graph(dependency_thr, relative_to_best)
+        cnet = self._mine_dependency_graph(
+            dependency_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr)
         self._mine_bindings(cnet, and_thr)
         return cnet
 
 
 def main(file_path, dependency_thr, and_thr, relative_to_best):
     from pymine.mining.process.eventlog.factory import create_log_from_file
-    from pymine.mining.process.eventlog.factory import SimpleProcessLogFactory
     from pymine.mining.process.tools.drawing.draw_cnet import draw
     from pymine.mining.process.conformance import simple_fitness
     log = create_log_from_file(file_path)[0]
     for c in log.cases:
         print c
 
-    log = SimpleProcessLogFactory([
-      ['a', 'b', 'c', 'd'],
-            ['a', 'b', 'c', 'b', 'c', 'd'],
-            ['a', 'b', 'c', 'b', 'c', 'b', 'c', 'd'],
-        #
-
-    ]
-    )
+    # log = SimpleProcessLogFactory([
+    #     ['a', 'b',  'd', 'e', 'g'],
+    #     ['a', 'c',  'd', 'f', 'g']
+    # ]
+    # )
     hm = HeuristicMiner(log)
-    cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
+    # cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
+    cnet = hm.mine()
     f = simple_fitness(log, cnet)
     print 'fitness', f.fitness
     print 'correct_cases', f.correct_cases
@@ -349,7 +406,6 @@ def main(file_path, dependency_thr, and_thr, relative_to_best):
     draw(cnet)
 
 
-
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -358,8 +414,5 @@ if __name__ == '__main__':
     parser.add_argument('--rtb', type=float, default=0.1, help="relative to best")
     parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
     parser.add_argument('--dt', type=float, default=0.5, help="dependency threshold")
-
-
     args = parser.parse_args()
     main(args.file_path, args.dt, args.bft, args.rtb)
-

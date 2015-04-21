@@ -57,12 +57,12 @@ class BackendTests(object):
 
     def test_triple_and(self):
         log = create_process_log_from_list([
-        ['a', 'b', 'c', 'd', 'e'],
-        ['a', 'b', 'd', 'c', 'e'],
-        ['a', 'c', 'b', 'd', 'e'],
-        ['a', 'c', 'd', 'b', 'e'],
-        ['a', 'd', 'b', 'c', 'e'],
-        ['a', 'd', 'c', 'b', 'e'],
+            ['a', 'b', 'c', 'd', 'e'],
+            ['a', 'b', 'd', 'c', 'e'],
+            ['a', 'c', 'b', 'd', 'e'],
+            ['a', 'c', 'd', 'b', 'e'],
+            ['a', 'd', 'b', 'c', 'e'],
+            ['a', 'd', 'c', 'b', 'e'],
         ])
         miner = self.create_miner(log)
         cnet = miner.mine()
@@ -124,7 +124,7 @@ class BackendTests(object):
         dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../../dataset/pg_4_label_final_node.csv')
         log = create_log_from_file(dataset_path)[0]
         miner = self.create_miner(log)
-        cnet = miner.mine()
+        cnet = miner.mine(long_distance_thr=1)
         a, b, c, d, e, f, g, h, z = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'z']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [z])
@@ -218,3 +218,33 @@ class BackendTests(object):
         b_b_bin = b.get_input_bindings_with({b}, True)
         self.assertEqual(b_b_bin.frequency, 4)
 
+    def test_long_distance_loop(self):
+        log = create_process_log_from_list([
+            ['a', 'b',  'd', 'e', 'g'],
+            ['a', 'c',  'd', 'f', 'g']
+        ])
+        miner = self.create_miner(log)
+        cnet = miner.mine(and_thr=0.2)
+        a, b, c, d, e, f, g = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e', 'f', 'g']]
+        self.assertEqual(cnet.get_initial_nodes(), [a])
+        self.assertEqual(cnet.get_final_nodes(), [g])
+
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b}), frozenset({c})})
+        self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b}), frozenset({c})})
+
+        self.assertEqual(get_binding_set(b.input_bindings), {frozenset({a})})
+        self.assertEqual(get_binding_set(b.output_bindings), {frozenset({d, e})})
+
+        self.assertEqual(get_binding_set(c.input_bindings), {frozenset({a})})
+        self.assertEqual(get_binding_set(c.output_bindings), {frozenset({d, f})})
+
+        self.assertEqual(get_binding_set(d.input_bindings), {frozenset({b}), frozenset({c})})
+        self.assertEqual(get_binding_set(d.output_bindings), {frozenset({f}), frozenset({e})})
+
+        self.assertEqual(get_binding_set(e.input_bindings), {frozenset({b, d})})
+        self.assertEqual(get_binding_set(e.output_bindings), {frozenset({g})})
+
+        self.assertEqual(get_binding_set(f.input_bindings), {frozenset({c, d})})
+        self.assertEqual(get_binding_set(f.output_bindings), {frozenset({g})})
+
+        self.assertEqual(get_binding_set(g.input_bindings), {frozenset({f}), frozenset({e})})

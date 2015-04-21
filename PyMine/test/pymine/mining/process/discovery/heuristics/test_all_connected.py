@@ -10,5 +10,3 @@ logger = logging.getLogger('all_connected')
 class TestAllConnected(BackendTests, unittest.TestCase):
     def create_miner(self, log):
         return HeuristicMiner(log)
-
-
