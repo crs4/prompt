@@ -145,7 +145,7 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(h.output_bindings), {frozenset({z})})
 
         self.assertEqual(get_binding_set(z.input_bindings), {frozenset({g}), frozenset({h})})
-    #
+
     def test_2_step_loop(self):
         log = create_process_log_from_list([
             ['a', 'b', 'c', 'd'],

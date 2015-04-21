@@ -10,10 +10,10 @@ from pymine.mining.process.network.cnet import *
 from pymine.mining.process.eventlog.factory import CsvLogFactory
 from pymine.mining.process.conformance import replay_case
 
-logging.basicConfig(level=logging.DEBUG,format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('heuristic')
-logger.setLevel(logging.DEBUG)
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+
 
 class TestHeuristicMiner(unittest.TestCase):
 
@@ -124,17 +124,6 @@ class TestHeuristicMiner(unittest.TestCase):
         self.assertTrue(len(cnet.arcs) == len(mined_cnet.arcs))
         self.assertTrue(len(cnet.input_bindings) == len(mined_cnet.input_bindings))
         self.assertTrue(len(cnet.output_bindings) == len(mined_cnet.output_bindings))
-
-    def test_remove_pending_obligations(self):
-        import os
-        log_factory = CsvLogFactory()
-        dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4_label_final_node.csv')
-        log = log_factory.create_log_from_file(dataset_path)[0]
-        miner = HeuristicMiner()
-        cnet = miner.mine(log)
-        for case in log.cases:
-            passed, obl_pending, unexpected = replay_case(case, cnet)
-            self.assertFalse(obl_pending)
 
 
 def suite():
