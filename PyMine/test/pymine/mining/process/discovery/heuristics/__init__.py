@@ -36,10 +36,14 @@ class BackendTests(object):
 
         a_b = cnet.get_arc_by_nodes(a, b)
         self.assertEqual(a_b.frequency, 1)
+        self.assertEqual(a_b.dependency, 0.5)
+
         a_c = cnet.get_arc_by_nodes(a, c)
         self.assertEqual(a_c.frequency, 1)
+        self.assertEqual(a_c.dependency, 0.5)
         a_d = cnet.get_arc_by_nodes(a, d)
         self.assertEqual(a_d.frequency, 1)
+        self.assertEqual(a_d.dependency, 0.5)
 
         a_b_c_bin = a.get_output_bindings_with({b, c}, True)
         a_d_bin = a.get_output_bindings_with({d}, True)
@@ -67,6 +71,10 @@ class BackendTests(object):
         self.assertEqual(cnet.get_final_nodes(), [e])
         self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c, d})})
         self.assertTrue(get_binding_set(e.input_bindings), {frozenset({b, c, d})})
+
+        a_b = cnet.get_arc_by_nodes(a, b)
+        self.assertEqual(a_b.frequency, 2)
+        self.assertEqual(a_b.dependency, 2.0/3)
 
         a_b_c_d_bin = a.get_output_bindings_with({b, c, d}, True)
         self.assertEqual(a_b_c_d_bin.frequency, 6)

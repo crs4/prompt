@@ -135,22 +135,22 @@ class HeuristicMiner(object):
 
         logger.debug('cells of %s = %s', event, cells)
         max_dep = max(cells, key=lambda x: x.value)
-        candidate_dep = [c.key for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
+        candidate_dep = [c for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
         logger.debug('candidate_dep %s of %s = %s', dep_type, event, candidate_dep)
 
         if not candidate_dep:
             if max_dep.value > 0:
-                candidate_dep.append(max_dep.key)
+                candidate_dep.append(max_dep)
 
         for c in candidate_dep:
             logger.debug('event %s, candidate_dep %s', event, candidate_dep)
-            c_node = cnet.get_node_by_label(c)
+            c_node = cnet.get_node_by_label(c.key)
             event_node = cnet.get_node_by_label(event)
 
             if dep_type == 'input':
-                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c][event])
+                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c.key][event], dependency=c.value)
             else:
-                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c])
+                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c.key], dependency=c.value)
 
     def _mine_dependency_graph(self, dep_thr, relative_to_best):
         cnet = CNet()
@@ -170,14 +170,14 @@ class HeuristicMiner(object):
 
             # 2 step loops
             cells = self._2_step_loop_matrix[event].cells
-            candidate_dep = [c.key for c in cells if c.value >= dep_thr and c.key != event]
+            candidate_dep = [c for c in cells if c.value >= dep_thr and c.key != event]
 
             for c in candidate_dep:
-                c_node = cnet.get_node_by_label(c)
+                c_node = cnet.get_node_by_label(c.key)
                 self._2_step_loop.add(frozenset({c_node, event_node}))
 
-                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c][event])
-                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c])
+                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c.key][event], dependency=c.value)
+                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c.key], dependency=c.value)
 
         start_nodes = cnet.get_initial_nodes()
         if not start_nodes or len(start_nodes) > 1:  # let's add a fake start

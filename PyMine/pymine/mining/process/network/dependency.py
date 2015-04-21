@@ -3,7 +3,7 @@ from pymine.mining.process.network import Network, Arc, Node
 
 class DArc(Arc):
 
-    def __init__(self, start_node, end_node, label=None, frequency=0, dependency=0.0, attrs={}):
+    def __init__(self, start_node, end_node, label=None, frequency=0, dependency=0.0, attrs=None):
         super(DArc, self).__init__(start_node, end_node, label, frequency, attrs)
         self.dependency = dependency
 
@@ -22,13 +22,14 @@ class DArc(Arc):
                  'attributes': self.attrs}]
         return json
 
+
 class DependencyGraph(Network):
     def __init__(self, label=None):
         super(DependencyGraph, self).__init__(label)
         self.start_node = None
         self.end_node = None
 
-    def add_arc(self, node_a, node_b, label=None, frequency=None, dependency=None, attrs={}):
+    def add_arc(self, node_a, node_b, label=None, frequency=None, dependency=None, attrs=None):
         arc = DArc(node_a, node_b, label, frequency, dependency, attrs)
         return self._add_arc(arc, node_a, node_b)
 

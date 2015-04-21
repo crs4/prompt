@@ -1,8 +1,9 @@
 from pymine.mining.process.network import Node, Network, LabeledObject, UnexpectedEvent
 from pymine.mining.process.network.graph import graph_factory
+from pymine.mining.process.network.dependency import DependencyGraph
+from collections import defaultdict
 import logging
 logger = logging.getLogger('cnet')
-from collections import defaultdict
 
 GRAPH_IMPL = 'nx'
 
@@ -18,14 +19,6 @@ class Obligation(object):
 
     def __hash__(self):
         return hash(self.node.label) + hash(self.source_node.label) + hash(frozenset(self.source_binding.node_set))
-
-# class Obligation(object):
-#     def __init__(self, source_node, node):
-#         self.source_node = source_node
-#         self.node = node
-#
-#     def __repr__(self):
-#         return "< Obligation node %s, source_node %s >" % (self.node, self.source_node)
 
 
 class Binding(LabeledObject):
@@ -101,7 +94,7 @@ class CNode(Node):
         return json
 
 
-class CNet(Network):
+class CNet(DependencyGraph):
     fake_start_label = '_start'
     fake_end_label = '_end'
 
