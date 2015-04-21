@@ -1,8 +1,7 @@
 """
 Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
+and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
-# FIXME add reference to flexible cnet
-
 from collections import defaultdict
 from pymine.mining.process.network.cnet import CNet as CNet
 from pymine.mining.process.conformance import replay_case
