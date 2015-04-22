@@ -2,9 +2,6 @@
 Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
 and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
-from pymine.mining.process.discovery.heuristics import Matrix
-from pymine.mining.process.conformance import replay_case
-from pymine.mining.process.tools.hnet_miner import draw_net_graph
 import logging
 logger = logging.getLogger('all_connected')
 
