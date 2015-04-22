@@ -2,9 +2,10 @@
 Implementation of the Dependency Graph Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
 """
 from collections import defaultdict
+from pymine.mining.process.discovery.heuristics import Matrix
 import logging
 
-from pymine.mining.process.network.dependency import DependencyGraph
+from pymine.mining.process.network.cnet import CNet
 
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
                     level=logging.DEBUG
@@ -13,154 +14,188 @@ logger = logging.getLogger('heuristic')
 logger.setLevel(logging.DEBUG)
 
 
-class Matrix(object):
-
-    class Cell(object):
-        def __init__(self, key, value):
-            self.key = key
-            self.value = value
-
-        def __str__(self):
-            return '%s: %s' %(self.key, self.value)
-
-        def __repr__(self):
-            return '%s: %s' %(self.key, self.value)
-
-    class Column(object):
-        def __init__(self):
-            self._column = defaultdict(float)
-
-        @property
-        def cells(self):
-            return [Matrix.Cell(k, v) for k,v in self._column.items()]
-
-        def __getitem__(self, item):
-            return self._column[item]
-
-        def __setitem__(self, key, value):
-            self._column[key] = value
-
-        def __str__(self):
-            return str(self._column)
-
-        def __repr__(self):
-            return repr(self._column)
-
-        def __len__(self):
-            return len(self._column)
-
-
-    def __init__(self):
-        self._matrix = defaultdict(lambda: Matrix.Column())
-
-    def __getitem__(self, item):
-        return self._matrix[item]
-
-    def __str__(self):
-        return str(self._matrix)
-
-    def __len__(self):
-        return len(self._matrix)
-
-
 class DependencyMiner(object):
 
-    def __init__(self, log=None):
+    def __init__(self, log):
         self.log = log
-        self._precede_matrix = Matrix()
-        self._dependency_matrix = Matrix()
-        self._2_step_loop = Matrix()
-        self._events = set()
-        self._loop = defaultdict(int)
-        self.d_graph = None
+        self.precede_matrix = Matrix()
+        self.dependency_matrix = Matrix()
+        self.two_step_loop_matrix = Matrix()
+        self.two_step_loop_freq = Matrix()
+        self.two_step_loop = set()
+        self.loop = defaultdict(int)
+        self.self_loop = []
+        self.start_events = set()
+        self.end_events = set()
+        self.has_fake_start = self.has_fake_end = False
+        self.events_freq = defaultdict(int)
+        self.long_distance_freq = Matrix()
+        self.long_distance_matrix = Matrix()
+
+    @property
+    def events(self):
+        return self.events_freq.keys()
+
+    def _compute_precede_matrix_by_events(self, events):
+        len_events = len(events)
+        for i, event in enumerate(events):
+            self.events_freq[event] += 1
+            if i == 0:
+                self.start_events.add(event)
+            elif i == len_events - 1:
+                self.end_events.add(event)
+            if i < len_events - 1:
+                self.precede_matrix[events[i]][events[i+1]] += 1
+            if i < len_events - 2 and events[i] == events[i + 2] and events[i] != events[i + 1]:
+                self.two_step_loop_freq[events[i]][events[i+1]] += 1
+
+            # long distance dependencies
+            events_seen = set()
+            for ld_event in events[i + 2:]:
+                if event == ld_event:
+                    break
+                if ld_event in events_seen:
+                    break
+                events_seen.add(ld_event)
+                self.long_distance_freq[event][ld_event] += 1
 
     def _compute_precede_matrix(self):
+
         for case in self.log.cases:
-            len_events = len(case.events)
-            for i, event in enumerate(case.events):
-                self._events.add(event.activity_name)
-                if i < len_events - 1:
-                    self._precede_matrix[case.events[i].activity_name][case.events[i+1].activity_name] += 1
-                if i < len_events - 2 and case.events[i].activity_name == case.events[i + 2].activity_name:
-                    self._2_step_loop[case.events[i].activity_name][case.events[i+1].activity_name] += 1
+            events = [e.activity_name for e in case.events]
+            self._compute_precede_matrix_by_events(events)
 
     def _compute_dependency_matrix(self):
         """
         Reversed matrix of the one illustrated in the paper
         :return:
         """
-        for event in self._events:
-            for next_event in self._events:
-                p_a_b = self._precede_matrix[event][next_event]
-                if event == next_event:
-                    self._loop[event] = p_a_b/(p_a_b + 1)
+        for e in self.events:
+            for next_e in self.events:
+                if e != next_e:
+                    # 2 step loops
+                    l2_a_b = self.two_step_loop_freq[e][next_e]
+                    l2_b_a = self.two_step_loop_freq[next_e][e]
+                    self.two_step_loop_matrix[e][next_e] = (l2_b_a + l2_a_b)/(l2_a_b + l2_b_a + 1)
+
+                    # long distance dependencies
+                    card_a = self.events_freq[e]
+                    card_b = self.events_freq[next_e]
+                    a_ll_b = self.long_distance_freq[e][next_e]
+                    self.long_distance_matrix[e][next_e] = 2*(a_ll_b - abs(card_a - card_b))/(card_a + card_b + 1)
+
+                p_a_b = self.precede_matrix[e][next_e]
+                if e == next_e:
+                    self.loop[e] = p_a_b/(p_a_b + 1)
                 else:
-                    p_b_a = self._precede_matrix[next_event][event]
-                    self._dependency_matrix[event][next_event] = (p_b_a - p_a_b )/(p_a_b + p_b_a + 1)
+                    p_b_a = self.precede_matrix[next_e][e]
+                    self.dependency_matrix[e][next_e] = (p_b_a - p_a_b)/(p_a_b + p_b_a + 1)
 
-    @property
-    def precede_matrix(self):
-        if len(self._precede_matrix) == 0:
+    def _mine_dependency(self, event, dep_type, dep_thr, relative_to_best, cnet):
+        if dep_type == 'input':
+            cells = self.dependency_matrix[event].cells
+        else:
+            cells = self.dependency_matrix.get_column(event)
+
+        logger.debug('cells of %s = %s', event, cells)
+        max_dep = max(cells, key=lambda x: x.value)
+        candidate_dep = [c for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
+        logger.debug('candidate_dep %s of %s = %s', dep_type, event, candidate_dep)
+
+        if not candidate_dep:
+            if max_dep.value > 0:
+                candidate_dep.append(max_dep)
+
+        for c in candidate_dep:
+            logger.debug('event %s, candidate_dep %s', event, candidate_dep)
+            c_node = cnet.get_node_by_label(c.key)
+            event_node = cnet.get_node_by_label(event)
+
+            if dep_type == 'input':
+                cnet.add_arc(c_node, event_node, frequency=self.precede_matrix[c.key][event], dependency=c.value)
+            else:
+                cnet.add_arc(event_node, c_node, frequency=self.precede_matrix[event][c.key], dependency=c.value)
+
+    @staticmethod
+    def _find_path_without_node(net, start_node, without_node, nodes_banned=None):
+            logger.debug('start_node %s, without_node %s, nodes_banned %s', start_node, without_node, nodes_banned)
+            nodes_banned = nodes_banned or {start_node, without_node}
+            for output_n in start_node.output_nodes:
+                    if output_n in nodes_banned:
+                        continue
+                    nodes_banned.add(output_n)
+                    if output_n in net.get_final_nodes():
+                        return True
+
+                    if DependencyMiner._find_path_without_node(net, output_n, without_node, nodes_banned):
+                        return True
+
+            return False
+
+    def mine(self, dep_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr):
+        if not self.precede_matrix:
             self._compute_precede_matrix()
-        return self._precede_matrix
-
-    @property
-    def dependency_matrix(self):
-        if len(self._dependency_matrix) == 0:
+        if not self.dependency_matrix:
             self._compute_dependency_matrix()
-        return self._dependency_matrix
 
-    def mine_dependency_graph(self, dep_thr=0.0, arc_freq=0):
-        self._compute_precede_matrix()
-        self._compute_dependency_matrix()
-        self.d_graph = DependencyGraph()
-        self.d_graph.add_nodes(*[e for e in self._events])
-        logger.debug('self._events %s', self._events)
-        for event in self._events:
-            dep_cells = self._dependency_matrix[event].cells
-            freq_cells = self._precede_matrix[event].cells
-            logger.debug('cells of %s = %s', event, dep_cells)
-            #candidate_dep = [c.key for c in dep_cells if c.value >= dep_thr]
-            candidate_dep = []
-            for i in xrange(0,len(dep_cells)):
-                if dep_cells[i].value >= dep_thr and freq_cells[i].value >= arc_freq:
-                    candidate_dep.append(dep_cells[i].key)
-            logger.debug('candidate_dep of %s = %s', event, candidate_dep)
+        cnet = CNet()
+        cnet.add_nodes(*[e for e in self.events])
+        logger.debug('self._events %s', self.events)
 
-            if not candidate_dep and dep_cells:
-                max_dep = max(dep_cells, key=lambda x: x.value)
-                if max_dep.value > 0:
-                    candidate_dep.append(max_dep.key)
+        # self loop
+        for l, v in self.loop.items():
+            if v >= self_loop_thr:
+                node = cnet.get_node_by_label(l)
+                cnet.add_arc(node, node, frequency=self.precede_matrix[l][l])
+                self.self_loop.append(node)
+
+        for event in self.events:
+            self._mine_dependency(event, 'input', dep_thr, relative_to_best, cnet)
+            self._mine_dependency(event, 'output', dep_thr, relative_to_best, cnet)
+            event_node = cnet.get_node_by_label(event)
+            event_node.frequency = self.events_freq[event]
+
+            # 2 step loops
+            cells = self.two_step_loop_matrix[event].cells
+            candidate_dep = [c for c in cells if c.value >= two_step_loop_thr and c.key != event]
 
             for c in candidate_dep:
-                logger.debug('event %s, candidate_dep %s', event, candidate_dep)
-                self.d_graph.add_arc(self.d_graph.get_node_by_label(c), self.d_graph.get_node_by_label(event))
+                c_node = cnet.get_node_by_label(c.key)
+                self.two_step_loop.add(frozenset({c_node, event_node}))
 
-        for l, v in self._loop.items():
-            if v >= dep_thr:
-                node = self.d_graph.get_node_by_label(l)
-                self.d_graph.add_arc(node, node)
-                
-                
-def main(file_path, dependency_thr):
-    from pymine.mining.process.eventlog.factory import create_log_from_file
-    log = create_log_from_file(file_path)[0]
+                cnet.add_arc(c_node, event_node, frequency=self.precede_matrix[c.key][event], dependency=c.value)
+                cnet.add_arc(event_node, c_node, frequency=self.precede_matrix[event][c.key], dependency=c.value)
 
-    dm = DependencyMiner(log)
-    logger.debug('MATRIX %s', str(dm.precede_matrix))
+        start_nodes = cnet.get_initial_nodes()
+        if not start_nodes or len(start_nodes) > 1:  # let's add a fake start
+            fake_start = cnet.add_node(cnet.fake_start_label)
+            cnet.has_fake_start = True
 
-    dm.mine_dependency_graph(dependency_thr)
+            for e in self.start_events:
+                node = cnet.get_node_by_label(e)
+                self.dependency_matrix[node][fake_start] = 1
+                cnet.add_arc(fake_start, node)
 
-if __name__ == '__main__':
-    import argparse
-    logger.setLevel(logging.DEBUG)
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file_path', type=str, help='the path of the file containing the log')
+        end_nodes = cnet.get_final_nodes()
+        if not end_nodes or len(end_nodes) > 1:
+            fake_end = cnet.add_node(cnet.fake_end_label)
+            cnet.has_fake_end = True
 
-    parser.add_argument('--aft', type=float, default=0.0, help="arc frequency threshold")
-    parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
-    parser.add_argument('--dt', type=float, default=0.0, help="dependency threshold")
-    parser.add_argument('-w', type=int, default=None, help="window size")
+            for e in self.end_events:
+                node = cnet.get_node_by_label(e)
+                self.dependency_matrix[fake_end][node] = 1
+                cnet.add_arc(node, fake_end)
 
-    args = parser.parse_args()
-    main(args.file_path, args.dt)
+        # long distance dependencies
+
+        for event in self.events:
+            node = cnet.get_node_by_label(event)
+            cells = self.long_distance_matrix[event].cells
+            candidate_dep = [c for c in cells if c.value >= long_distance_thr]
+
+            for c in candidate_dep:
+                c_node = cnet.get_node_by_label(c.key)
+                if DependencyMiner._find_path_without_node(cnet, node, c_node):
+                    cnet.add_arc(node, c_node, frequency=self.long_distance_freq[event][c], dependency=c.value)
+
+        return cnet

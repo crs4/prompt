@@ -2,252 +2,22 @@
 Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
 and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
-from collections import defaultdict
-from pymine.mining.process.network.cnet import CNet as CNet
+from pymine.mining.process.discovery.heuristics import Matrix
+from pymine.mining.process.conformance import replay_case
+from pymine.mining.process.tools.hnet_miner import draw_net_graph
 import logging
 logger = logging.getLogger('all_connected')
 
 
-class Matrix(object):
-
-    class Cell(object):
-        def __init__(self, key, value):
-            self.key = key
-            self.value = value
-
-        def __str__(self):
-            return '%s: %s' % (self.key, self.value)
-
-        def __repr__(self):
-            return '%s: %s' % (self.key, self.value)
-
-    class Column(object):
-        def __init__(self):
-            self._column = defaultdict(float)
-
-        @property
-        def cells(self):
-            return [Matrix.Cell(k, v) for k, v in self._column.items()]
-
-        def __getitem__(self, item):
-            return self._column[item]
-
-        def __setitem__(self, key, value):
-            self._column[key] = value
-
-        def __str__(self):
-            return str(self._column)
-
-        def __repr__(self):
-            return repr(self._column)
-
-        def __iter__(self):
-            return iter(self._column)
-
-        def __getattr__(self, item):
-            return getattr(self._column, item)
-
-    def __init__(self):
-        self._matrix = defaultdict(lambda: Matrix.Column())
-
-    def __getitem__(self, item):
-        return self._matrix[item]
-
-    def __str__(self):
-        return str(self._matrix)
-
-    def __nonzero__(self):
-        return bool(self._matrix)
-
-    def __iter__(self):
-        return iter(self._matrix)
-
-    def __getattr__(self, item):
-        return getattr(self._matrix, item)
-
-    def get_column(self, item):
-        cells = []
-        for e in self._matrix:
-            cells.append(Matrix.Cell(e, self._matrix[e][item]))
-        return cells
-
-
 class HeuristicMiner(object):
-    def __init__(self, log):
+    def __init__(self, log, parallel_dep=False, parallel_binding=False):
         self.log = log
-        self._precede_matrix = Matrix()
-        self._dependency_matrix = Matrix()
-        self._2_step_loop_matrix = Matrix()
-        self._2_step_loop_freq = Matrix()
-        self._2_step_loop = set()
-        self._loop = defaultdict(int)
-        self._self_loop = []
-        self._start_events = set()
-        self._end_events = set()
-        self.has_fake_start = self.has_fake_end = False
-        self._events_freq = defaultdict(int)
-        self._long_distance_freq = Matrix()
-        self._long_distance_matrix = Matrix()
-
-    @property
-    def _events(self):
-        return self._events_freq.keys()
-
-    def _compute_precede_matrix(self):
-
-        for case in self.log.cases:
-            events = [e.name for e in case.events]
-            len_events = len(events)
-            for i, event in enumerate(events):
-                self._events_freq[event] += 1
-                if i == 0:
-                    self._start_events.add(event)
-                elif i == len_events - 1:
-                    self._end_events.add(event)
-                if i < len_events - 1:
-                    self._precede_matrix[events[i]][events[i+1]] += 1
-                if i < len_events - 2 and events[i] == events[i + 2] and events[i] != events[i + 1]:
-                    self._2_step_loop_freq[events[i]][events[i+1]] += 1
-
-                # long distance dependencies
-                events_seen = set()
-                for ld_event in events[i + 2:]:
-                    if event == ld_event:
-                        break
-                    if ld_event in events_seen:
-                        break
-                    events_seen.add(ld_event)
-                    self._long_distance_freq[event][ld_event] += 1
-
-    def _compute_dependency_matrix(self):
-        """
-        Reversed matrix of the one illustrated in the paper
-        :return:
-        """
-        for e in self._events:
-            for next_e in self._events:
-                if e != next_e:
-                    # 2 step loops
-                    l2_a_b = self._2_step_loop_freq[e][next_e]
-                    l2_b_a = self._2_step_loop_freq[next_e][e]
-                    self._2_step_loop_matrix[e][next_e] = (l2_b_a + l2_a_b)/(l2_a_b + l2_b_a + 1)
-
-                    # long distance dependencies
-                    card_a = self._events_freq[e]
-                    card_b = self._events_freq[next_e]
-                    a_ll_b = self._long_distance_freq[e][next_e]
-                    self._long_distance_matrix[e][next_e] = 2*(a_ll_b - abs(card_a - card_b))/(card_a + card_b + 1)
-
-                p_a_b = self._precede_matrix[e][next_e]
-                if e == next_e:
-                    self._loop[e] = p_a_b/(p_a_b + 1)
-                else:
-                    p_b_a = self._precede_matrix[next_e][e]
-                    self._dependency_matrix[e][next_e] = (p_b_a - p_a_b)/(p_a_b + p_b_a + 1)
-
-    def _mine_dependency(self, event, dep_type, dep_thr, relative_to_best, cnet):
-        if dep_type == 'input':
-            cells = self._dependency_matrix[event].cells
+        if parallel_dep:
+            raise Exception
         else:
-            cells = self._dependency_matrix.get_column(event)
+            from pymine.mining.process.discovery.heuristics.dependency import DependencyMiner
+            self.dep_miner = DependencyMiner(log)
 
-        logger.debug('cells of %s = %s', event, cells)
-        max_dep = max(cells, key=lambda x: x.value)
-        candidate_dep = [c for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
-        logger.debug('candidate_dep %s of %s = %s', dep_type, event, candidate_dep)
-
-        if not candidate_dep:
-            if max_dep.value > 0:
-                candidate_dep.append(max_dep)
-
-        for c in candidate_dep:
-            logger.debug('event %s, candidate_dep %s', event, candidate_dep)
-            c_node = cnet.get_node_by_label(c.key)
-            event_node = cnet.get_node_by_label(event)
-
-            if dep_type == 'input':
-                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c.key][event], dependency=c.value)
-            else:
-                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c.key], dependency=c.value)
-
-    @staticmethod
-    def _find_path_without_node(net, start_node, without_node, nodes_banned=None):
-            logger.debug('start_node %s, without_node %s, nodes_banned %s', start_node, without_node, nodes_banned)
-            nodes_banned = nodes_banned or {start_node, without_node}
-            for output_n in start_node.output_nodes:
-                    if output_n in nodes_banned:
-                        continue
-                    nodes_banned.add(output_n)
-                    if output_n in net.get_final_nodes():
-                        return True
-
-                    if HeuristicMiner._find_path_without_node(net, output_n, without_node, nodes_banned):
-                        return True
-
-            return False
-
-    def _mine_dependency_graph(self, dep_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr):
-        cnet = CNet()
-        cnet.add_nodes(*[e for e in self._events])
-        logger.debug('self._events %s', self._events)
-
-        # self loop
-        for l, v in self._loop.items():
-            if v >= self_loop_thr:
-                node = cnet.get_node_by_label(l)
-                cnet.add_arc(node, node, frequency=self._precede_matrix[l][l])
-                self._self_loop.append(node)
-
-        for event in self._events:
-            self._mine_dependency(event, 'input', dep_thr, relative_to_best, cnet)
-            self._mine_dependency(event, 'output', dep_thr, relative_to_best, cnet)
-            event_node = cnet.get_node_by_label(event)
-            event_node.frequency = self._events_freq[event]
-
-            # 2 step loops
-            cells = self._2_step_loop_matrix[event].cells
-            candidate_dep = [c for c in cells if c.value >= two_step_loop_thr and c.key != event]
-
-            for c in candidate_dep:
-                c_node = cnet.get_node_by_label(c.key)
-                self._2_step_loop.add(frozenset({c_node, event_node}))
-
-                cnet.add_arc(c_node, event_node, frequency=self._precede_matrix[c.key][event], dependency=c.value)
-                cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c.key], dependency=c.value)
-
-        start_nodes = cnet.get_initial_nodes()
-        if not start_nodes or len(start_nodes) > 1:  # let's add a fake start
-            fake_start = cnet.add_node(cnet.fake_start_label)
-            cnet.has_fake_start = True
-
-            for e in self._start_events:
-                node = cnet.get_node_by_label(e)
-                self._dependency_matrix[node][fake_start] = 1
-                cnet.add_arc(fake_start, node)
-
-        end_nodes = cnet.get_final_nodes()
-        if not end_nodes or len(end_nodes) > 1:
-            fake_end = cnet.add_node(cnet.fake_end_label)
-            cnet.has_fake_end = True
-
-            for e in self._end_events:
-                node = cnet.get_node_by_label(e)
-                self._dependency_matrix[fake_end][node] = 1
-                cnet.add_arc(node, fake_end)
-
-        # long distance dependencies
-
-        for event in self._events:
-            node = cnet.get_node_by_label(event)
-            cells = self._long_distance_matrix[event].cells
-            candidate_dep = [c for c in cells if c.value >= long_distance_thr]
-
-            for c in candidate_dep:
-                c_node = cnet.get_node_by_label(c.key)
-                if HeuristicMiner._find_path_without_node(cnet, node, c_node):
-                    cnet.add_arc(node, c_node, frequency=self._long_distance_freq[event][c], dependency=c.value)
-
-        return cnet
 
     @staticmethod
     def _create_bindings(type_, node, bindings, cnet, thr):
@@ -280,13 +50,13 @@ class HeuristicMiner(object):
         output_bindings = Matrix()
         input_bindings = Matrix()
 
-        for l in self._self_loop:
+        for l in self.dep_miner.self_loop:
             freq = cnet.get_arc_by_nodes(l, l).frequency
             cnet.add_input_binding(l, {l}, frequency=freq)
             cnet.add_output_binding(l, {l}, frequency=freq)
 
-        logger.debug('self._2_step_loop %s', self._2_step_loop)
-        for n1, n2 in self._2_step_loop:
+        logger.debug('self._2_step_loop %s', self.dep_miner.two_step_loop)
+        for n1, n2 in self.dep_miner.two_step_loop:
             freq_n1_n2 = cnet.get_arc_by_nodes(n1, n2).frequency
             freq_n2_n1 = cnet.get_arc_by_nodes(n2, n1).frequency
             cnet.add_input_binding(n1, {n2}, frequency=freq_n2_n1)
@@ -296,7 +66,7 @@ class HeuristicMiner(object):
             cnet.add_output_binding(n2, {n1}, frequency=freq_n2_n1)
 
         for c in self.log.cases:
-            events = [e.name for e in c.events]
+            events = [e.activity_name for e in c.events]
             if cnet.has_fake_start:
                 events.insert(0, cnet.fake_start_label)
             if cnet.has_fake_end:
@@ -368,12 +138,6 @@ class HeuristicMiner(object):
         two_step_loop_thr = two_step_loop_thr if two_step_loop_thr is not None else dependency_thr
         long_distance_thr = long_distance_thr if long_distance_thr is not None else dependency_thr
 
-        if not self._precede_matrix:
-            self._compute_precede_matrix()
-        if not self._dependency_matrix:
-            self._compute_dependency_matrix()
-
-        cnet = self._mine_dependency_graph(
-            dependency_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr)
+        cnet = self.dep_miner.mine(dependency_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr)
         self._mine_bindings(cnet, bindings_thr)
         return cnet
