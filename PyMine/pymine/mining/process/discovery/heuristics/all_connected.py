@@ -4,8 +4,6 @@ and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
 from collections import defaultdict
 from pymine.mining.process.network.cnet import CNet as CNet
-from pymine.mining.process.conformance import replay_case
-from pymine.mining.process.tools.hnet_miner import draw_net_graph
 import logging
 logger = logging.getLogger('all_connected')
 
@@ -379,45 +377,3 @@ class HeuristicMiner(object):
             dependency_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr)
         self._mine_bindings(cnet, bindings_thr)
         return cnet
-
-
-def main(file_path, dependency_thr, and_thr, relative_to_best):
-    from pymine.mining.process.eventlog.factory import create_log_from_file
-    from pymine.mining.process.tools.drawing.draw_cnet import draw
-    from pymine.mining.process.conformance import simple_fitness
-    log = create_log_from_file(file_path)[0]
-    for c in log.cases:
-        print c
-
-    # log = SimpleProcessLogFactory([
-    #     ['a', 'b',  'd', 'e', 'g'],
-    #     ['a', 'c',  'd', 'f', 'g']
-    # ]
-    # )
-    hm = HeuristicMiner(log)
-    # cnet = hm.mine(dependency_thr, and_thr, relative_to_best)
-    cnet = hm.mine()
-    f = simple_fitness(log, cnet)
-    print 'fitness', f.fitness
-    print 'correct_cases', f.correct_cases
-    print 'failed_cases', f.failed_cases
-    print replay_case(log.cases[0], cnet)
-
-    for n in cnet.nodes:
-        print n.label, 'input_nodes', n.input_nodes
-        print n.label, 'output_nodes', n.output_nodes
-
-    draw_net_graph(cnet)
-    draw(cnet)
-
-
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file_path', type=str, help='the path of the file containing the log')
-
-    parser.add_argument('--rtb', type=float, default=0.1, help="relative to best")
-    parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
-    parser.add_argument('--dt', type=float, default=0.5, help="dependency threshold")
-    args = parser.parse_args()
-    main(args.file_path, args.dt, args.bft, args.rtb)
