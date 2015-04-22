@@ -129,9 +129,11 @@ class Case(IdObject):
         activity_instance = self.add_activity_instance(activity)
         return activity_instance.add_event(timestamp, resources, attributes)
 
-
     def __str__(self):
         return str([e.activity_name for e in self.events])
+
+    def __repr__(self):
+        return str(self)
 
     # def __eq__(self, other):
     #     if type(self) == type(other):
