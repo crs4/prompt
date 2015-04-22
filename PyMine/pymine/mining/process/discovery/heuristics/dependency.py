@@ -3,15 +3,10 @@ Implementation of the Dependency Graph Miner illustrated in http://wwwis.win.tue
 """
 from collections import defaultdict
 from pymine.mining.process.discovery.heuristics import Matrix
-import logging
-
 from pymine.mining.process.network.cnet import CNet
-
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
-                    level=logging.DEBUG
-                    )
-logger = logging.getLogger('heuristic')
-logger.setLevel(logging.DEBUG)
+import logging
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
+logger = logging.getLogger('depedency')
 
 
 class DependencyMiner(object):
@@ -197,5 +192,20 @@ class DependencyMiner(object):
                 c_node = cnet.get_node_by_label(c.key)
                 if DependencyMiner._find_path_without_node(cnet, node, c_node):
                     cnet.add_arc(node, c_node, frequency=self.long_distance_freq[event][c], dependency=c.value)
+
+        for l in self.self_loop:
+            freq = cnet.get_arc_by_nodes(l, l).frequency
+            cnet.add_input_binding(l, {l}, frequency=freq)
+            cnet.add_output_binding(l, {l}, frequency=freq)
+
+        logger.debug('self._2_step_loop %s', self.two_step_loop)
+        for n1, n2 in self.two_step_loop:
+            freq_n1_n2 = cnet.get_arc_by_nodes(n1, n2).frequency
+            freq_n2_n1 = cnet.get_arc_by_nodes(n2, n1).frequency
+            cnet.add_input_binding(n1, {n2}, frequency=freq_n2_n1)
+            cnet.add_output_binding(n1, {n2}, frequency=freq_n1_n2)
+
+            cnet.add_input_binding(n2, {n1}, frequency=freq_n1_n2)
+            cnet.add_output_binding(n2, {n1}, frequency=freq_n2_n1)
 
         return cnet
