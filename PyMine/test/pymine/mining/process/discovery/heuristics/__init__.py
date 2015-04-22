@@ -92,7 +92,7 @@ class BackendTests(object):
             ['a', 'e', 'b', 'd'],
         ])
         miner = self.create_miner(log)
-        cnet = miner.mine(and_thr=0.2)
+        cnet = miner.mine(bindings_thr=0.2)
         a, b, c, d, e = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [d])
@@ -111,7 +111,7 @@ class BackendTests(object):
             ['a', 'b2', 'tb1', 'd'],
         ])
         miner = self.create_miner(log)
-        cnet = miner.mine(and_thr=0.2)
+        cnet = miner.mine(bindings_thr=0.2)
         a, b1, b2, tb1, tb2,  d = [cnet.get_node_by_label(n) for n in ['a', 'b1', 'b2', 'tb1', 'tb2', 'd']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [d])
@@ -162,7 +162,7 @@ class BackendTests(object):
 
         ])
         miner = self.create_miner(log)
-        cnet = miner.mine(and_thr=0.2)
+        cnet = miner.mine(bindings_thr=0.2)
         a, b, c, d = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [d])
@@ -197,7 +197,7 @@ class BackendTests(object):
 
         ])
         miner = self.create_miner(log)
-        cnet = miner.mine(and_thr=0.2)
+        cnet = miner.mine(bindings_thr=0.2)
         a, b, c, d = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [d])
@@ -224,7 +224,7 @@ class BackendTests(object):
             ['a', 'c',  'd', 'f', 'g']
         ])
         miner = self.create_miner(log)
-        cnet = miner.mine(and_thr=0.2)
+        cnet = miner.mine(bindings_thr=0.2)
         a, b, c, d, e, f, g = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e', 'f', 'g']]
         self.assertEqual(cnet.get_initial_nodes(), [a])
         self.assertEqual(cnet.get_final_nodes(), [g])
