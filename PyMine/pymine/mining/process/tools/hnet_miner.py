@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 from pymine.mining.process.discovery.heuristics.window import HeuristicMiner as HeuristicMiner
 
 
-def draw_net_graph(net, output_filename):
+def draw_net_graph(net, output_filename='/tmp/graph.png'):
     g=nx.MultiDiGraph()
     for node in net.nodes:
-        g.add_node(net.nodes[node].name)
+        g.add_node(node.label)
     for arc in net.arcs:
-        g.add_edge(net.arcs[arc].input_node, net.arcs[arc].output_node, weight=net.arcs[arc].frequency)
+        g.add_edge(arc.start_node, arc.end_node, weight=arc.frequency)
     a = nx.to_agraph(g)
     a.layout(prog='dot')
     a.draw(output_filename)
