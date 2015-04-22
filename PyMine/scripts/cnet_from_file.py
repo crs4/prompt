@@ -1,7 +1,5 @@
 from pymine.mining.process.eventlog.factory import create_log_from_file
-from collections import defaultdict
-from pymine.mining.process.conformance.alignment import fitness
-from pymine.mining.process.conformance import simple_fitness, replay_case
+from pymine.mining.process.conformance import simple_fitness
 from pymine.mining.process.tools.drawing.draw_cnet import draw
 
 import logging
@@ -18,7 +16,6 @@ def generic_computations(cnet, log):
     print 'f.correct_cases', f.correct_cases
     print 'f.failed_cases', f.failed_cases
     print 'results', f.results
-
 
     from pymine.mining.process.network.converters.cnet_bpmn_converter import CNetBPMNConverter
     from pymine.mining.process.network.bpmn.serializer.bpmn2 import BPMN2Serializer
