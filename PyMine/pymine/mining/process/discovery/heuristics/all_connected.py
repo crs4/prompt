@@ -172,6 +172,22 @@ class HeuristicMiner(object):
             else:
                 cnet.add_arc(event_node, c_node, frequency=self._precede_matrix[event][c.key], dependency=c.value)
 
+    @staticmethod
+    def _find_path_without_node(net, start_node, without_node, nodes_banned=None):
+            logger.debug('start_node %s, without_node %s, nodes_banned %s', start_node, without_node, nodes_banned)
+            nodes_banned = nodes_banned or {start_node, without_node}
+            for output_n in start_node.output_nodes:
+                    if output_n in nodes_banned:
+                        continue
+                    nodes_banned.add(output_n)
+                    if output_n in net.get_final_nodes():
+                        return True
+
+                    if HeuristicMiner._find_path_without_node(net, output_n, without_node, nodes_banned):
+                        return True
+
+            return False
+
     def _mine_dependency_graph(self, dep_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr):
         cnet = CNet()
         cnet.add_nodes(*[e for e in self._events])
@@ -223,21 +239,6 @@ class HeuristicMiner(object):
 
         # long distance dependencies
 
-        def _find_path_without_node(net, start_node, without_node, nodes_banned=None):
-            logger.debug('start_node %s, without_node %s, nodes_banned %s', start_node, without_node, nodes_banned)
-            nodes_banned = nodes_banned or {start_node, without_node}
-            for output_n in start_node.output_nodes:
-                    if output_n in nodes_banned:
-                        continue
-                    nodes_banned.add(output_n)
-                    if output_n in net.get_final_nodes():
-                        return True
-
-                    if _find_path_without_node(net, output_n, without_node, nodes_banned):
-                        return True
-
-            return False
-
         for event in self._events:
             node = cnet.get_node_by_label(event)
             cells = self._long_distance_matrix[event].cells
@@ -245,7 +246,7 @@ class HeuristicMiner(object):
 
             for c in candidate_dep:
                 c_node = cnet.get_node_by_label(c.key)
-                if _find_path_without_node(cnet, node, c_node):
+                if HeuristicMiner._find_path_without_node(cnet, node, c_node):
                     cnet.add_arc(node, c_node, frequency=self._long_distance_freq[event][c], dependency=c.value)
 
         return cnet
@@ -349,18 +350,22 @@ class HeuristicMiner(object):
                         logger.debug('incrementing input_binding %s, node %s', input_binding, node)
                         input_bindings[node][frozenset(input_binding)] += 1
 
-        # TODO: duplicated code...
         for n in cnet.nodes:
             self._create_bindings('input', n, input_bindings, cnet, thr)
             self._create_bindings('output', n, output_bindings, cnet, thr)
 
-    def mine(self,
-             dependency_thr=0.5,
-             and_thr=0.2,
-             relative_to_best=0.1,
-             self_loop_thr=None,
-             two_step_loop_thr=None,
-             long_distance_thr=None):
+    def mine(self, dependency_thr=0.5, bindings_thr=0.2, relative_to_best=0.1, self_loop_thr=None,
+             two_step_loop_thr=None, long_distance_thr=None):
+        """
+        Mine a :class:`pymine.mining.process.network.cnet.CNet`. All possible thresholds range from 0 to 1.
+        :param dependency_thr: dependency threshold
+        :param bindings_thr: threshold for mining bindings
+        :param relative_to_best: relative to the best threshold, for mining dependencies
+        :param self_loop_thr: threshold for self loop, by default equals to dependency_thr
+        :param two_step_loop_thr: threshold for two step loops, by default equals to dependency_thr
+        :param long_distance_thr: threshold for long distance dependencies, by default equals to dependency_thr
+        :return: :class:`pymine.mining.process.network.cnet.CNet`
+        """
         self_loop_thr = self_loop_thr if self_loop_thr is not None else dependency_thr
         two_step_loop_thr = two_step_loop_thr if two_step_loop_thr is not None else dependency_thr
         long_distance_thr = long_distance_thr if long_distance_thr is not None else dependency_thr
@@ -372,7 +377,7 @@ class HeuristicMiner(object):
 
         cnet = self._mine_dependency_graph(
             dependency_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr)
-        self._mine_bindings(cnet, and_thr)
+        self._mine_bindings(cnet, bindings_thr)
         return cnet
 
 
