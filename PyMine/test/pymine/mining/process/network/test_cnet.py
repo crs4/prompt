@@ -3,9 +3,9 @@ from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, Output
 import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('cnet')
-logger.setLevel(logging.DEBUG)
+
 
 def _create_cnet():
     cnet = CNet()

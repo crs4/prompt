@@ -8,10 +8,8 @@ from pymine.mining.process.eventlog.factory import ProcessInfo
 import logging
 logger = logging.getLogger('heuristic')
 
-class HeuristicMiner(Miner):
 
-    def __init__(self):
-        pass
+class HeuristicMiner(Miner):
 
     def calculate_arcs_dependency(self, net):
         for arc in net.arcs:
@@ -59,7 +57,7 @@ class HeuristicMiner(Miner):
                 #del net.arcs[a]
                 net.remove_arc(a)
         except Exception as e:
-            logger.exception(e) # FIXME
+            logger.exception(e)  # FIXME
 
     def mine_dependency_graph(self, process_log, frequency_threshold=None, dependency_threshold=None):
 
@@ -132,23 +130,63 @@ class HeuristicMiner(Miner):
                           label=connection.label,
                           frequency=connection.frequency)
         self.calculate_possible_binds(c_net, p_info.process, window_size, frequency_thr)
-        
+
+
         # checking c_net soundness
-        obls_to_rm = set()
-        logger.debug('checking for pending obligations')
-        for case in p_info.process.cases:
-            passed, obls, unexpected = replay_case(case, c_net)
-            logger.debug('case %s, obls %s', [e.activity_name for e in case.events], obls)
-            obls_to_rm |= set(obls)
 
-        for obl in obls_to_rm:
-            try:
-                logger.debug('removing obl %s', obl)
-                c_net.remove_node_from_binding(obl.node, obl.source_binding)
-            except Exception as ex:
-                logger.debug('ex %s', ex)  # FIXME use a specialized exception in case of non existing binding
+        bad_loop_binding = []
+        for b in c_net.output_bindings:
+            if b.node in b.node_set and len(b.node_set) > 1:
+                bad_loop_binding.append(b)
 
-        
+        for b in bad_loop_binding:
+            c_net.remove_node_from_binding(b.node, b)
+            c_net.add_output_binding(b.node, {b.node})
+
+        bad_loop_binding = []
+        for b in c_net.input_bindings:
+            if b.node in b.node_set and len(b.node_set) > 1:
+                bad_loop_binding.append(b)
+
+        for b in bad_loop_binding:
+            c_net.remove_node_from_binding(b.node, b)
+            c_net.add_input_binding(b.node, {b.node})
+
+        bad_shared_binding = []
+        for b in c_net.output_bindings:
+            logger.debug('binding %s, check for soundness', b)
+            if len(b.node_set) > 1:
+                output_nodes_set = []
+                for node in b.node_set:
+                    output_nodes_set.append(node.output_nodes)
+                logger.debug('output_nodes_set %s for binding %s', output_nodes_set, b)
+                if not set.intersection(*output_nodes_set):  # nodes does not share output node
+                    bad_shared_binding.append(b)
+
+        for b in bad_shared_binding:
+            logger.debug('removing binding %s, no shared output node', b)
+            c_net.remove_binding(b)
+            for node in b.node_set:
+                logger.debug('creationg binding %s -> {%s}', b.node, node)
+                c_net.add_output_binding(b.node, {node})
+                if b.node not in node.input_nodes:
+                    c_net.add_input_binding(node, {b.node})
+
+        # obls_to_rm = set()
+        # logger.debug('checking for pending obligations')
+        # for idx, case in enumerate(p_info.process.cases):
+        #     passed, obls, unexpected = replay_case(case, c_net)
+        #     logger.debug('idx %s, case %s, obls %s', idx, [e.activity_name for e in case.events], obls)
+        #     obls_to_rm |= set(obls)
+        #
+        # logger.debug('obls_to_rm %s', obls_to_rm)
+        # for obl in obls_to_rm:
+        #     try:
+        #         logger.debug('removing obl %s', obl)
+        #         c_net.remove_node_from_binding(obl.node, obl.source_binding)
+        #     except Exception as ex:
+        #         logger.exception('ex %s', ex)  # FIXME use a specialized exception in case of non existing binding
+
         return c_net
 
     def calculate_possible_binds(self, c_net, process, window_size, frequency_thr):
