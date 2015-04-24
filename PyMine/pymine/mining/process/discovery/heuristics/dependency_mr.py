@@ -1,8 +1,6 @@
 import sys
+import os
 import pydoop.hdfs as hdfs
-from pymine.mining.process.discovery.heuristics.dependency import DependencyGraph
-from pymine.mining.process.discovery.heuristics.dependency import Matrix
-
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
                     level=logging.DEBUG
@@ -10,16 +8,21 @@ logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
 logger = logging.getLogger('heuristic')
 logger.setLevel(logging.DEBUG)
 
+pymine_home = os.environ.get('PYMINE_HOME')
+sys.path.append(pymine_home)
+from pymine.mining.process.discovery.heuristics.dependency import DependencyGraph
+from pymine.mining.process.discovery.heuristics.dependency import Matrix
+
+
 class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
 
 
-def main(file_path, dependency_thr):
+def main(dir_path, dependency_thr):
     arcs = {}
-    dir_name = argv[1]
-    if hdfs.path.isdir(dir_name):
-        for filename in hdfs.ls(dir_name):
+    if hdfs.path.isdir(dir_path):
+        for filename in hdfs.ls(dir_path):
             try:
                 with hdfs.open(filename, "r") as fi:
                     while True:
@@ -44,6 +47,7 @@ def main(file_path, dependency_thr):
         raise Usage("Not a valid directory")
         sys.exit(0)
 
+    '''
     dep_matrix = Matrix()
     _2_step_matrix = Matrix()
 
@@ -53,6 +57,7 @@ def main(file_path, dependency_thr):
     dm._precede_matrix = dep_matrix
     dm._2_step_loop = _2_step_matrix
     dep_graph = dm.mine_dependency_graph(dependency_thr)
+    '''
 
 if __name__ == '__main__':
     import argparse

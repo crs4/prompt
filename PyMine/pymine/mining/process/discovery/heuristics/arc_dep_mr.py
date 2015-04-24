@@ -1,6 +1,8 @@
 import sys
 import uuid
-sys.path.append('/Users/paolo/Documents/CRS4/src/pymine/PyMine/')
+import os
+pymine_home = os.environ.get('PYMINE_HOME')
+sys.path.append(pymine_home)
 
 import pydoop.mapreduce.api as api
 import pydoop.mapreduce.pipes as pp
