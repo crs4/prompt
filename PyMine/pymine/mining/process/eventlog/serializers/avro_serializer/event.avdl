@@ -1,0 +1,8 @@
+protocol EventProtocol{
+
+   record Event{
+      union { null, string } id;
+      string activity_name;
+      string timestamp;
+    }
+}

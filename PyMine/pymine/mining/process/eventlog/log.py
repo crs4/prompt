@@ -84,6 +84,9 @@ class Log(BaseLog):
             cases.extend(process_log.cases)
         return cases
 
+    def __iter__(self):
+        return self.cases
+
     def __getitem__(self, item):
         process = self._process_logs.keys()[item]
         return self._process_logs[process]

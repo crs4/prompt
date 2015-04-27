@@ -96,7 +96,7 @@ class HeuristicMiner(object):
     def _compute_precede_matrix(self):
 
         for case in self.log.cases:
-            events = [e.activity_name for e in case.events]
+            events = [e.name for e in case.events]
             len_events = len(events)
             for i, event in enumerate(events):
                 self._events_freq[event] += 1
@@ -296,7 +296,7 @@ class HeuristicMiner(object):
             cnet.add_output_binding(n2, {n1}, frequency=freq_n2_n1)
 
         for c in self.log.cases:
-            events = [e.activity_name for e in c.events]
+            events = [e.name for e in c.events]
             if cnet.has_fake_start:
                 events.insert(0, cnet.fake_start_label)
             if cnet.has_fake_end:

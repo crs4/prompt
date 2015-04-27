@@ -2,7 +2,7 @@ import unittest
 import logging
 
 from pymine.mining.process.network.cnet import CNet
-from pymine.mining.process.eventlog.factory import SimpleProcessLogFactory
+from pymine.mining.process.eventlog.factory import create_process_log_from_list
 import pymine.mining.process.conformance.alignment as aln
 from pymine.mining.process.conformance.alignment import Alignment
 
@@ -42,7 +42,7 @@ class AlignmentTestCase(unittest.TestCase):
     def test_optimal_alignment(self):
 
         case = ['a', 'b', 'c', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         alignment = aln.compute_optimal_alignment(log.cases[0], self.net)
         logging.debug('alignment.cost %s', alignment.cost)
         logging.debug('alignment.get_flat_log_moves() %s', alignment.get_flat_log_moves())
@@ -55,7 +55,7 @@ class AlignmentTestCase(unittest.TestCase):
     def test_optimal_alignment_with_cost_function(self):
         logging.debug('test_optimal_alignment_with_cost_function')
         case = ['a', 'b', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         alignment = aln.compute_optimal_alignment(log.cases[0], self.net, self.double_cost_function)
         logging.debug('alignment.cost %s', alignment.cost)
         logging.debug('alignment.get_flat_log_moves() %s', alignment.get_flat_log_moves())
@@ -68,7 +68,7 @@ class AlignmentTestCase(unittest.TestCase):
     def test_optimal_alignment_worst_scenario(self):
 
         case = ['w', 'y', 'z']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         alignment = aln.compute_optimal_alignment(log.cases[0], self.net)
         logging.debug('alignment.cost %s', alignment.cost)
         logging.debug('alignment.get_flat_log_moves() %s', alignment.get_flat_log_moves())
@@ -83,68 +83,68 @@ class AlignmentTestCase(unittest.TestCase):
 
     def test_case_fitness_complete(self):
         case = ['a', 'b', 'c', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         alignment = aln.fitness(log.cases[0], self.net)
         self.assertEqual(alignment, 1)
 
     def test_case_fitness_complete_loop(self):
 
         case = ['a', 'b', 'c', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         alignment = aln.fitness(log.cases[0], self.loop_net)
         self.assertEqual(alignment, 1)
 
     def test_case_fitness_complete_loop_2(self):
 
         case = ['a', 'b', 'b', 'c', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         alignment = aln.fitness(log.cases[0], self.loop_net)
         self.assertEqual(alignment, 1)
 
     def test_case_fitness_2(self):
         case = ['a', 'b', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         fitness = aln.fitness(log.cases[0], self.net)
         self.assertEqual(fitness, 1 - 1.0/(4 + 3))
 
     def test_case_fitness_bad(self):
         case = ['a', 'b', 'y', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         fitness = aln.fitness(log.cases[0], self.net)
         self.assertEqual(fitness, 1 - 2.0/(4 + 4))
 
     def test_case_fitness_bad_2(self):
         case = ['a', 'b', 'c', 'd', 'd', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         fitness = aln.fitness(log.cases[0], self.net)
         self.assertEqual(fitness, 1 - 2.0/(6 + 4))
 
     def test_case_fitness_bad_3(self):
         case = ['x', 'x', 'a', 'b', 'c', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         fitness = aln.fitness(log.cases[0], self.net)
         self.assertEqual(fitness, 1 - 2.0/(6 + 4))
 
     def test_case_fitness_with_cost(self):
         logging.debug('test_fitness_with_cost')
         case = ['a', 'b', 'd']
-        log = SimpleProcessLogFactory([case]).create_log()
+        log = create_process_log_from_list([case])
         fitness = aln.fitness(log.cases[0], self.net, self.double_cost_function)
         self.assertEqual(fitness, 1 - 1.0/(4 + 3))
 
     def test_log_fitness_all_good(self):
-        log = SimpleProcessLogFactory([
+        log = create_process_log_from_list([
             ['a', 'b', 'c', 'd'],
             ['a', 'c', 'b', 'd']
-        ]).create_log()
+        ])
         alignment = aln.fitness(log, self.net)
         self.assertEqual(alignment, 1)
 
     def test_log_fitness_half_good(self):
-        log = SimpleProcessLogFactory([
+        log = create_process_log_from_list([
             ['a', 'b', 'y', 'd'],
             ['a', 'c', 'b', 'd']
-        ]).create_log()
+        ])
         fitness = aln.fitness(log, self.net)
         self.assertEqual(fitness, 1 - 2.0/(4 + 4 + 2*4))
 

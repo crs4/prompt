@@ -1,0 +1,27 @@
+{
+  "type" : "record",
+  "name" : "Case",
+  "fields" : [ {
+    "name" : "id",
+    "type" : [ "null", "string" ]
+  }, {
+    "name" : "events",
+    "type" : {
+      "type" : "array",
+      "items" : {
+        "type" : "record",
+        "name" : "Event",
+        "fields" : [ {
+          "name" : "id",
+          "type" : [ "null", "string" ]
+        }, {
+          "name" : "activity_name",
+          "type" : "string"
+        }, {
+          "name" : "timestamp",
+          "type" : "string"
+        } ]
+      }
+    }
+  } ]
+}

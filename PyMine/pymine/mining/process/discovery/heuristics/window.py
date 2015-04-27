@@ -205,7 +205,7 @@ class HeuristicMiner(Miner):
                             counter = 0
                             for event in case.events:
                                 try:
-                                    candidate_node = c_net.get_node_by_label(event.activity_name)
+                                    candidate_node = c_net.get_node_by_label(event.name)
                                     if counter <= node_index:
                                         #this is supposed to be before the node
                                         if not (counter == node_index) and \
@@ -223,9 +223,9 @@ class HeuristicMiner(Miner):
                                 except Exception, e:
                                     print("Cannot compute bindins: "+str(e.message))
                         for i in xrange(len(candidate_input_bind)):
-                            candidate_input_bind[i] = c_net.get_node_by_label(case.events[candidate_input_bind[i]].activity_name)
+                            candidate_input_bind[i] = c_net.get_node_by_label(case.events[candidate_input_bind[i]].name)
                         for i in xrange(len(candidate_output_bind)):
-                            candidate_output_bind[i] = c_net.get_node_by_label(case.events[candidate_output_bind[i]].activity_name)
+                            candidate_output_bind[i] = c_net.get_node_by_label(case.events[candidate_output_bind[i]].name)
 
                         # Before inserting the candidate input bind, check if it contains the initial node
                         initial_node = c_net.start_node

@@ -60,7 +60,7 @@ def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
 
     g.add_node(start)
     g.add_node(end)
-    case = [e.activity_name for e in case.events]
+    case = [e.name for e in case.events]
 
     def add_moves_to_graph(log_move, net_move, previous_move):
         logger.debug('-----log_move %s', log_move)
@@ -172,9 +172,9 @@ def _log_fitness(log, net, cost_function, shortest_path, max_depth):
     total_cost = 0.0
     total_worst_scenario_cost = 0.0
     for case in log.cases:
-        logger.debug('alignment for case %s', [e.activity_name for e in case.events])
+        logger.debug('alignment for case %s', [e.name for e in case.events])
         optimal_aln, worst_scenario_cost = _case_fitness(case, net, cost_function, shortest_path, max_depth)
-        logger.debug('optimal_aln %s for case %s', optimal_aln, [e.activity_name for e in case.events])
+        logger.debug('optimal_aln %s for case %s', optimal_aln, [e.name for e in case.events])
         total_cost += optimal_aln.cost
         total_worst_scenario_cost += worst_scenario_cost
     return 1 - total_cost/total_worst_scenario_cost
