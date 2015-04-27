@@ -22,52 +22,43 @@ class TestHeuristicMiner(unittest.TestCase):
 
     def create_log_from_test_data(self):
         process = Process(_id="p1")
-        case1 = process.add_case("c1")
-        case2 = process.add_case("c2")
+        case1 = process.add_case(Case(_id="c1"))
+        case2 = process.add_case(Case(_id="c2"))
         activity_a = process.add_activity(name="A")
         activity_b = process.add_activity(name="B")
         activity_c = process.add_activity(name="C")
         activity_d = process.add_activity(name="D")
         # Event 1
-        activity_a_instance = case1.add_activity_instance(activity_a)
-        event1 = activity_a_instance.add_event(activity_a_instance)
-        event1.timestamp = dt.strptime("2014-12-25 00:00:01.0", TIME_FORMAT)
-        event1.resources.append("R1")
+        event1 = Event(activity_a.name, dt.strptime("2014-12-25 00:00:01.0", TIME_FORMAT), resources=['R1'])
+        case1.add_event(event1)
         # Event 2
-        activity_b_instance = case1.add_activity_instance(activity_b)
-        event2 = activity_b_instance.add_event(activity_b_instance)
-        event2.timestamp = dt.strptime("2014-12-25 00:00:02.0", TIME_FORMAT)
-        event2.resources.append("R1")
+        event2 = Event(activity_b.name, dt.strptime("2014-12-25 00:00:02.0", TIME_FORMAT), resources=['R1'])
+        case1.add_event(event2)
+
         # Event 3
-        activity_c_instance = case1.add_activity_instance(activity_c)
-        event3 = activity_c_instance.add_event(activity_c_instance)
-        event3.timestamp = dt.strptime("2014-12-25 00:00:03.0", TIME_FORMAT)
-        event3.resources.append("R2")
+        event3 = Event(activity_c.name, dt.strptime("2014-12-25 00:00:03.0", TIME_FORMAT), resources=["R2"])
+        case1.add_event(event3)
+
         # Event 4
-        activity_b_instance = case1.add_activity_instance(activity_b)
-        event4 = activity_b_instance.add_event(activity_b_instance)
-        event4.timestamp = dt.strptime("2014-12-25 00:00:04.0", TIME_FORMAT)
-        event4.resources.append("R2")
+        event4 = Event(activity_b.name, dt.strptime("2014-12-25 00:00:04.0", TIME_FORMAT), resources=["R2"])
+        case1.add_event(event4)
+
         # Event 5
-        activity_d_instance = case1.add_activity_instance(activity_d)
-        event5 = activity_d_instance.add_event(activity_d_instance)
-        event5.timestamp = dt.strptime("2014-12-25 00:00:05.0", TIME_FORMAT)
-        event5.resources.append("R1")
+        event5 = Event(activity_d.name, dt.strptime("2014-12-25 00:00:05.0", TIME_FORMAT), resources=["R1"])
+        case1.add_event(event5)
+
         # Event 6
-        activity_a_instance = case2.add_activity_instance(activity_a)
-        event6 = activity_a_instance.add_event(activity_a_instance)
-        event6.timestamp = dt.strptime("2014-12-25 00:00:06.0", TIME_FORMAT)
-        event6.resources.append("R1")
+        event6 = Event(activity_a.name, dt.strptime("2014-12-25 00:00:06.0", TIME_FORMAT), resources=["R1"])
+        case2.add_event(event6)
+
         # Event 7
-        activity_b_instance = case2.add_activity_instance(activity_b)
-        event7 = activity_b_instance.add_event(activity_b_instance)
-        event7.timestamp = dt.strptime("2014-12-25 00:00:07.0", TIME_FORMAT)
-        event7.resources.append("R1")
+        event7 = Event(activity_b.name, dt.strptime("2014-12-25 00:00:07.0", TIME_FORMAT), resources=["R1"])
+        case2.add_event(event7)
+
         # Event 8
-        activity_d_instance = case2.add_activity_instance(activity_d)
-        event8 = activity_d_instance.add_event(activity_d_instance)
-        event8.timestamp = dt.strptime("2014-12-25 00:00:08.0", TIME_FORMAT)
-        event8.resources.append("R1")
+        event8 = Event(activity_d.name, dt.strptime("2014-12-25 00:00:08.0", TIME_FORMAT), ["R1"])
+        case2.add_event(event8)
+
         log = Log()
         log.add_case(case1)
         log.add_case(case2)

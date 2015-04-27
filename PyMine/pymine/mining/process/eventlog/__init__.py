@@ -46,8 +46,11 @@ class Process(IdObject):
     def activities(self):
         return self._activities.values()
 
-    def add_case(self, case_id=None):
-        case = Case(self, _id=case_id)
+    def add_case(self, case=None):
+        if case is None:
+            case = Case(self)
+        else:
+            case.process = self
         self.cases.append(case)
         return case
 
@@ -94,15 +97,17 @@ class Activity(IdObject):
     def __hash__(self):
         return hash(self.name)
 
+
 class Case(IdObject):
     """
     It represents a sequence of :class:`Event<.Event>`
     """
 
-    def __init__(self, process, _id=None):
+    def __init__(self, process=None, _id=None):
         super(Case, self).__init__(_id)
         self.process = process
         self.activity_instances = []
+        self.events = []
 
     def add_activity_instance(self, activity,_id=None):
         activity_instance = ActivityInstance(_id=_id, case=self, activity=activity)
@@ -111,26 +116,22 @@ class Case(IdObject):
         return activity_instance
 
     @property
-    def events(self):
-        events = []
-        for act_instance in self.activity_instances:
-            events.extend(act_instance.events)
-        return events
-
-    @property
     def activity_list(self):
         activities = []
         for act_instance in self.activity_instances:
             activities.append(act_instance.activity.name)
         return activities
 
-    def add_event(self, activity_name, timestamp=None, resources=None, attributes=None):
-        activity = self.process.add_activity(activity_name)
-        activity_instance = self.add_activity_instance(activity)
-        return activity_instance.add_event(timestamp, resources, attributes)
+    def add_event(self, event):
+        if self.process:
+            activity = self.process.add_activity(event.name)
+            activity_instance = self.add_activity_instance(activity)
+            activity_instance.add_event(event)
+        self.events.append(event)
+        return event
 
     def __str__(self):
-        return str([e.activity_name for e in self.events])
+        return str([e.name for e in self.events])
 
     def __repr__(self):
         return str(self)
@@ -168,41 +169,45 @@ class ActivityInstance(IdObject):
         else:
             return False
 
-    def add_event(self, timestamp=None, resources=None,  attributes=None, _id=None):
-        event = Event(self, timestamp, resources,  attributes, _id)
+    def add_event(self, event):
         self.events.append(event)
+        event.activity_instance = self
         return event
 
 
 class Event(IdObject):
 
-    def __init__(self, activity_instance, timestamp=None, resources=None,  attributes=None, _id=None):
+    def __init__(self, activity_name, timestamp=None, resources=None, attributes=None, _id=None,
+                 activity_instance=None):
         """
 
-        :param activity_instance:
+        :param activity_name:
         :param timestamp: a datetime
+        :param activity_instance:
         :param resources: a list of objects
         :param attributes: a list of :class:`Attribute<pymine.mining.process.eventlog.Attribute>`
         :param _id: a unique id
         :return:
         """
         super(Event, self).__init__(_id)
+        self.activity_name = activity_name
         self.attributes = attributes or []
         self.timestamp = timestamp
         self.resources = resources or []
         self.activity_instance = activity_instance
 
     @property
-    def activity_name(self):
-        return self.activity_instance.activity.name
+    def activity(self):
+        return self.activity_instance.activity if self.activity_instance else None
 
     @property
-    def activity(self):
-        return self.activity_instance.activity
+    def name(self):
+        return self.activity_name
 
     @property
     def case(self):
-        return self.activity_instance.case
+        return self.activity_instance.case if self.activity_instance else None
+
 
     def add_attribute(self, name, value):
         attr = Attribute(name=name, value=value, event=self)

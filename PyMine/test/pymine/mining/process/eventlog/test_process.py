@@ -23,18 +23,14 @@ class ProcessTest(unittest.TestCase):
         case2 = Case(process, "c2")
 
         # Event 1
-        activity_a_instance = case1.add_activity_instance(activity_a)
-        event1 = activity_a_instance.add_event(activity_a_instance)
         dt1 = dt.strptime("2014-12-25 00:00:01", TIME_FORMAT)
-        event1.timestamp = dt1
-        event1.resources.append("R1")
+        event1 = Event(activity_a.name, dt1, resources=["R1"])
+        case1.add_event(event1)
 
         # Event 2
-        activity_b_instance = case1.add_activity_instance(activity_b)
-        event2 = activity_b_instance.add_event(activity_b_instance)
         dt2 = dt.strptime("2014-12-25 00:00:02", TIME_FORMAT)
-        event2.timestamp = dt2
-        event2.resources.append("R1")
+        event2 = Event(activity_b.name, dt2, resources=["R1"])
+        case1.add_event(event2)
 
         self.assertEqual(len(case1.activity_instances), 2)
         self.assertEqual(len(case1.events), 2)
@@ -44,11 +40,9 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(case1.events[1].resources, ["R1"])
 
         # Event 3
-        activity_a_instance = case2.add_activity_instance(activity_a)
-        event3 = activity_a_instance.add_event(activity_a_instance)
-        dt3 = dt.strptime("2014-12-25 00:00:02", TIME_FORMAT)
-        event3.timestamp = dt3
-        event3.resources.append("R2")
+        dt3 = dt.strptime("2014-12-25 00:00:02", TIME_FORMAT),
+        event3 = Event(activity_a.name, dt3, resources=["R2"])
+        case2.add_event(event3)
 
         self.assertEqual(len(case2.activity_instances), 1)
         self.assertEqual(len(case2.events), 1)

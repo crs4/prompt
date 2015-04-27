@@ -2,14 +2,16 @@ import unittest
 import os
 import logging
 from datetime import datetime as dt
-from pymine.mining.process.eventlog.factory import CsvLogFactory, SimpleProcessLogFactory, create_log_from_xes, \
-    create_log_from_file, FAKE_START, FAKE_END
+from pymine.mining.process.eventlog.factory import CsvLogFactory, create_log_from_xes, \
+    create_log_from_file, FAKE_START, FAKE_END, create_process_log_from_list
 from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import *
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 # logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
 XES_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/reviewing_short.xes')
 CSV_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4.csv')
+AVRO_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4.avro')
+
 
 class TestFactory(unittest.TestCase):
 
@@ -121,8 +123,8 @@ class TestFactory(unittest.TestCase):
         for index,e in enumerate(self.csv_test_data[1:6]):
             data = e.split(',')
             self.assertEqual(case1.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
-            self.assertEqual(case1.events[index].activity_name, data[2])
-            self.assertEqual(case1.events[index].activity_name, data[2])
+            self.assertEqual(case1.events[index].name, data[2])
+            self.assertEqual(case1.events[index].name, data[2])
             self.assertEqual(case1.events[index].resources, [data[3]])
             self.assertEqual(len(case1.events[index].attributes), 1)
             self.assertEqual(case1.events[index].attributes[0].name, 'operator')
@@ -130,8 +132,8 @@ class TestFactory(unittest.TestCase):
         for index,e in enumerate(self.csv_test_data[6:]):
             data = e.split(',')
             self.assertEqual(case2.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
-            self.assertEqual(case2.events[index].activity_name, data[2])
-            self.assertEqual(case2.events[index].activity_name, data[2])
+            self.assertEqual(case2.events[index].name, data[2])
+            self.assertEqual(case2.events[index].name, data[2])
             self.assertEqual(case2.events[index].resources, [data[3]])
             self.assertEqual(len(case2.events[index].attributes), 1)
             self.assertEqual(case2.events[index].attributes[0].name, 'operator')
@@ -140,12 +142,11 @@ class TestFactory(unittest.TestCase):
 
         test_case = [['A', 'B'], ['A']]
 
-        f = SimpleProcessLogFactory(test_case)
-        log = f.create_log()
+        log = create_process_log_from_list(test_case)
         self.assertEqual(len(log.cases), 2)
 
-        self.assertEqual([e.activity_name for e in log.cases[0].events], test_case[0])
-        self.assertEqual([e.activity_name for e in log.cases[1].events], test_case[1])
+        self.assertEqual([e.name for e in log.cases[0].events], test_case[0])
+        self.assertEqual([e.name for e in log.cases[1].events], test_case[1])
 
         process = log.cases[1].process
         self.assertEqual(set([a.name for a in process.activities]), {'A', 'B'})
@@ -165,29 +166,17 @@ class TestFactory(unittest.TestCase):
         log = create_log_from_file(XES_PATH, True, True)
         self.assertEqual(len(log.cases), 5)
         case0 = log.cases[0]
-        self.assertEqual(case0.events[0].activity_name, FAKE_START)
-        self.assertEqual(case0.events[-1].activity_name, FAKE_END)
+        self.assertEqual(case0.events[0].name, FAKE_START)
+        self.assertEqual(case0.events[-1].name, FAKE_END)
 
     def test_create_log_from_file_2(self):
         log = create_log_from_file(CSV_PATH, True, True)
         self.assertEqual(len(log.cases), 6)
         case0 = log.cases[0]
-        self.assertEqual(case0.events[0].activity_name, FAKE_START)
-        self.assertEqual(case0.events[-1].activity_name, FAKE_END)
+        self.assertEqual(case0.events[0].name, FAKE_START)
+        self.assertEqual(case0.events[-1].name, FAKE_END)
 
+    def test_create_log_from_avro_(self):
+        log = create_log_from_file(AVRO_PATH)
+        self.assertEqual(len(log.cases), 6)
 
-
-
-
-
-
-
-def suite():
-    suite = unittest.TestSuite()
-    suite.addTest(TestFactory('test_create_log'))
-    #suite.addTest(TestFactory('test_create_loginfo'))
-    return suite
-
-if __name__ == '__main__':
-    runner = unittest.TestFactory(verbosity=2)
-    runner.run(suite())

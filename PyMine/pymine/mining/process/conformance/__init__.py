@@ -5,7 +5,7 @@ def replay_case(case, net):
     :return: a tuple containing: a boolean telling if the replay has been completed successfully,
         a list of obligations and a list of unexpected events.
     """
-    return net.replay_sequence([event.activity_name for event in case.events])
+    return net.replay_sequence([event.name for event in case.events])
 
 
 def simple_fitness(process_log, net):

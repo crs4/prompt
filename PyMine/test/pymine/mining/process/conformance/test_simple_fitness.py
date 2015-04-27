@@ -1,7 +1,7 @@
 import unittest
 
 from pymine.mining.process.conformance import replay_case, simple_fitness
-from pymine.mining.process.eventlog.factory import SimpleProcessLogFactory
+from pymine.mining.process.eventlog.factory import create_process_log_from_list
 from test.pymine.mining.process.network.test_cnet import _create_cnet
 
 
@@ -15,15 +15,13 @@ class ConformanceTestCase(unittest.TestCase):
 
         half_correct_cases = correct_cases + wrong_cases
 
-        self.factory = SimpleProcessLogFactory(correct_cases)
-        self.correct_log = self.factory.create_log()
-        self.wrong_log = SimpleProcessLogFactory(wrong_cases).create_log()
-        self.half_correct_log = SimpleProcessLogFactory(half_correct_cases).create_log()
+        self.correct_log = create_process_log_from_list(correct_cases)
+        self.wrong_log = create_process_log_from_list(wrong_cases)
+        self.half_correct_log = create_process_log_from_list(half_correct_cases)
 
     def test_replay_case_on_cnet(self):
         cnet, a, b, c, d, e = _create_cnet()
-        log = self.factory.create_log()
-        result, obligations, unknown = replay_case(log.cases[0], cnet)
+        result, obligations, unknown = replay_case(self.correct_log.cases[0], cnet)
         self.assertTrue(result)
         self.assertEqual(len(obligations), 0)
 
