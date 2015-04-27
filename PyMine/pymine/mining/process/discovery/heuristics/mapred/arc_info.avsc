@@ -1,0 +1,25 @@
+{
+  "type" : "record",
+  "name" : "ArcInfo",
+  "fields" : [
+    {
+    "name" : "start_node",
+    "type" : "string"
+    },{
+    "name" : "end_node",
+    "type" : "string"
+    },
+    {
+    "name" : "precede",
+    "type" : "int"
+    },
+    {
+    "name" : "two_step_loop",
+    "type" : "int"
+    },
+    {
+    "name" : "long_distance",
+    "type" : "int"
+    }
+    ]
+}

@@ -27,22 +27,28 @@ class DependencyMiner(object):
         self.long_distance_freq = Matrix()
         self.long_distance_matrix = Matrix()
 
+
+
     @property
     def events(self):
         return self.events_freq.keys()
 
-    def _compute_precede_matrix_by_events(self, events):
+    @staticmethod
+    def compute_precede_matrix_by_case(
+            case, events_freq, precede_matrix, two_step_loop_freq, start_events, end_events, long_distance_freq):
+
+        events = [e.activity_name for e in case.events]
         len_events = len(events)
         for i, event in enumerate(events):
-            self.events_freq[event] += 1
+            events_freq[event] += 1
             if i == 0:
-                self.start_events.add(event)
+                start_events.add(event)
             elif i == len_events - 1:
-                self.end_events.add(event)
+                end_events.add(event)
             if i < len_events - 1:
-                self.precede_matrix[events[i]][events[i+1]] += 1
+                precede_matrix[events[i]][events[i+1]] += 1
             if i < len_events - 2 and events[i] == events[i + 2] and events[i] != events[i + 1]:
-                self.two_step_loop_freq[events[i]][events[i+1]] += 1
+                two_step_loop_freq[events[i]][events[i+1]] += 1
 
             # long distance dependencies
             events_seen = set()
@@ -52,13 +58,19 @@ class DependencyMiner(object):
                 if ld_event in events_seen:
                     break
                 events_seen.add(ld_event)
-                self.long_distance_freq[event][ld_event] += 1
+                long_distance_freq[event][ld_event] += 1
 
     def _compute_precede_matrix(self):
 
         for case in self.log.cases:
-            events = [e.activity_name for e in case.events]
-            self._compute_precede_matrix_by_events(events)
+            self.compute_precede_matrix_by_case(
+                case,
+                self.events_freq,
+                self.precede_matrix,
+                self.two_step_loop_freq,
+                self.start_events,
+                self.end_events,
+                self.long_distance_freq)
 
     def _compute_dependency_matrix(self):
         """
