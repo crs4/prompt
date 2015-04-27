@@ -1,0 +1,8 @@
+protocol CaseProtocol{
+    import idl "event.avdl";
+
+   record Case{
+       union { null, string } id;
+      array<Event> events;
+    }
+}

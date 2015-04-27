@@ -1,0 +1,14 @@
+{
+  "type" : "record",
+  "name" : "Event",
+  "fields" : [ {
+    "name" : "id",
+    "type" : [ "null", "string" ]
+  }, {
+    "name" : "activity_name",
+    "type" : "string"
+  }, {
+    "name" : "timestamp",
+    "type" : "string"
+  } ]
+}

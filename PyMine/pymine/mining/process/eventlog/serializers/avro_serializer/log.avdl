@@ -1,0 +1,7 @@
+protocol CaseProtocol{
+    import idl "case.avdl";
+
+   record Log{
+      array<Case> cases;
+    }
+}
