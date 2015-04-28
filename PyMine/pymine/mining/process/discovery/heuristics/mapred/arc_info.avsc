@@ -11,15 +11,15 @@
     },
     {
     "name" : "precede",
-    "type" : "int"
+    "type" : "float"
     },
     {
     "name" : "two_step_loop",
-    "type" : "int"
+    "type" : "float"
     },
     {
     "name" : "long_distance",
-    "type" : "int"
+    "type" : "float"
     }
     ]
 }
