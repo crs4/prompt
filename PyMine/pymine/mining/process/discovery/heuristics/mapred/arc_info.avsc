@@ -3,23 +3,24 @@
   "name" : "ArcInfo",
   "fields" : [
     {
-    "name" : "start_node",
-    "type" : "string"
-    },{
-    "name" : "end_node",
+    "name" : "event",
     "type" : "string"
     },
     {
     "name" : "precede",
-    "type" : "float"
+    "type" : {"type": "map", "values": "float"}
     },
     {
     "name" : "two_step_loop",
-    "type" : "float"
+    "type" : {"type": "map", "values": "float"}
     },
     {
     "name" : "long_distance",
-    "type" : "float"
+    "type" : {"type": "map", "values": "float"}
+    },
+    {
+    "name" : "freq",
+    "type" : "int"
     }
     ]
 }

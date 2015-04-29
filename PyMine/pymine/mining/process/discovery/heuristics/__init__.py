@@ -15,8 +15,11 @@ class Matrix(object):
             return '%s: %s' % (self.key, self.value)
 
     class Column(object):
-        def __init__(self):
-            self._column = defaultdict(float)
+        def __init__(self, values=None):
+            self._column = values or defaultdict(float)
+
+        def get_dict(self):
+            return self._column
 
         @property
         def cells(self):
@@ -45,6 +48,9 @@ class Matrix(object):
 
     def __getitem__(self, item):
         return self._matrix[item]
+
+    def __setitem__(self, key, value):
+        return self._matrix.__setitem__(key, value)
 
     def __str__(self):
         return str(self._matrix)

@@ -34,13 +34,13 @@ class Mapper(api.Mapper):
         events = [e.name for e in case.events]
 
         for e1 in events:
-            for e2 in events:
-                logger.debug("emitting  e1 %s, e2 %s")
-                context.emit(SEPARATOR.join([e1, e2]), {
-                    'precede': precede_matrix[e1][e2],
-                    'two_step_loop': two_step_loop_freq[e1][e2],
-                    'long_distance': long_distance_freq[e1][e2],
-                })
+            logger.debug("emitting  e1 %s", e1)
+            context.emit(e1, {
+                'precede': precede_matrix[e1].get_dict(),
+                'two_step_loop': two_step_loop_freq[e1].get_dict(),
+                'long_distance': long_distance_freq[e1].get_dict(),
+
+            })
 
 
 class Reducer(api.Reducer):
@@ -51,23 +51,24 @@ class Reducer(api.Reducer):
         self.arcs = context.get_counter("DEP_MR", "ARCS")
 
     def reduce(self, context):
-        arc_id = context.key
-        start_node, end_node = arc_id.split(SEPARATOR)
-        arc_info = {
-            'precede': 0,
-            'two_step_loop': 0,
-            'long_distance': 0,
+        event = context.key
+        e_info = {
+            'precede': defaultdict(float),
+            'two_step_loop': defaultdict(float),
+            'long_distance': defaultdict(float)
 
         }
 
-        for arc in context.values:
-            for k in arc_info.keys():
-                arc_info[k] += arc[k]
+        freq = 0
+        for info in context.values:
+            freq += 1
+            for matrix_name in e_info.keys():
+                for k, v in info[matrix_name].items():
+                    e_info[matrix_name][k] += v
 
-        arc_info['start_node'] = start_node
-        arc_info['end_node'] = end_node
-        print 'emitting arc_info', arc_info
-        context.emit(SEPARATOR.join([start_node, end_node]), arc_info)
+        e_info['event'] = event
+        e_info['freq'] = freq
+        context.emit(event, e_info)
 
 
 def __main__():

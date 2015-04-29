@@ -7,6 +7,7 @@ from pymine.mining.process.eventlog.serializers.avro_serializer import serialize
 import os
 import subprocess
 import tarfile
+from collections import defaultdict
 
 
 class DependencyMiner(dp.DependencyMiner):
@@ -64,13 +65,10 @@ class DependencyMiner(dp.DependencyMiner):
         for filename in hdfs.ls(output_dir):
             if filename.split('.')[-1] == 'avro':
                 with hdfs.open(filename, "r") as fi:
-                    print 'fi', fi
                     reader = DataFileReader(fi, DatumReader())
                     for e in reader:
                         for n, m in matrices.items():
-                            m[e['start_node']][e['end_node']] += e[n]
-
-        for n, m in self.precede_matrix.items():
-            self.events_freq[n] = sum(m.values())
-            print 'n', n
-            print 'm', m
+                            d = defaultdict(int)
+                            d.update(e[n])
+                            m[e['event']] = Matrix.Column(d)
+                        self.events_freq[e['event']] = e['freq']
