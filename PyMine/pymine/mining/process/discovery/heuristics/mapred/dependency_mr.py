@@ -1,72 +1,76 @@
-import sys
-import os
 import pydoop.hdfs as hdfs
-import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",
-                    level=logging.DEBUG
-                    )
-logger = logging.getLogger('heuristic')
-logger.setLevel(logging.DEBUG)
-
-pymine_home = os.environ.get('PYMINE_HOME')
-sys.path.append(pymine_home)
-from pymine.mining.process.discovery.heuristics.dependency import DependencyGraph
-from pymine.mining.process.discovery.heuristics.dependency import Matrix
+from avro.datafile import DataFileReader
+from avro.io import DatumReader
+from pymine.mining.process.discovery.heuristics import Matrix
+import pymine.mining.process.discovery.heuristics.dependency as dp
+from pymine.mining.process.eventlog.serializers.avro_serializer import serialize_log_as_case_collection
+import os
+import subprocess
+import tarfile
 
 
-class Usage(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-
-def main(dir_path, dependency_thr):
-    arcs = {}
-    if hdfs.path.isdir(dir_path):
-        for filename in hdfs.ls(dir_path):
+class DependencyMiner(dp.DependencyMiner):
+    def _compute_precede_matrix(self):
+        cwd = os.path.dirname(__file__)
+        output_dir = "dm_output"
+        if self.log.filename is None or not self.log.filename.startswith('hdfs://'):
+            input_filename = 'hdfs:///user/%s/log.avro' % os.environ['USER']
             try:
+                hdfs.rmr(input_filename)
+            except IOError:
+                pass
+            serialize_log_as_case_collection(self.log, input_filename)
+
+        else:
+            input_filename = self.log.filename
+
+        with open(os.path.join(cwd, 'arc_info.avsc'), 'r') as sf:
+            schema = sf.read()
+
+        try:
+            hdfs.rmr(output_dir)
+        except IOError:
+            pass
+
+        tar = tarfile.open("/tmp/pymine.tgz", "w:gz")
+        tar.add(os.path.join(cwd, '../../../../../mining'))
+        tar.add(os.path.join(cwd, '../../../../../__init__.py'))
+        tar.close()
+
+        args = ["pydoop", "submit",
+                "-D", "pydoop.mapreduce.avro.value.output.schema=%s" % schema,
+                "--upload-file-to-cache", os.path.join(cwd, 'arc_dep_mr.py'),
+                "--upload-archive-to-cache",
+                "/tmp/pymine.tgz",
+                "--avro-input", "v",
+                "--avro-output", "v",
+                "--log-level", "DEBUG",
+                "--num-reducers", "1",  # FIXME
+                "--mrv2",
+                "arc_dep_mr",
+                input_filename,
+                output_dir]
+
+        retcode = subprocess.call(args)
+        # if retcode:
+        #     raise Exception('mapred failed')
+
+        matrices = {
+            'precede': self.precede_matrix,
+            'two_step_loop': self.two_step_loop_freq,
+            'long_distance': self.long_distance_freq
+        }
+
+        for filename in hdfs.ls(output_dir):
+            if filename.split('.')[-1] == 'avro':
                 with hdfs.open(filename, "r") as fi:
-                    while True:
-                        try:
-                            line = fi.readline()
-                            index = line.index('[')
-                            key = line[:index-1].strip()
-                            values = line[index:].strip()
-                            if key in arcs:
-                                arcs[key] += values
-                            else:
-                                arcs[key] = values
-                        except StopIteration:
-                            break
-            except Exception:
-                continue
-        for key in arcs:
-            print("ARC: "+key)
-            print("VALUE: "+str(arcs[key]))
-            print("")
-    else:
-        raise Usage("Not a valid directory")
-        sys.exit(0)
+                    print 'fi', fi
+                    reader = DataFileReader(fi, DatumReader())
+                    for e in reader:
+                        for n, m in matrices.items():
+                            m[e['start_node']][e['end_node']] += e[n]
 
-    '''
-    dep_matrix = Matrix()
-    _2_step_matrix = Matrix()
-
-    # add the code to populate the matrices
-
-    dm = DependencyMiner()
-    dm._precede_matrix = dep_matrix
-    dm._2_step_loop = _2_step_matrix
-    dep_graph = dm.mine_dependency_graph(dependency_thr)
-    '''
-
-if __name__ == '__main__':
-    import argparse
-    logger.setLevel(logging.DEBUG)
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file_path', type=str, help='the path of the hdfs directory containing the log')
-    parser.add_argument('--aft', type=float, default=0.0, help="arc frequency threshold")
-    parser.add_argument('--bft', type=float, default=0.0, help="binding frequency threshold")
-    parser.add_argument('--dt', type=float, default=0.0, help="dependency threshold")
-
-    args = parser.parse_args()
-    main(args.file_path, args.dt)
+        for n, m in self.precede_matrix.items():
+            self.events_freq[n] = sum(m.values())
+            print 'n', n
+            print 'm', m
