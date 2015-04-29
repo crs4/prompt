@@ -7,10 +7,10 @@ from pymine.mining.process.eventlog.serializers.avro_serializer import serialize
 import os
 import subprocess
 import tarfile
-from collections import defaultdict
 
 
 class DependencyMiner(dp.DependencyMiner):
+
     def _compute_precede_matrix(self):
         cwd = os.path.dirname(__file__)
         output_dir = "dm_output"
@@ -62,13 +62,24 @@ class DependencyMiner(dp.DependencyMiner):
             'long_distance': self.long_distance_freq
         }
 
+        events = set()
         for filename in hdfs.ls(output_dir):
             if filename.split('.')[-1] == 'avro':
                 with hdfs.open(filename, "r") as fi:
                     reader = DataFileReader(fi, DatumReader())
                     for e in reader:
+                        events.add(e['start_node'])
+                        events.add(e['end_node'])
                         for n, m in matrices.items():
-                            d = defaultdict(int)
-                            d.update(e[n])
-                            m[e['event']] = Matrix.Column(d)
-                        self.events_freq[e['event']] = e['freq']
+                            m[e['start_node']][e['end_node']] += e[n]
+                        if e['is_start']:
+                            self.start_events.add(e['start_node'])
+                        if e['is_end']:
+                            self.end_events.add(e['end_node'])
+
+        for e in events:
+            freq = sum(self.precede_matrix[e].values())
+            if not freq:
+                cells = self.precede_matrix.get_column(e)
+                freq = sum([c.value for c in cells])
+            self.events_freq[e] = freq

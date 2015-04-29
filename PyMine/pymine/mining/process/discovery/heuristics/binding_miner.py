@@ -15,7 +15,6 @@ class BindingMiner(object):
 
         for b, v in bindings[node].items():
             if v/total >= thr:
-
                 if type_ == 'output':
                     if len(b) > 1:
                         b = b - set(cnet.get_final_nodes())

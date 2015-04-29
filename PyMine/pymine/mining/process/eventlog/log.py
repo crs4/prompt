@@ -1,3 +1,4 @@
+import pymine
 from pymine.mining.process.eventlog.exceptions import InvalidProcess
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import OrderedDict
@@ -5,6 +6,9 @@ from collections import OrderedDict
 
 class BaseLog(object):
     __metaclass__ = ABCMeta
+
+    def __init__(self, filename=None):
+        self.filename = filename
 
     @abstractproperty
     def cases(self):
@@ -19,7 +23,8 @@ class ProcessLog(BaseLog):
     """
     A contaneir for :class:`Case<pymine.mining.process.eventlog.Case>`.They must belong to the same process.
     """
-    def __init__(self, process, cases=None):
+    def __init__(self, process, cases=None, filename=None):
+        super(ProcessLog, self).__init__(filename)
         self._process = process
         self._cases = []
         if cases is not None:
@@ -54,7 +59,8 @@ class Log(BaseLog):
     :class:`<ProcessLog>pymine.mining.process.eventlog.log.ProcessLog`) just use the Log as dictionary (log[process]).
     """
 
-    def __init__(self, cases=None, process_logs=()):
+    def __init__(self, cases=None, process_logs=(), filename=None):
+        super(Log, self).__init__(filename)
         self._process_logs = OrderedDict()
         for p_log in process_logs:
             self._process_logs[p_log.process] = p_log
@@ -104,6 +110,22 @@ class Log(BaseLog):
             return True
         else:
             return False
+
+
+class AvroProcessLog(ProcessLog):
+    def __init__(self, process, cases=None, filename=None):
+        super(ProcessLog, self).__init__(filename)
+        self._process = process
+
+    def add_case(self, case):
+        raise NotImplementedError
+
+    @property
+    def cases(self):
+        from pymine.mining.process.eventlog.serializers.avro_serializer import deserialize
+        for c in deserialize(self.filename):
+            yield c
+        
 
 
 class LogInfo(object):

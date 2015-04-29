@@ -178,5 +178,8 @@ class TestFactory(unittest.TestCase):
 
     def test_create_log_from_avro_(self):
         log = create_log_from_file(AVRO_PATH)
-        self.assertEqual(len(log.cases), 6)
+        c = 0
+        for i in log.cases:
+            c += 1
+        self.assertEqual(c, 6)
 

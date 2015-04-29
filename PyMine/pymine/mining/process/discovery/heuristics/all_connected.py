@@ -2,6 +2,8 @@
 Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
 and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
+import pymine.mining.process.discovery.heuristics.dependency as dependency
+
 import logging
 logger = logging.getLogger('all_connected')
 
@@ -10,10 +12,10 @@ class HeuristicMiner(object):
     def __init__(self, log, parallel_dep=False, parallel_binding=False):
         self.log = log
         if parallel_dep:
-            raise NotImplementedError
+            import pymine.mining.process.discovery.heuristics.mapred.dependency_mr as dependency_mr
+            self.dep_miner = dependency_mr.DependencyMiner(log)
         else:
-            from pymine.mining.process.discovery.heuristics.dependency import DependencyMiner
-            self.dep_miner = DependencyMiner(log)
+            self.dep_miner = dependency.DependencyMiner(log)
 
         if parallel_binding:
             raise NotImplementedError

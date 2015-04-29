@@ -3,8 +3,6 @@ from collections import defaultdict
 import os
 import pydoop.mapreduce.api as api
 import pydoop.mapreduce.pipes as pp
-
-sys.stderr.write("%r\n" % (os.listdir(os.getcwd(),)))
 from pymine.mining.process.discovery.heuristics.dependency import DependencyMiner
 from pymine.mining.process.discovery.heuristics import Matrix
 from pydoop.avrolib import AvroContext
@@ -23,24 +21,30 @@ class Mapper(api.Mapper):
     def map(self, context):
         case = convert_avro_dict_to_obj(context.value, 'Case')
         events_freq = defaultdict(int)
-        precede_matrix = Matrix()
-        two_step_loop_freq = Matrix()
+        mtrx = {
+            'precede': Matrix(),
+            'two_step_loop': Matrix(),
+            'long_distance': Matrix()
+        }
+
         start_events = set()
         end_events = set()
-        long_distance_freq = Matrix()
         DependencyMiner.compute_precede_matrix_by_case(
-            case, events_freq, precede_matrix, two_step_loop_freq, start_events, end_events, long_distance_freq)
+            case, events_freq, mtrx['precede'], mtrx['two_step_loop'], start_events, end_events, mtrx['long_distance'])
 
         events = [e.name for e in case.events]
+        set_events = set(events)
 
-        for e1 in events:
-            logger.debug("emitting  e1 %s", e1)
-            context.emit(e1, {
-                'precede': precede_matrix[e1].get_dict(),
-                'two_step_loop': two_step_loop_freq[e1].get_dict(),
-                'long_distance': long_distance_freq[e1].get_dict(),
-
-            })
+        for e1 in set_events:
+            for e2 in set_events:
+                logger.debug("emitting  e1 %s, e2 %s")
+                context.emit(SEPARATOR.join([e1, e2]), {
+                    'precede': mtrx['precede'][e1][e2],
+                    'two_step_loop': mtrx['two_step_loop'][e1][e2],
+                    'long_distance': mtrx['long_distance'][e1][e2],
+                    'is_start': int(events.index(e1) == 0),
+                    'is_end': int(events.index(e2) == len(events) - 1)
+                })
 
 
 class Reducer(api.Reducer):
@@ -51,24 +55,28 @@ class Reducer(api.Reducer):
         self.arcs = context.get_counter("DEP_MR", "ARCS")
 
     def reduce(self, context):
-        event = context.key
-        e_info = {
-            'precede': defaultdict(float),
-            'two_step_loop': defaultdict(float),
-            'long_distance': defaultdict(float)
+        arc_id = context.key
+        start_node, end_node = arc_id.split(SEPARATOR)
+        arc_info = {
+            'precede': 0,
+            'two_step_loop': 0,
+            'long_distance': 0,
+            'is_start': 0,
+            'is_end': 0
 
         }
 
-        freq = 0
-        for info in context.values:
-            freq += 1
-            for matrix_name in e_info.keys():
-                for k, v in info[matrix_name].items():
-                    e_info[matrix_name][k] += v
+        for arc in context.values:
+            for k in arc_info.keys():
+                arc_info[k] += arc[k]
+                arc_info["is_start"] += arc["is_start"]
+                arc_info["is_end"] += arc["is_end"]
 
-        e_info['event'] = event
-        e_info['freq'] = freq
-        context.emit(event, e_info)
+        arc_info['start_node'] = start_node
+        arc_info['end_node'] = end_node
+
+        print 'emitting arc_info', arc_info
+        context.emit(SEPARATOR.join([start_node, end_node]), arc_info)
 
 
 def __main__():
