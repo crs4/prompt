@@ -6,7 +6,6 @@ import pydoop.hdfs as hdfs
 import os
 
 
-
 class BindingMiner(bm.BindingMiner, MRMiner):
     CNET_FILENAME = 'cnet_file'
 

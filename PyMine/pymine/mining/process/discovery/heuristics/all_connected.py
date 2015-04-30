@@ -9,7 +9,7 @@ logger = logging.getLogger('all_connected')
 
 
 class HeuristicMiner(object):
-    def __init__(self, log, parallel_dep=False, parallel_binding=True):
+    def __init__(self, log, parallel_dep=False, parallel_binding=False):
         self.log = log
         if parallel_dep:
             import pymine.mining.process.discovery.heuristics.mapred.dependency_mr as dependency_mr
