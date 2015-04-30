@@ -1,7 +1,7 @@
 from collections import defaultdict
 import pydoop.mapreduce.api as api
 import pydoop.mapreduce.pipes as pp
-from pymine.mining.process.discovery.heuristics.binding_miner import BindingMiner
+from pymine.mining.process.discovery.heuristics.mapred.binding_miner_mr import BindingMiner
 from pymine.mining.process.discovery.heuristics import Matrix
 from pymine.mining.process.eventlog.serializers.avro_serializer import convert_avro_dict_to_obj
 from pydoop.avrolib import AvroContext
@@ -18,7 +18,10 @@ class Mapper(api.Mapper):
     def __init__(self, context):
         super(Mapper, self).__init__(context)
         context.setStatus("initializing mapper")
-        self.cnet = pickle.load(hdfs.open('cnet.pkl', 'r'))
+
+        cnet_filename = context.job_conf.get(BindingMiner.CNET_FILENAME)
+        with hdfs.open(cnet_filename, 'r') as f:
+            self.cnet = pickle.loads(f.read())
 
     def map(self, context):
         case = convert_avro_dict_to_obj(context.value, 'Case')
@@ -27,11 +30,12 @@ class Mapper(api.Mapper):
         BindingMiner._mine_bindings_by_case(self.cnet, case, output_bindings, input_bindings)
 
         for b_type in [input_bindings, output_bindings]:
-            for node, bindings in b_type:
+            for node, bindings in b_type.items():
                 for b in bindings:
                     serialized_b = (sorted([n.label for n in b]))
-                    key = '__'.join([node.label] + serialized_b)
-                    value = {'input': b_type[node][b]} if b_type == input_bindings else {'output': b_type[node][b]}
+                    str_b_type = 'input' if b_type == input_bindings else "output"
+                    key = '__'.join([node.label, str_b_type] + serialized_b)
+                    value = b_type[node][b]
                     context.emit(key, value)
 
 
@@ -43,9 +47,11 @@ class Reducer(api.Reducer):
 
     def reduce(self, context):
         tmp = context.key.split(SEPARATOR)
-        node_label = tmp[0]
-        binding_nodes = tmp[1:]
-
+        node = tmp[0]
+        b_type = tmp[1]
+        binding_nodes = tmp[2:]
+        total = sum(context.values)
+        context.emit(context.key, {'node': node, 'type': b_type, 'binding': binding_nodes, 'freq': total})
 
 
 def __main__():

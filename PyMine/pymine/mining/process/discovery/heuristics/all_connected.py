@@ -9,7 +9,7 @@ logger = logging.getLogger('all_connected')
 
 
 class HeuristicMiner(object):
-    def __init__(self, log, parallel_dep=False, parallel_binding=False):
+    def __init__(self, log, parallel_dep=False, parallel_binding=True):
         self.log = log
         if parallel_dep:
             import pymine.mining.process.discovery.heuristics.mapred.dependency_mr as dependency_mr
@@ -18,7 +18,8 @@ class HeuristicMiner(object):
             self.dep_miner = dependency.DependencyMiner(log)
 
         if parallel_binding:
-            raise NotImplementedError
+            import pymine.mining.process.discovery.heuristics.mapred.binding_miner_mr as binding_mr
+            self.binding_miner = binding_mr.BindingMiner(log)
         else:
             from pymine.mining.process.discovery.heuristics.binding_miner import BindingMiner
             self.binding_miner = BindingMiner(log)
