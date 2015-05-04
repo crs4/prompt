@@ -1,9 +1,9 @@
 import pymine.mining.process.discovery.heuristics.dependency as dp
-from pymine.mining.process.discovery.heuristics.mapred import MRMiner
+from pymine.mining.mapred import MRLauncher
 import os
 
 
-class DependencyMiner(dp.DependencyMiner, MRMiner):
+class DependencyMiner(dp.DependencyMiner, MRLauncher):
 
     def _compute_precede_matrix(self):
         cwd = os.path.dirname(__file__)

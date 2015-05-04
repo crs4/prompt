@@ -2,6 +2,7 @@ from collections import defaultdict
 import pydoop.mapreduce.api as api
 import pydoop.mapreduce.pipes as pp
 from pymine.mining.process.discovery.heuristics.mapred.binding_miner_mr import BindingMiner
+from pymine.mining.mapred import deserialize_obj
 from pymine.mining.process.discovery.heuristics import Matrix
 from pymine.mining.process.eventlog.serializers.avro_serializer import convert_avro_dict_to_obj
 from pydoop.avrolib import AvroContext
@@ -20,8 +21,7 @@ class Mapper(api.Mapper):
         context.setStatus("initializing mapper")
 
         cnet_filename = context.job_conf.get(BindingMiner.CNET_FILENAME)
-        with hdfs.open(cnet_filename, 'r') as f:
-            self.cnet = pickle.loads(f.read())
+        self.cnet = deserialize_obj(cnet_filename)
 
     def map(self, context):
         case = convert_avro_dict_to_obj(context.value, 'Case')

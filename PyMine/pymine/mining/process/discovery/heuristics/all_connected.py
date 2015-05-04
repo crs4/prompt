@@ -2,27 +2,19 @@
 Implementation of the Heuristic Miner illustrated in http://wwwis.win.tue.nl/~wvdaalst/publications/p314.pdf
 and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
-import pymine.mining.process.discovery.heuristics.dependency as dependency
+from pymine.mining.process.discovery.heuristics.dependency import DependencyMiner
+from pymine.mining.process.discovery.heuristics.binding_miner import BindingMiner
+
 
 import logging
 logger = logging.getLogger('all_connected')
 
 
 class HeuristicMiner(object):
-    def __init__(self, log, parallel_dep=False, parallel_binding=False):
+    def __init__(self, log, dep_miner_cls=None, b_miner_cls=None):
         self.log = log
-        if parallel_dep:
-            import pymine.mining.process.discovery.heuristics.mapred.dependency_mr as dependency_mr
-            self.dep_miner = dependency_mr.DependencyMiner(log)
-        else:
-            self.dep_miner = dependency.DependencyMiner(log)
-
-        if parallel_binding:
-            import pymine.mining.process.discovery.heuristics.mapred.binding_miner_mr as binding_mr
-            self.binding_miner = binding_mr.BindingMiner(log)
-        else:
-            from pymine.mining.process.discovery.heuristics.binding_miner import BindingMiner
-            self.binding_miner = BindingMiner(log)
+        self.dep_miner = dep_miner_cls(log) if dep_miner_cls else DependencyMiner(log)
+        self.binding_miner = b_miner_cls(log )if b_miner_cls else BindingMiner(log)
 
     def mine(self, dependency_thr=0.5, bindings_thr=0.2, relative_to_best=0.1, self_loop_thr=None,
              two_step_loop_thr=None, long_distance_thr=None):

@@ -1,22 +1,19 @@
 from pymine.mining.process.discovery.heuristics import Matrix
 import pymine.mining.process.discovery.heuristics.binding_miner as bm
-from pymine.mining.process.discovery.heuristics.mapred import MRMiner, create_unique_filename
+from pymine.mining.mapred import MRLauncher, create_unique_filename, serialize_obj
 import pickle
 import pydoop.hdfs as hdfs
 import os
 
 
-class BindingMiner(bm.BindingMiner, MRMiner):
+class BindingMiner(bm.BindingMiner, MRLauncher):
     CNET_FILENAME = 'cnet_file'
 
     def mine(self, cnet, thr):
         output_bindings = Matrix()
         input_bindings = Matrix()
 
-        str_cnet = pickle.dumps(cnet)
-        cnet_filename = create_unique_filename(prefix="cnet", ext="pkl")
-        with hdfs.open(cnet_filename, 'w') as f:
-            f.write(str_cnet)
+        cnet_filename = serialize_obj(cnet, 'cnet')
 
         cwd = os.path.dirname(__file__)
         output_dir_prefix = "bm_output"
