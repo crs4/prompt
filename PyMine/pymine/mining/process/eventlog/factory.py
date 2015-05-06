@@ -185,7 +185,11 @@ def create_log_from_file(file_path, add_start_activity=False, add_end_activity=F
 
     ext = file_path.split('.')[-1].lower()
     valid_ext = ('csv', 'xes', 'avro')
-    is_dir =  os.path.isdir(file_path)  # FIXME should check if is a hdfs path
+    if file_path.startswith('hdfs://'):
+        import pydoop.hdfs as fs
+    else:
+        fs = os
+    is_dir = fs.path.isdir(file_path)  # FIXME should check if is a hdfs path
     if ext not in valid_ext and not is_dir:
         raise InvalidExtension('Unknown extension %s. Valid ones: %s' % (ext, valid_ext))
     if ext == 'csv':
