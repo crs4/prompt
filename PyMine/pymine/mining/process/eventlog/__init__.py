@@ -74,6 +74,7 @@ class Activity(IdObject):
         activity_instance.activity = self
         return activity_instance
 
+
 class Case(IdObject):
     """
     It represents a sequence of :class:`Event<.Event>`
@@ -141,20 +142,18 @@ class ActivityInstance(IdObject):
         else:
             return False
 
-    @property
-    def label(self):
-        return self._label
-
     def add_event(self, event):
         self.events.append(event)
         event.activity_instance = self
         return event
 
+    def __str__(self):
+        return self.id
+
 
 class Event(IdObject):
 
-    def __init__(self, name=None, timestamp=None, resources=None, attributes=None, _id=None,
-                 activity_instance=None, case=None):
+    def __init__(self, activity_instance=None, name=None, timestamp=None, resources=None, attributes=None, _id=None, case=None):
         """
 
         :param name:
@@ -168,9 +167,9 @@ class Event(IdObject):
         super(Event, self).__init__(_id)
         self.name = name
         self.case = case
-        self.attributes = attributes or []
+        self.attributes = attributes or {}
         self.timestamp = timestamp
-        self.resources = resources or []
+        self.resources = resources
         self.activity_instance = activity_instance
 
     @property
@@ -178,9 +177,7 @@ class Event(IdObject):
         return self.activity_instance.activity if self.activity_instance else None
 
     def add_attribute(self, name, value):
-        attr = Attribute(name=name, value=value, event=self)
-        self.attributes.append(attr)
-        return attr
+        self.attributes[name] = value
 
     def __str__(self):
         return "timestamp %s, resources %s" % (self.timestamp, self.resources)

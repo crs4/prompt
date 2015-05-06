@@ -1,12 +1,14 @@
 from pymine.mining.process.discovery.heuristics import Matrix
 import logging
+from pymine.mining.process.eventlog.log import Classifier
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('binding')
 
 
 class BindingMiner(object):
-    def __init__(self, log):
+    def __init__(self, log, classifier=None):
         self.log = log
+        self.classifier = classifier or Classifier()
 
     @staticmethod
     def _create_bindings(type_, node, bindings, cnet, thr):
@@ -35,8 +37,8 @@ class BindingMiner(object):
                 cnet.add_input_binding(node, {unlucky_node}, frequency=arc.frequency)
 
     @staticmethod
-    def _mine_bindings_by_case(cnet, case, output_bindings, input_bindings):
-        events = [e.activity_name for e in case.events]
+    def _mine_bindings_by_case(cnet, classifier, case, output_bindings, input_bindings):
+        events = [classifier.get_event_name(e) for e in case.events]
         if cnet.has_fake_start:
             events.insert(0, cnet.fake_start_label)
         if cnet.has_fake_end:
@@ -98,6 +100,6 @@ class BindingMiner(object):
         input_bindings = Matrix()
 
         for case in self.log.cases:
-            self._mine_bindings_by_case(cnet, case, output_bindings, input_bindings)
+            self._mine_bindings_by_case(cnet, self.classifier, case, output_bindings, input_bindings)
 
         self._populate_cnet(cnet, input_bindings, output_bindings, thr)

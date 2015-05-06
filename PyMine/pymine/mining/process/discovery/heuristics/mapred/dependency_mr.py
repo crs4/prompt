@@ -4,6 +4,9 @@ import os
 
 
 class DependencyMiner(dp.DependencyMiner, MRLauncher):
+    def __init__(self, log, classifier=None):
+        DependencyMiner.__init__(self, log, classifier)
+        MRLauncher.__init__(self)
 
     def _compute_precede_matrix(self):
         cwd = os.path.dirname(__file__)

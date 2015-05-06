@@ -114,16 +114,18 @@ class CsvLogFactory(LogFactory):
             if timestamp:
                 timestamp = DateTimeFromString(timestamp)
 
-            resources = resource.split('|') if resource else None
-
-            attributes = []
+            attributes = {}
             for attribute, index in self.indexes.items():
-                if attribute not in ('case_id', 'timestamp', 'activity', 'resource'):
-                    attribute_instance = Attribute(name=attribute, value=row[index])
-                    attributes.append(attribute_instance)
+                if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
+                    attributes[attribute] = row[index]
 
-            event = Event(timestamp=timestamp, resources=resources, attributes=attributes,
-                                 activity_instance=activity_instance)
+            event = Event(
+                activity_instance=activity_instance,
+                name=activity_instance.activity.name,
+                timestamp=timestamp,
+                resources=resource,
+                attributes=attributes)
+
             case.add_event(event)
             activity_instance.add_event(event)
 
@@ -168,7 +170,18 @@ def create_process_log_from_list(cases):
         case_obj = Case()
         process.add_case(case_obj)
         for event_name in case:
-            case_obj.add_event(Event(name=event_name))
+            activity = Activity(event_name)
+            activity_instance = ActivityInstance()
+            activity = process.add_activity(activity)
+            activity.add_actity_instance(activity_instance)
+
+            case_obj.add_activity_instance(activity)
+            case_obj.add_activity_instance(activity_instance)
+
+            event = Event(activity_instance=activity_instance, name=event_name)
+
+            case_obj.add_event(event)
+            activity_instance.add_event(event)
     return ProcessLog(process, process.cases)  # FIXME ProcessLog == Process...
 
 

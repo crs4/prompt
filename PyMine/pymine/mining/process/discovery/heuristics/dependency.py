@@ -4,6 +4,7 @@ Implementation of the Dependency Graph Miner illustrated in http://wwwis.win.tue
 from collections import defaultdict
 from pymine.mining.process.discovery.heuristics import Matrix
 from pymine.mining.process.network.cnet import CNet
+from pymine.mining.process.eventlog.log import Classifier
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('depedency')
@@ -11,8 +12,9 @@ logger = logging.getLogger('depedency')
 
 class DependencyMiner(object):
 
-    def __init__(self, log):
+    def __init__(self, log, classifier=None):
         self.log = log
+        self.classifier = classifier or Classifier()
         self.precede_matrix = Matrix()
         self.dependency_matrix = Matrix()
         self.two_step_loop_matrix = Matrix()
@@ -35,9 +37,9 @@ class DependencyMiner(object):
 
     @staticmethod
     def compute_precede_matrix_by_case(
-            case, events_freq, precede_matrix, two_step_loop_freq, start_events, end_events, long_distance_freq):
+            case, classifier, events_freq, precede_matrix, two_step_loop_freq, start_events, end_events, long_distance_freq):
 
-        events = [e.activity_name for e in case.events]
+        events = [classifier.get_event_name(e)for e in case.events]
         len_events = len(events)
         for i, event in enumerate(events):
             events_freq[event] += 1
@@ -65,6 +67,7 @@ class DependencyMiner(object):
         for case in self.log.cases:
             self.compute_precede_matrix_by_case(
                 case,
+                self.classifier,
                 self.events_freq,
                 self.precede_matrix,
                 self.two_step_loop_freq,

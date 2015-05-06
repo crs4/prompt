@@ -3,7 +3,7 @@ from pymine.mining.process.eventlog.factory import create_log_from_file
 from pymine.mining.process.tools.drawing.draw_cnet import draw
 import pickle
 import datetime as dt
-import os
+from pymine.mining.process.eventlog.log import Classifier
 
 
 MAPRED = 'mapred'
@@ -13,12 +13,13 @@ SEQ = 'seq'
 def main(
         log_path, mode, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
     log = create_log_from_file(log_path)
+    classifier = Classifier(keys=['activity', 'activity_type'])
     if mode == MAPRED:
         from pymine.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
         from pymine.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
-        miner = HeuristicMiner(log, DependencyMiner, BindingMiner)
+        miner = HeuristicMiner(log, classifier, DependencyMiner, BindingMiner)
     else:
-        miner = HeuristicMiner(log)
+        miner = HeuristicMiner(log, classifier)
     start_time = dt.datetime.now()
     cnet = miner.mine(
         dependency_thr,

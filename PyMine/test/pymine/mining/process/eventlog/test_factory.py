@@ -125,18 +125,18 @@ class TestFactory(unittest.TestCase):
             self.assertEqual(case1.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
             #self.assertEqual(case1.events[index].name, data[2])
             #self.assertEqual(case1.events[index].name, data[2])
-            self.assertEqual(case1.events[index].resources, [data[3]])
+            # self.assertEqual(case1.events[index].resources, data[3])
             self.assertEqual(len(case1.events[index].attributes), 1)
-            self.assertEqual(case1.events[index].attributes[0].name, 'operator')
+            self.assertEqual(case1.events[index].attributes.keys()[0], 'operator')
 
         for index,e in enumerate(self.csv_test_data[6:]):
             data = e.split(',')
             self.assertEqual(case2.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
             #self.assertEqual(case2.events[index].name, data[2])
             #self.assertEqual(case2.events[index].name, data[2])
-            self.assertEqual(case2.events[index].resources, [data[3]])
+            self.assertEqual(case2.events[index].resources, data[3])
             self.assertEqual(len(case2.events[index].attributes), 1)
-            self.assertEqual(case2.events[index].attributes[0].name, 'operator')
+            self.assertEqual(case2.events[index].attributes.keys()[0], 'operator')
 
     def test_process_log_factory(self):
 
@@ -158,7 +158,7 @@ class TestFactory(unittest.TestCase):
 
         self.assertEqual(len(process.get_activity_by_name('B').activity_instances[0].events), 1)
 
-    def test_create_log_from_xes_(self):
+    def test_create_log_from_xes(self):
         log = create_log_from_xes(XES_PATH)
         self.assertEqual(len(log.cases), 5)
 

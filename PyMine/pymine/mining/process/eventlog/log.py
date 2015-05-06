@@ -20,14 +20,10 @@ class BaseLog(object):
 
 class Classifier(object):
 
-    def __init__(self, process, name=None):
+    def __init__(self, name=None, sep='::', keys=None):
         self._name = name
-        self._process = process
-        self._keys = []
-
-    @property
-    def process(self):
-        return self._process
+        self._keys = keys or ['activity']
+        self.sep = sep
 
     @property
     def name(self):
@@ -39,6 +35,21 @@ class Classifier(object):
     @property
     def keys(self):
         return self._keys
+
+    def get_event_name(self, event):
+        name = []
+        for k in self._keys:
+            if hasattr(event, k):
+                name.append(str(getattr(event, k)))
+            elif k in event.attributes:
+                name.append(event.attributes[k])
+        if name:
+            return self.sep.join(name)
+        else:
+            return str(event.id)
+
+
+
 
 
 class ProcessLog(BaseLog):

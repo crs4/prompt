@@ -20,14 +20,14 @@ class Mapper(api.Mapper):
         super(Mapper, self).__init__(context)
         context.setStatus("initializing mapper")
 
-        cnet_filename = context.job_conf.get(BindingMiner.CNET_FILENAME)
-        self.cnet = deserialize_obj(cnet_filename)
+        self.cnet = deserialize_obj(context.job_conf.get(BindingMiner.CNET_FILENAME))
+        self.classifier = deserialize_obj(context.job_conf.get(BindingMiner.CLASSIFIER))
 
     def map(self, context):
         case = convert_avro_dict_to_obj(context.value, 'Case')
         input_bindings = Matrix()
         output_bindings = Matrix()
-        BindingMiner._mine_bindings_by_case(self.cnet, case, output_bindings, input_bindings)
+        BindingMiner._mine_bindings_by_case(self.cnet, self.classifier, case, output_bindings, input_bindings)
 
         for b_type in [input_bindings, output_bindings]:
             for node, bindings in b_type.items():

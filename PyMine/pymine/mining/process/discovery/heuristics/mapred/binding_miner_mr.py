@@ -7,6 +7,10 @@ import os
 
 
 class BindingMiner(bm.BindingMiner, MRLauncher):
+    def __init__(self, log, classifier=None):
+        BindingMiner.__init__(self, log, classifier)
+        MRLauncher.__init__(self)
+
     CNET_FILENAME = 'cnet_file'
 
     def mine(self, cnet, thr):
