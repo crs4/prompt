@@ -97,7 +97,7 @@ class TestFactory(unittest.TestCase):
         file_path = self.create_csv_test_file()
         log_factory = CsvLogFactory(file_path)
         log = log_factory.create_log()
-        self.assertEqual(len(log.processes), 1)
+        #self.assertEqual(len(log.processes), 1)
 
         case1, case2 = log.cases
         self.assertTrue(len(case1.activity_instances), 5)
@@ -105,7 +105,7 @@ class TestFactory(unittest.TestCase):
         self.assertTrue(len(case1.events), 5)
         self.assertTrue(len(case2.events), 3)
 
-        process = log.processes[0]
+        process = log.process
         act_a = process.get_activity_by_name('A')
         act_b = process.get_activity_by_name('B')
         act_c = process.get_activity_by_name('C')

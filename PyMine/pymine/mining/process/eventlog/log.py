@@ -1,4 +1,3 @@
-import pymine
 from pymine.mining.process.eventlog.exceptions import InvalidProcess
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import OrderedDict
@@ -19,17 +18,45 @@ class BaseLog(object):
         pass
 
 
+class Classifier(object):
+
+    def __init__(self, process, name=None):
+        self._name = name
+        self._process = process
+        self._keys = []
+
+    @property
+    def process(self):
+        return self._process
+
+    @property
+    def name(self):
+        return self._name
+
+    def add_key(self, key):
+        self._keys.append(key)
+
+    @property
+    def keys(self):
+        return self._keys
+
+
 class ProcessLog(BaseLog):
     """
     A contaneir for :class:`Case<pymine.mining.process.eventlog.Case>`.They must belong to the same process.
     """
-    def __init__(self, process, cases=None, filename=None):
+    def __init__(self, process, cases=None, filename=None, classifier=None):
         super(ProcessLog, self).__init__(filename)
         self._process = process
         self._cases = []
         if cases is not None:
             for case in cases:
                 self.add_case(case)
+        if classifier:
+            self.classifier = classifier
+        else:
+            self.classifier = Classifier(process)
+            self.classifier.add_key("activity")
 
     @property
     def process(self):

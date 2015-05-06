@@ -49,26 +49,9 @@ class Process(IdObject):
     def add_case(self, case=None):
         if case is None:
             case = Case(self)
-        else:
-            case.process = self
+        case.process = self
         self.cases.append(case)
         return case
-
-
-class ProcessInfo(object):
-
-    def __init__(self, process):
-
-        self.process = process
-        self.activities_number = len(process.activities)
-        self.cases_number = len(process.cases)
-        events_number = 0
-        for case in process.cases:
-            events_number += len(case.events)
-        self.events_number = events_number
-        self.average_case_size = float(events_number/len(process.cases))
-        # self.activity_frequencies = activity_frequencies or []
-        # self.event_frequencies = event_frequencies or []
 
 
 class Activity(IdObject):
@@ -123,10 +106,14 @@ class Case(IdObject):
         return activities
 
     def add_event(self, event):
+        '''
         if self.process:
             activity = self.process.add_activity(event.name)
             activity_instance = self.add_activity_instance(activity)
             activity_instance.add_event(event)
+            event.activity_instance = activity_instance
+        '''
+        event.case = self
         self.events.append(event)
         return event
 
@@ -151,11 +138,12 @@ class Case(IdObject):
 
 class ActivityInstance(IdObject):
 
-    def __init__(self, activity, case=None, _id=None):
+    def __init__(self, activity, case=None, _id=None, label=None):
         super(ActivityInstance, self).__init__(_id)
         self.case = case
         self.activity = activity
         self.events = []
+        self._label = label
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -169,6 +157,10 @@ class ActivityInstance(IdObject):
         else:
             return False
 
+    @property
+    def label(self):
+        return self._label
+
     def add_event(self, event):
         self.events.append(event)
         event.activity_instance = self
@@ -177,11 +169,11 @@ class ActivityInstance(IdObject):
 
 class Event(IdObject):
 
-    def __init__(self, activity_name, timestamp=None, resources=None, attributes=None, _id=None,
-                 activity_instance=None):
+    def __init__(self, name=None, timestamp=None, resources=None, attributes=None, _id=None,
+                 activity_instance=None, case=None):
         """
 
-        :param activity_name:
+        :param name:
         :param timestamp: a datetime
         :param activity_instance:
         :param resources: a list of objects
@@ -190,7 +182,8 @@ class Event(IdObject):
         :return:
         """
         super(Event, self).__init__(_id)
-        self.activity_name = activity_name
+        self._name = name
+        self.case = case
         self.attributes = attributes or []
         self.timestamp = timestamp
         self.resources = resources or []
@@ -202,31 +195,14 @@ class Event(IdObject):
 
     @property
     def name(self):
-        return self.activity_name
-
-    @property
-    def case(self):
-        return self.activity_instance.case if self.activity_instance else None
+        #return self.activity_name
+        return self._name or self.activity_instance.activity.name if self.activity_instance else None
 
 
     def add_attribute(self, name, value):
         attr = Attribute(name=name, value=value, event=self)
         self.attributes.append(attr)
         return attr
-
-    # def __eq__(self, other):
-    #     if type(self) == type(other):
-    #         try:
-    #             for counter in xrange(len(self.attributes)):
-    #                 assert self.attributes[counter] == other.attributes[counter]
-    #             assert self.timestamp == other.timestamp
-    #             assert self.resources == other.resources
-    #         except AssertionError, e:
-    #             logging.debug('self %s != other %s', self, other)
-    #             return False
-    #         return True
-    #     else:
-    #         return False
 
     def __str__(self):
         return "timestamp %s, resources %s" % (self.timestamp, self.resources)
@@ -254,3 +230,19 @@ class Attribute(IdObject):
 
     def __str__(self):
         return "name: %s, value %s" % (self.name, self.value)
+
+
+class ProcessInfo(object):
+
+    def __init__(self, process):
+
+        self.process = process
+        self.activities_number = len(process.activities)
+        self.cases_number = len(process.cases)
+        events_number = 0
+        for case in process.cases:
+            events_number += len(case.events)
+        self.events_number = events_number
+        self.average_case_size = float(events_number/len(process.cases))
+        # self.activity_frequencies = activity_frequencies or []
+        # self.event_frequencies = event_frequencies or []

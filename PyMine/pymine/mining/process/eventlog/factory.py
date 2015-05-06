@@ -36,7 +36,7 @@ class LogFactory(object):
 
 class CsvLogFactory(LogFactory):
 
-    def __init__(self, input_filename=None, add_start_activity=False, add_end_activity=False):
+    def __init__(self, input_filename=None, add_start_activity=False, add_end_activity=False, classifier=None):
         super(CsvLogFactory, self).__init__()
         self.indexes = {}
         self._cases = {}
@@ -44,9 +44,13 @@ class CsvLogFactory(LogFactory):
         self._previous_case = None
         self.add_start_activity = add_start_activity
         self.add_end_activity = add_end_activity
-
+        self._classifier = classifier
+        self._process = Process()
         if input_filename:
             self.parse_csv_file(input_filename=input_filename)
+
+    def create_log(self):
+        return ProcessLog(self._process, cases=self.cases, classifier=self._classifier)
 
     def parse_indexes(self, input_line, dialect):
         try:
@@ -64,6 +68,10 @@ class CsvLogFactory(LogFactory):
         timestamp = row[self.indexes['timestamp']]
         activity_id = row[self.indexes['activity']]
         resource = row[self.indexes['resource']]
+        label = None
+        if self._classifier:
+            if self._classifier.keys() in self.indexes:
+                label = self._classifier.keys()
         if case_id and activity_id:
             if case_id not in self._cases:
 
@@ -81,6 +89,9 @@ class CsvLogFactory(LogFactory):
             else:
                 case = self._cases[case_id]
 
+            activity = process.add_activity(activity_id)
+            activity_instance = case.add_activity_instance(activity)
+
             if timestamp:
                 timestamp = DateTimeFromString(timestamp)
 
@@ -92,12 +103,12 @@ class CsvLogFactory(LogFactory):
                     attribute_instance = Attribute(name=attribute, value=row[index])
                     attributes.append(attribute_instance)
 
-            case.add_event(Event(activity_id, timestamp, resources, attributes))
+            case.add_event(Event(timestamp=timestamp, resources=resources, attributes=attributes,
+                                 activity_instance=activity_instance))
 
     def parse_csv_file(self, input_filename):
         with open(input_filename, 'rbU') as csvfile:
             # Check if first line has the parameters definition
-            process = Process()
             first_line = csvfile.readline()
             dialect = csv.Sniffer().sniff(first_line)
             self.parse_indexes(first_line, dialect)
@@ -108,7 +119,7 @@ class CsvLogFactory(LogFactory):
             for row in reader:
                 if row:
                     try:
-                        self.parse_row(row, process)
+                        self.parse_row(row, self._process)
                     except csv.Error as e:
                         logger.error(e)
 
@@ -135,7 +146,7 @@ def create_process_log_from_list(cases):
     for case in cases:
         case_obj = process.add_case()
         for event_name in case:
-            case_obj.add_event(Event(event_name))
+            case_obj.add_event(Event(name=event_name))
     return ProcessLog(process, process.cases)  # FIXME ProcessLog == Process...
 
 
