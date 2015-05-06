@@ -178,13 +178,25 @@ class AvroProcessLog(ProcessLog):
 
 class LogInfo(object):
 
-    def __init__(self, log=None, processes_info={}):
+    def __init__(self, log):
         self.log = log
-        self.processes_info = processes_info
+        self._avg_lead_time =  None
 
-    def get_process_size(self):
-        return len(self.log.processes)
+    def compute_avg_lead_time(self):
+        if self._avg_lead_time is None:
 
-    def get_process_info(self, process_id):
-        if process_id in self.processes_info:
-            return self.processes_info[process_id]
+            avg = 0.0
+            total_cases = 0
+            for case in self.log.cases:
+                total_cases += 1
+                start_time = case.events[0].timestamp
+                end_time = case.events[-1].timestamp
+                if end_time and start_time:
+                    avg += end_time - start_time
+
+            self._avg_lead_time = avg/total_cases
+
+        return self._avg_lead_time
+
+
+
