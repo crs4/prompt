@@ -3,6 +3,7 @@ from pymine.mining.process.eventlog.factory import create_log_from_file
 from pymine.mining.process.tools.drawing.draw_cnet import draw
 import pickle
 import datetime as dt
+import os
 
 
 MAPRED = 'mapred'
@@ -28,7 +29,7 @@ def main(
         long_dist_thr)
     end_time = dt.datetime.now()
     delta_t = end_time - start_time
-    pkl_filepath = "cnet_%s_%s__%s.pkl" % (mode, start_time, end_time)
+    pkl_filepath = "cnet_%s__%s_%s__%s.pkl" % (mode, os.path.basename(log_path),start_time, end_time)
     with open(pkl_filepath, 'wb') as f:
         pickle.dump(cnet, f)
     print "mining started at", start_time
