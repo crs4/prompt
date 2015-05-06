@@ -12,6 +12,49 @@ class InvalidSchema(Exception):
     pass
 
 
+def is_hdfs(path):
+    return path.startswith('hdfs://')
+
+
+class Serializer(object):
+    def __init__(self, path):
+        self.path = path
+        self.writer = None
+        self.f_out = None
+        self.schema_path = None
+
+    def _create_writer(self, schema_path):
+        if is_hdfs(self.path):
+            import pydoop.hdfs as hdfs
+            openfile = hdfs.open
+        else:
+            openfile = open
+
+        with open(schema_path, 'r') as sf:
+            self.schema = avro.schema.parse(sf.read())
+
+        self.f_out = openfile(self.path, 'w')
+        self.writer = DataFileWriter(self.f_out, DatumWriter(), self.schema)
+
+    def serialize(self, objs):
+        if not isinstance(objs, collections.Iterable):
+            objs = [objs]
+
+        if self.writer is None:
+
+            schema_name = objs[0].__class__.__name__
+            schema_path = os.path.join(os.path.dirname(__file__), 'schemas/%s.avsc' % schema_name)
+            self._create_writer(schema_path)
+        for obj in objs:
+            self.writer.append(convert_obj_to_avro_dict(obj))
+
+    def close(self):
+        self.writer.close()
+        self.f_out.close()
+
+
+
+
 def convert_obj_to_avro_dict(obj):
     cls_name = obj.__class__
     if cls_name == el.Case:
@@ -21,28 +64,13 @@ def convert_obj_to_avro_dict(obj):
 
 
 def serialize(objs, dest_path):
-    if not isinstance(objs, collections.Iterable):
-        objs = [objs]
-
-    schema_name = objs[0].__class__.__name__
-    schema_path = os.path.join(os.path.dirname(__file__), 'schemas/%s.avsc' % schema_name)
-    if dest_path.startswith('hdfs://'):
-        import pydoop.hdfs as hdfs
-        openfile = hdfs.open
-    else:
-        openfile = open
-
-    with open(schema_path, 'r') as sf:
-        schema = avro.schema.parse(sf.read())
-    with openfile(dest_path, 'w') as f_out:
-        writer = DataFileWriter(f_out, DatumWriter(), schema)
-        for obj in objs:
-            writer.append(convert_obj_to_avro_dict(obj))
-        writer.close()
+    serializer = Serializer(dest_path)
+    serializer.serialize(objs)
+    serializer.close()
 
 
 def deserialize(path):
-    if path.startswith('hdfs://'):
+    if is_hdfs(path):
         import pydoop.hdfs as hdfs
         openfile = hdfs.open
     else:

@@ -123,9 +123,19 @@ class AvroProcessLog(ProcessLog):
     @property
     def cases(self):
         from pymine.mining.process.eventlog.serializers.avro_serializer import deserialize
-        for c in deserialize(self.filename):
-            yield c
-        
+        if self.filename.startswith('hdfs://'):
+            import pydoop.hdfs as hdfs
+            fs = hdfs
+        else:
+            import os
+            fs = os
+
+        files = [fs.path.join(self.filename, f) for f in fs.listdir(self.filename)] \
+            if fs.path.isdir(self.filename) else [self.filename]
+
+        for fn in files:
+            for c in deserialize(fn):
+                yield c
 
 
 class LogInfo(object):
