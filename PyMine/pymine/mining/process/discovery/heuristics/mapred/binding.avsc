@@ -1,0 +1,24 @@
+{
+  "type" : "record",
+  "name" : "Binding",
+  "fields" : [
+    {
+    "name" : "node",
+    "type" : "string"
+    },
+
+    {
+    "name" : "type",
+    "type" : "string"
+    },
+
+    {
+    "name" : "binding",
+    "type" : {"type": "array", "items": "string"}
+    },
+    {
+    "name" : "freq",
+    "type" : "float"
+    }
+    ]
+}

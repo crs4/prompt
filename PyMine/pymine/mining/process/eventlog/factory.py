@@ -6,7 +6,7 @@ from mx.DateTime.Parser import DateTimeFromString
 from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
 from pymine.mining.process.eventlog import *
 from pymine.mining.process.eventlog.exceptions import InvalidExtension
-
+import os
 logger = logging.getLogger('factory')
 
 FAKE_START = '_start'
@@ -182,15 +182,17 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
 
 
 def create_log_from_file(file_path, add_start_activity=False, add_end_activity=False):
+
     ext = file_path.split('.')[-1].lower()
     valid_ext = ('csv', 'xes', 'avro')
-    if ext not in valid_ext:
+    is_dir =  os.path.isdir(file_path)  # FIXME should check if is a hdfs path
+    if ext not in valid_ext and not is_dir:
         raise InvalidExtension('Unknown extension %s. Valid ones: %s' % (ext, valid_ext))
     if ext == 'csv':
         return create_log_from_csv(file_path, add_start_activity, add_end_activity)
     elif ext == 'xes':
         return create_log_from_xes(file_path,  add_start_activity, add_end_activity)
-    elif ext == 'avro':
+    elif ext == 'avro' or is_dir:
         from pymine.mining.process.eventlog.serializers.avro_serializer import deserialize_log_from_case_collection
         return deserialize_log_from_case_collection(file_path)
 
