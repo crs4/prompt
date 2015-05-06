@@ -41,6 +41,7 @@ class CsvLogFactory(LogFactory):
         self.indexes = {}
         self._cases = {}
         self.activities = {}
+        self.activity_instances = {}
         self._previous_case = None
         self.add_start_activity = add_start_activity
         self.add_end_activity = add_end_activity
@@ -64,10 +65,12 @@ class CsvLogFactory(LogFactory):
 
     def parse_row(self, row, process):
         logger.debug('row %s', row)
-        case_id = row[self.indexes['case_id']]
-        timestamp = row[self.indexes['timestamp']]
-        activity_id = row[self.indexes['activity']]
-        resource = row[self.indexes['resource']]
+
+        case_id = row[self.indexes['case_id']] if 'case_id' in self.indexes else None
+        timestamp = row[self.indexes['timestamp']] if 'timestamp' in self.indexes else None
+        activity_id = row[self.indexes['activity']] if 'activity' in self.indexes else None
+        activity_instance_id = row[self.indexes['activity_instance']] if 'activity_instance' in self.indexes else None
+        resource = row[self.indexes['resource']] if 'resource' in self.indexes else None
         label = None
         if self._classifier:
             if self._classifier.keys() in self.indexes:
@@ -78,19 +81,35 @@ class CsvLogFactory(LogFactory):
                 if self.add_end_activity and self.cases:
                     self.cases[-1].add_event(Event(FAKE_END))
 
-                case = Case(_id=case_id, process=process)
+                case = Case(_id=case_id)
                 if self.add_start_activity:
                     case.add_event(Event(FAKE_START))
                 self._cases[case_id] = case
 
                 self.cases.append(case)
-                process.cases.append(case)
-                #process.add_case(case)
+                process.add_case(case)
             else:
                 case = self._cases[case_id]
 
-            activity = process.add_activity(activity_id)
-            activity_instance = case.add_activity_instance(activity)
+            activity = process.get_activity_by_name(activity_id)
+            if activity is None:
+                activity = Activity(activity_id)
+                process.add_activity(activity)
+
+            if activity_instance_id in self.activity_instances:
+                activity_instance = self.activity_instances[activity_instance_id]
+            else:
+                if not activity_instance_id:
+                    activity_instance = ActivityInstance()
+                else:
+                    activity_instance = ActivityInstance(_id=activity_instance_id)
+
+                self.activity_instances[activity_instance.id] = activity_instance
+
+            activity.add_actity_instance(activity_instance)
+
+            case.add_activity_instance(activity)
+            case.add_activity_instance(activity_instance)
 
             if timestamp:
                 timestamp = DateTimeFromString(timestamp)
@@ -103,8 +122,10 @@ class CsvLogFactory(LogFactory):
                     attribute_instance = Attribute(name=attribute, value=row[index])
                     attributes.append(attribute_instance)
 
-            case.add_event(Event(timestamp=timestamp, resources=resources, attributes=attributes,
-                                 activity_instance=activity_instance))
+            event = Event(timestamp=timestamp, resources=resources, attributes=attributes,
+                                 activity_instance=activity_instance)
+            case.add_event(event)
+            activity_instance.add_event(event)
 
     def parse_csv_file(self, input_filename):
         with open(input_filename, 'rbU') as csvfile:
@@ -144,7 +165,8 @@ def create_log_from_csv(file_path, add_start_activity=False, add_end_activity=Fa
 def create_process_log_from_list(cases):
     process = Process()
     for case in cases:
-        case_obj = process.add_case()
+        case_obj = Case()
+        process.add_case(case_obj)
         for event_name in case:
             case_obj.add_event(Event(name=event_name))
     return ProcessLog(process, process.cases)  # FIXME ProcessLog == Process...

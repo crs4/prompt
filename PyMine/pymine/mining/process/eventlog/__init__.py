@@ -30,25 +30,22 @@ class Process(IdObject):
     #
     #     return False
 
-    def add_activity(self, name, _id=None):
-        if name in self._activities:
-            return self._activities[name]
-        
-        activity = Activity(_id=_id, name=name, process=self)
+    def add_activity(self, activity):
+        if activity.name in self._activities:
+            return self._activities[activity.name]
+
         activity.process = self
-        self._activities[name] = activity
+        self._activities[activity.name] = activity
         return activity
 
     def get_activity_by_name(self, name):
-        return self._activities[name]
+        return self._activities.get(name)
 
     @property
     def activities(self):
         return self._activities.values()
 
-    def add_case(self, case=None):
-        if case is None:
-            case = Case(self)
+    def add_case(self, case):
         case.process = self
         self.cases.append(case)
         return case
@@ -56,7 +53,7 @@ class Process(IdObject):
 
 class Activity(IdObject):
 
-    def __init__(self, name, process, _id=None):
+    def __init__(self, name, _id=None):
         """
 
         :return:
@@ -64,15 +61,7 @@ class Activity(IdObject):
         super(Activity, self).__init__(_id)
         self.name = name
         self.activity_instances = []
-        self.process = process
-
-    # def __eq__(self, other):
-    #     logging.debug('--------self.name', self.name)
-    #     return True
-    #     if type(self) == type(other):
-    #         return True
-    #
-    #     return False
+        self.process = None
 
     def __str__(self):
         return self.name
@@ -80,22 +69,25 @@ class Activity(IdObject):
     def __hash__(self):
         return hash(self.name)
 
+    def add_actity_instance(self, activity_instance):
+        self.activity_instances.append(activity_instance)
+        activity_instance.activity = self
+        return activity_instance
 
 class Case(IdObject):
     """
     It represents a sequence of :class:`Event<.Event>`
     """
 
-    def __init__(self, process=None, _id=None):
+    def __init__(self, _id=None):
         super(Case, self).__init__(_id)
-        self.process = process
+        self.process = None
         self.activity_instances = []
         self.events = []
 
-    def add_activity_instance(self, activity,_id=None):
-        activity_instance = ActivityInstance(_id=_id, case=self, activity=activity)
+    def add_activity_instance(self, activity_instance):
         self.activity_instances.append(activity_instance)
-        activity.activity_instances.append(activity_instance)
+        activity_instance.case = self
         return activity_instance
 
     @property
@@ -106,13 +98,6 @@ class Case(IdObject):
         return activities
 
     def add_event(self, event):
-        '''
-        if self.process:
-            activity = self.process.add_activity(event.name)
-            activity_instance = self.add_activity_instance(activity)
-            activity_instance.add_event(event)
-            event.activity_instance = activity_instance
-        '''
         event.case = self
         self.events.append(event)
         return event
@@ -138,12 +123,11 @@ class Case(IdObject):
 
 class ActivityInstance(IdObject):
 
-    def __init__(self, activity, case=None, _id=None, label=None):
+    def __init__(self, _id=None):
         super(ActivityInstance, self).__init__(_id)
-        self.case = case
-        self.activity = activity
+        self.case = None
+        self.activity = None
         self.events = []
-        self._label = label
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -182,7 +166,7 @@ class Event(IdObject):
         :return:
         """
         super(Event, self).__init__(_id)
-        self._name = name
+        self.name = name
         self.case = case
         self.attributes = attributes or []
         self.timestamp = timestamp
@@ -192,12 +176,6 @@ class Event(IdObject):
     @property
     def activity(self):
         return self.activity_instance.activity if self.activity_instance else None
-
-    @property
-    def name(self):
-        #return self.activity_name
-        return self._name or self.activity_instance.activity.name if self.activity_instance else None
-
 
     def add_attribute(self, name, value):
         attr = Attribute(name=name, value=value, event=self)
