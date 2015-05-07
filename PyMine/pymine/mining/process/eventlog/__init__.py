@@ -1,6 +1,6 @@
 import uuid
 import logging
-
+import mx.DateTime as dt
 
 class IdObject(object):
     def __init__(self, _id=None):
@@ -69,7 +69,7 @@ class Activity(IdObject):
     def __hash__(self):
         return hash(self.name)
 
-    def add_actity_instance(self, activity_instance):
+    def add_activity_instance(self, activity_instance):
         self.activity_instances.append(activity_instance)
         activity_instance.activity = self
         return activity_instance
@@ -219,5 +219,41 @@ class ProcessInfo(object):
             events_number += len(case.events)
         self.events_number = events_number
         self.average_case_size = float(events_number/len(process.cases))
+        self._average_lead_time = 0
+
         # self.activity_frequencies = activity_frequencies or []
         # self.event_frequencies = event_frequencies or []
+
+    @property
+    def average_lead_time(self):
+        lead_time = 0
+        for case in self.process.cases:
+            lead_time += float(case.activity_instances[-1].events[-1].timestamp-case.activity_instances[0].events[0].timestamp)
+        self._average_lead_time = float(lead_time/len(self.process.cases))
+        return self._average_lead_time
+
+    def get_lead_time_data(self):
+        lead_time_data = []
+        for case in self.process.cases:
+            lead_time_data.append(float(case.activity_instances[-1].events[-1].timestamp-case.activity_instances[0].events[0].timestamp))
+        return lead_time_data
+
+    def get_activity_duration(self, activity_name):
+        activity = self.process.get_activity_by_name(activity_name)
+        if activity:
+            activity_data = []
+            for instance in activity.activity_instances:
+                if len(instance.events) > 1:
+                    activity_data.append(float(instance.events[-1].timestamp-instance.events[0].timestamp))
+                else:
+                    print "NONE"
+            return activity_data
+        else:
+            None
+
+    def get_average_activity_duration(self, activity_name):
+        duration_data = self.get_activity_duration(activity_name)
+        if duration_data:
+            return sum(duration_data)/len(duration_data)
+        else:
+            return 0

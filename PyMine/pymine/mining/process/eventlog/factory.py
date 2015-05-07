@@ -105,11 +105,8 @@ class CsvLogFactory(LogFactory):
                     activity_instance = ActivityInstance(_id=activity_instance_id)
 
                 self.activity_instances[activity_instance.id] = activity_instance
-
-            activity.add_actity_instance(activity_instance)
-
-            case.add_activity_instance(activity)
-            case.add_activity_instance(activity_instance)
+                activity.add_activity_instance(activity_instance)
+                case.add_activity_instance(activity_instance)
 
             if timestamp:
                 timestamp = DateTimeFromString(timestamp)
