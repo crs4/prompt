@@ -1,6 +1,6 @@
 import csv
 import logging
-
+from collections import defaultdict
 from mx.DateTime.Parser import DateTimeFromString
 
 from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
@@ -9,8 +9,15 @@ from pymine.mining.process.eventlog.exceptions import InvalidExtension
 import os
 logger = logging.getLogger('factory')
 
+
 FAKE_START = '_start'
 FAKE_END = '_end'
+
+
+class LifeCycle:
+    START = 'start'
+    END = 'end'
+
 
 class LogInfoFactory(object):
 
@@ -47,6 +54,7 @@ class CsvLogFactory(LogFactory):
         self.add_end_activity = add_end_activity
         self._classifier = classifier
         self._process = Process()
+        self._pending_activity_instances = defaultdict(lambda: defaultdict(list))
         if input_filename:
             self.parse_csv_file(input_filename=input_filename)
 
@@ -71,6 +79,9 @@ class CsvLogFactory(LogFactory):
         activity_id = row[self.indexes['activity']] if 'activity' in self.indexes else None
         activity_instance_id = row[self.indexes['activity_instance']] if 'activity_instance' in self.indexes else None
         resource = row[self.indexes['resource']] if 'resource' in self.indexes else None
+        lifecycle = row[self.indexes['lifecycle']].lower() if 'lifecycle' in self.indexes else None
+
+
         label = None
         if self._classifier:
             if self._classifier.keys() in self.indexes:
@@ -90,7 +101,6 @@ class CsvLogFactory(LogFactory):
                 process.add_case(case)
             else:
                 case = self._cases[case_id]
-
             activity = process.get_activity_by_name(activity_id)
             if activity is None:
                 activity = Activity(activity_id)
@@ -100,7 +110,20 @@ class CsvLogFactory(LogFactory):
                 activity_instance = self.activity_instances[activity_instance_id]
             else:
                 if not activity_instance_id:
-                    activity_instance = ActivityInstance()
+                    pending_activity_instances = self._pending_activity_instances[case_id]
+                    if lifecycle == LifeCycle.START or not pending_activity_instances[activity.name]:
+                        activity_instance = ActivityInstance()
+                        pending_activity_instances[activity.name].append(activity_instance)
+                    else:
+                        if pending_activity_instances[activity.name]:
+                            activity_instance = pending_activity_instances[activity.name][0]
+
+                        else:
+                            activity_instance = ActivityInstance()
+
+                    if lifecycle == LifeCycle.END:
+                        pending_activity_instances[activity.name].remove(activity_instance)
+
                 else:
                     activity_instance = ActivityInstance(_id=activity_instance_id)
 

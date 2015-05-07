@@ -6,7 +6,7 @@ from pymine.mining.process.eventlog.factory import CsvLogFactory, create_log_fro
     create_log_from_file, FAKE_START, FAKE_END, create_process_log_from_list
 from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import *
-TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 # logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)s %(message)s')
 XES_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/reviewing_short.xes')
 CSV_PATH = os.path.join(os.path.dirname(__file__), '../../../../../dataset/pg_4.csv')
@@ -19,15 +19,17 @@ class TestFactory(unittest.TestCase):
         super(TestFactory, self).__init__(label)
 
         self.csv_test_data = [
-            "timestamp,case_id,activity,resource,operator",
-            "2014-12-25 00:00:01.0,C1,A,R1,O1",
-            "2014-12-25 00:00:02.0,C1,B,R1,O2",
-            "2014-12-25 00:00:03.0,C1,C,R2,O3",
-            "2014-12-25 00:00:04.0,C1,B,R2,O4",
-            "2014-12-25 00:00:05.0,C1,D,R1,O5",
-            "2014-12-25 00:00:06.0,C2,A,R1,O1",
-            "2014-12-25 00:00:07.0,C2,B,R1,O2",
-            "2014-12-25 00:00:08.0,C2,D,R1,O3"
+            "timestamp,case_id,activity,resource,operator,lifecycle",
+            "2014-12-25 00:00:01,C1,A,R1,O1,START",
+            "2014-12-25 00:00:01,C1,A,R1,O1,END",
+            "2014-12-25 00:00:02,C1,B,R1,O2,END",
+            "2014-12-25 00:00:03,C1,C,R2,O3,END",
+            "2014-12-25 00:00:04,C1,B,R2,O4,END",
+            "2014-12-25 00:00:05,C1,D,R1,O5,END",
+            "2014-12-25 00:00:06,C2,A,R1,O1,START",
+            "2014-12-25 00:00:06,C2,A,R1,O1,END",
+            "2014-12-25 00:00:07,C2,B,R1,O2,END",
+            "2014-12-25 00:00:08,C2,D,R1,O3,END"
         ]
 
     def create_csv_test_file(self):
@@ -117,25 +119,23 @@ class TestFactory(unittest.TestCase):
         self.assertEqual(len(act_c.activity_instances), 1)
         self.assertEqual(len(act_d.activity_instances), 2)
 
-        self.assertEqual(len(case1.events), 5)
-        self.assertEqual(len(case2.events), 3)
+        self.assertEqual(len(case1.events), 6)
+        self.assertEqual(len(case2.events), 4)
 
-        for index,e in enumerate(self.csv_test_data[1:6]):
+        for index, e in enumerate(self.csv_test_data[1:7]):
             data = e.split(',')
             self.assertEqual(case1.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
-            #self.assertEqual(case1.events[index].name, data[2])
-            #self.assertEqual(case1.events[index].name, data[2])
-            # self.assertEqual(case1.events[index].resources, data[3])
-            self.assertEqual(len(case1.events[index].attributes), 1)
+            self.assertEqual(case1.events[index].name, data[2])
+            self.assertEqual(case1.events[index].resources, data[3])
+            self.assertEqual(len(case1.events[index].attributes), 2)
             self.assertEqual(case1.events[index].attributes.keys()[0], 'operator')
 
-        for index,e in enumerate(self.csv_test_data[6:]):
+        for index,e in enumerate(self.csv_test_data[7:]):
             data = e.split(',')
             self.assertEqual(case2.events[index].timestamp, dt.strptime(data[0], TIME_FORMAT))
-            #self.assertEqual(case2.events[index].name, data[2])
-            #self.assertEqual(case2.events[index].name, data[2])
+            self.assertEqual(case2.events[index].name, data[2])
             self.assertEqual(case2.events[index].resources, data[3])
-            self.assertEqual(len(case2.events[index].attributes), 1)
+            self.assertEqual(len(case2.events[index].attributes), 2)
             self.assertEqual(case2.events[index].attributes.keys()[0], 'operator')
 
     def test_process_log_factory(self):

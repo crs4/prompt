@@ -70,8 +70,9 @@ class Activity(IdObject):
         return hash(self.name)
 
     def add_activity_instance(self, activity_instance):
-        self.activity_instances.append(activity_instance)
-        activity_instance.activity = self
+        if activity_instance not in self.activity_instances:
+            self.activity_instances.append(activity_instance)
+            activity_instance.activity = self
         return activity_instance
 
 
@@ -130,17 +131,17 @@ class ActivityInstance(IdObject):
         self.activity = None
         self.events = []
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            try:
-                for counter in xrange(len(self.events)):
-                    assert self.events[counter] == other.events[counter]
-            except AssertionError, e:
-                logging.debug('self %s ! = other %s', self, other)
-                return False
-            return True
-        else:
-            return False
+    # def __eq__(self, other):
+    #     if type(self) == type(other):
+    #         try:
+    #             for counter in xrange(len(self.events)):
+    #                 assert self.events[counter] == other.events[counter]
+    #         except AssertionError, e:
+    #             logging.debug('self %s ! = other %s', self, other)
+    #             return False
+    #         return True
+    #     else:
+    #         return False
 
     def add_event(self, event):
         self.events.append(event)
