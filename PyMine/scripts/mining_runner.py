@@ -11,9 +11,19 @@ SEQ = 'seq'
 
 
 def main(
-        log_path, mode, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
+        log_path,
+        mode,
+        dependency_thr,
+        bindings_thr,
+        rel_to_best,
+        self_loop_thr,
+        two_step_loop_thr,
+        long_dist_thr,
+        classifier
+):
     log = create_log_from_file(log_path)
-    classifier = Classifier(keys=['activity', 'activity_type'])
+    classifier_keys = classifier.split()
+    classifier = Classifier(keys=classifier_keys) if classifier_keys else Classifier()
     if mode == MAPRED:
         from pymine.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
         from pymine.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
@@ -55,6 +65,8 @@ if __name__ == '__main__':
     parser.add_argument('--ldt', type=float, default=None, help="long distance threshold")
     parser.add_argument('--rtb', type=float, default=0.1, help="relative to the best threshold")
     parser.add_argument('--tsl', type=float, default=None, help="two steps loop threshold")
+    parser.add_argument('-c', type=str, default="", help="classifiers, string of attributes space separated")
+
 
     args = parser.parse_args()
-    main(args.log_path, args.mode, args.dt, args.bt, args.rtb, args.slt, args.tsl, args.ldt)
+    main(args.log_path, args.mode, args.dt, args.bt, args.rtb, args.slt, args.tsl, args.ldt,args.c)
