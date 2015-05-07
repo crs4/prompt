@@ -46,7 +46,7 @@ class Classifier(object):
         if name:
             return self.sep.join(name)
         else:
-            return str(event.id)
+            return str(event.name)
 
 
 

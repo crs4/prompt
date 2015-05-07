@@ -41,6 +41,18 @@ class LogFactory(object):
         return Log(self.cases)
 
 
+def add_event_to_case(case, event_name):
+    activity = Activity(event_name)
+    case.process.add_activity(activity)
+    case.process.add_activity(activity)
+    activity_instance = ActivityInstance()
+    activity.add_activity_instance(activity_instance)
+    event = Event(name=event_name)
+    case.add_event(event)
+    activity_instance.add_event(event)
+    return event
+
+
 class CsvLogFactory(LogFactory):
 
     def __init__(self, input_filename=None, add_start_activity=False, add_end_activity=False, classifier=None):
@@ -81,7 +93,6 @@ class CsvLogFactory(LogFactory):
         resource = row[self.indexes['resource']] if 'resource' in self.indexes else None
         lifecycle = row[self.indexes['lifecycle']].lower() if 'lifecycle' in self.indexes else None
 
-
         label = None
         if self._classifier:
             if self._classifier.keys() in self.indexes:
@@ -90,15 +101,17 @@ class CsvLogFactory(LogFactory):
             if case_id not in self._cases:
 
                 if self.add_end_activity and self.cases:
-                    self.cases[-1].add_event(Event(FAKE_END))
+                    # self.cases[-1].add_event(Event(FAKE_END))
+                    add_event_to_case(self.cases[-1], FAKE_END)
 
                 case = Case(_id=case_id)
-                if self.add_start_activity:
-                    case.add_event(Event(FAKE_START))
                 self._cases[case_id] = case
 
                 self.cases.append(case)
                 process.add_case(case)
+                if self.add_start_activity:
+                    add_event_to_case(case, FAKE_START)
+
             else:
                 case = self._cases[case_id]
             activity = process.get_activity_by_name(activity_id)
@@ -165,9 +178,6 @@ class CsvLogFactory(LogFactory):
                         self.parse_row(row, self._process)
                     except csv.Error as e:
                         logger.error(e)
-
-            if self.add_end_activity and self.cases:
-                self.cases[-1].add_event(Event(FAKE_END))
 
     def create_log_from_file(self, input_filename):
         if input_filename:
@@ -247,7 +257,7 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
     return Log(process.cases)
 
 
-def create_log_from_file(file_path, add_start_activity=False, add_end_activity=False):
+def create_log_from_file(file_path, add_start_activity=True, add_end_activity=True):
 
     ext = file_path.split('.')[-1].lower()
     valid_ext = ('csv', 'xes', 'avro')
