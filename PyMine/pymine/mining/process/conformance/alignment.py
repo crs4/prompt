@@ -1,8 +1,9 @@
 from pymine.mining.process.network.graph import graph_factory
 from pymine.mining.process.network import UnexpectedEvent
-from pymine.mining.process.eventlog.log import ProcessLog
+from pymine.mining.process.eventlog.log import Log
 from pymine.mining.process.eventlog import Case
 import logging
+from pymine.mining.process.eventlog.log import Classifier
 logger = logging.getLogger('alignment')
 
 GRAPH_IMPL = 'nx'
@@ -45,7 +46,7 @@ class Move(object):
         return self.value == other.value
 
 
-def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
+def compute_optimal_alignment(case, net, cost_function=None, max_depth=30, classifier=None):
 
     net.rewind()  # TODO design a better api for network reset
 
@@ -152,9 +153,10 @@ def compute_optimal_alignment(case, net, cost_function=None, max_depth=30):
     return optimal_alignment
 
 
-def _worst_scenario_cost(case, cost_function, shortest_path):
+def _worst_scenario_cost(case, cost_function, shortest_path, classifier):
     worst_scenario_cost = 0.0
     for event in case.events:
+        event = classifier.get_event_name(event)
         worst_scenario_cost += cost_function(event, None)
     for node in shortest_path:
         worst_scenario_cost += cost_function(None, node.label)
@@ -162,25 +164,24 @@ def _worst_scenario_cost(case, cost_function, shortest_path):
     return worst_scenario_cost
 
 
-def _case_fitness(case, net, cost_function, shortest_path, max_depth):
-    optimal_aln = compute_optimal_alignment(case, net, cost_function, max_depth)
-    worst_scenario_cost = _worst_scenario_cost(case, cost_function, shortest_path)
+def _case_fitness(case, net, cost_function, shortest_path, max_depth, classifier):
+    optimal_aln = compute_optimal_alignment(case, net, cost_function, max_depth, classifier)
+    worst_scenario_cost = _worst_scenario_cost(case, cost_function, shortest_path, classifier)
     return optimal_aln, worst_scenario_cost
 
 
-def _log_fitness(log, net, cost_function, shortest_path, max_depth):
+def _log_fitness(log, net, cost_function, shortest_path, max_depth, classifier):
     total_cost = 0.0
     total_worst_scenario_cost = 0.0
     for case in log.cases:
         logger.debug('alignment for case %s', [e.name for e in case.events])
-        optimal_aln, worst_scenario_cost = _case_fitness(case, net, cost_function, shortest_path, max_depth)
-        logger.debug('optimal_aln %s for case %s', optimal_aln, [e.name for e in case.events])
+        optimal_aln, worst_scenario_cost = _case_fitness(case, net, cost_function, shortest_path, max_depth, classifier)
         total_cost += optimal_aln.cost
         total_worst_scenario_cost += worst_scenario_cost
     return 1 - total_cost/total_worst_scenario_cost
 
 
-def fitness(events_container, net, cost_function=None, max_depth=30):
+def fitness(events_container, net, cost_function=None, max_depth=30, classifier=None):
     """
     :param events_container: a :class:`pymine.mining.process.eventlog.log.ProcessLog`
         or :class:`pymine.mining.process.eventlog.Case` instance
@@ -193,11 +194,13 @@ def fitness(events_container, net, cost_function=None, max_depth=30):
     net.rewind()
     cost_function = cost_function or _default_cost_function
     cost, shortest_path = net.shortest_path()
-    if isinstance(events_container, ProcessLog):
-        return _log_fitness(events_container, net, cost_function, shortest_path, max_depth)
+    classifier = classifier or Classifier()
+    if isinstance(events_container, Log):
+        return _log_fitness(events_container, net, cost_function, shortest_path, max_depth, classifier)
 
     elif isinstance(events_container, Case):
-        optimal_aln, worst_scenario_cost = _case_fitness(events_container, net, cost_function, shortest_path, max_depth)
+        optimal_aln, worst_scenario_cost = _case_fitness(
+            events_container, net, cost_function, shortest_path, max_depth, classifier)
         return 1 - optimal_aln.cost/worst_scenario_cost
 
     else:

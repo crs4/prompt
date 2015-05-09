@@ -16,19 +16,11 @@ class Process(IdObject):
         """
         super(Process, self).__init__(_id)
         self._activities = {}
-        self.cases = []
+        self._cases = {}
 
-    # def __eq__(self, other):
-    #     if type(self) == type(other):
-    #         logging.debug('self.activities %s', [a.name for a in self.activities])
-    #         logging.debug('other.activities %s', [a.name for a in other.activities])
-    #         logging.debug('self.cases %s', self.cases)
-    #         logging.debug('other.cases %s', other.cases)
-    #
-    #         # return set(self.activities) == set(other.activities) and set(self.cases) == set(other.cases)
-    #         return set(self.activities) == set(other.activities)
-    #
-    #     return False
+    @property
+    def cases(self):
+        return self._cases.values()
 
     def add_activity(self, activity):
         if activity.name in self._activities:
@@ -47,9 +39,11 @@ class Process(IdObject):
 
     def add_case(self, case):
         case.process = self
-        self.cases.append(case)
+        self._cases[case.id] = case
         return case
 
+    def get_case_by_id(self, case_id):
+        return self._cases.get(case_id)
 
 class Activity(IdObject):
 
@@ -84,20 +78,20 @@ class Case(IdObject):
     def __init__(self, _id=None):
         super(Case, self).__init__(_id)
         self.process = None
-        self.activity_instances = []
+        self._activity_instances = {}
         self.events = []
 
+    def get_activity_instance_by_id(self, _id):
+        return self._activity_instances.get(_id)
+
     def add_activity_instance(self, activity_instance):
-        self.activity_instances.append(activity_instance)
+        self._activity_instances[activity_instance.id] = activity_instance
         activity_instance.case = self
         return activity_instance
 
     @property
-    def activity_list(self):
-        activities = []
-        for act_instance in self.activity_instances:
-            activities.append(act_instance.activity.name)
-        return activities
+    def activity_instances(self):
+        return self._activity_instances.values()
 
     def add_event(self, event):
         event.case = self
@@ -182,6 +176,9 @@ class Event(IdObject):
 
     def __str__(self):
         return "timestamp %s, resources %s" % (self.timestamp, self.resources)
+
+    def __getattr__(self, item):
+        return self.attributes.get(item)
 
 
 class Attribute(IdObject):

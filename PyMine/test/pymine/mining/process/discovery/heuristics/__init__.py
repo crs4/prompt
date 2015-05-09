@@ -122,7 +122,7 @@ class BackendTests(object):
 
     def test_pg_4_dataset(self):
         dataset_path = os.path.join(os.path.dirname(__file__), '../../../../../../dataset/pg_4_label_final_node.csv')
-        log = create_log_from_file(dataset_path)
+        log = create_log_from_file(dataset_path, False, False, False)
         miner = self.create_miner(log)
         cnet = miner.mine(long_distance_thr=1)
         a, b, c, d, e, f, g, h, z = [cnet.get_node_by_label(n) for n in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'z']]

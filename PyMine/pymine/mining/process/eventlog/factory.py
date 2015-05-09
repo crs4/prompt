@@ -1,9 +1,9 @@
 import csv
 import logging
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from mx.DateTime.Parser import DateTimeFromString
 
-from pymine.mining.process.eventlog.log import Log, LogInfo, ProcessLog
+from pymine.mining.process.eventlog.log import Log, LogInfo
 from pymine.mining.process.eventlog import *
 from pymine.mining.process.eventlog.exceptions import InvalidExtension
 import os
@@ -55,23 +55,25 @@ def add_event_to_case(case, event_name):
 
 class CsvLogFactory(LogFactory):
 
-    def __init__(self, input_filename=None, add_start_activity=False, add_end_activity=False, classifier=None):
+    def __init__(self, input_filename=None, add_start_activity=False, add_end_activity=False, create_process=False):
         super(CsvLogFactory, self).__init__()
         self.indexes = {}
-        self._cases = {}
+        self._cases = OrderedDict()
         self.activities = {}
         self.activity_instances = {}
         self._previous_case = None
         self.add_start_activity = add_start_activity
         self.add_end_activity = add_end_activity
-        self._classifier = classifier
-        self._process = Process()
         self._pending_activity_instances = defaultdict(lambda: defaultdict(list))
+        self.filename = input_filename
+        self._process = None if not create_process else Process()
         if input_filename:
-            self.parse_csv_file(input_filename=input_filename)
+            self.parse_csv_file(input_filename, create_process)
 
     def create_log(self):
-        return ProcessLog(self._process, cases=self.cases, classifier=self._classifier)
+        log = Log(cases=self._cases.values(), filename=self.filename)
+        log.process = self._process
+        return  log
 
     def parse_indexes(self, input_line, dialect):
         try:
@@ -93,76 +95,92 @@ class CsvLogFactory(LogFactory):
         resource = row[self.indexes['resource']] if 'resource' in self.indexes else None
         lifecycle = row[self.indexes['lifecycle']].lower() if 'lifecycle' in self.indexes else None
 
-        label = None
-        if self._classifier:
-            if self._classifier.keys() in self.indexes:
-                label = self._classifier.keys()
         if case_id and activity_id:
             if case_id not in self._cases:
-
-                if self.add_end_activity and self.cases:
-                    # self.cases[-1].add_event(Event(FAKE_END))
-                    add_event_to_case(self.cases[-1], FAKE_END)
-
-                case = Case(_id=case_id)
+                case = Case()
                 self._cases[case_id] = case
-
-                self.cases.append(case)
-                process.add_case(case)
-                if self.add_start_activity:
-                    add_event_to_case(case, FAKE_START)
-
             else:
-                case = self._cases[case_id]
-            activity = process.get_activity_by_name(activity_id)
-            if activity is None:
-                activity = Activity(activity_id)
-                process.add_activity(activity)
+                case = self._cases.values()[-1]
 
-            if activity_instance_id in self.activity_instances:
-                activity_instance = self.activity_instances[activity_instance_id]
-            else:
-                if not activity_instance_id:
-                    pending_activity_instances = self._pending_activity_instances[case_id]
-                    if lifecycle == LifeCycle.START or not pending_activity_instances[activity.name]:
-                        activity_instance = ActivityInstance()
-                        pending_activity_instances[activity.name].append(activity_instance)
-                    else:
-                        if pending_activity_instances[activity.name]:
-                            activity_instance = pending_activity_instances[activity.name][0]
+            if self.add_end_activity and self.cases:
+                # self.cases[-1].add_event(Event(FAKE_END))
+                self.cases[-1].add_event(Event(name=FAKE_END))
 
-                        else:
-                            activity_instance = ActivityInstance()
-
-                    if lifecycle == LifeCycle.END:
-                        pending_activity_instances[activity.name].remove(activity_instance)
-
-                else:
-                    activity_instance = ActivityInstance(_id=activity_instance_id)
-
-                self.activity_instances[activity_instance.id] = activity_instance
-                activity.add_activity_instance(activity_instance)
-                case.add_activity_instance(activity_instance)
-
-            if timestamp:
-                timestamp = DateTimeFromString(timestamp)
+            self.cases.append(case)
+            if self.add_start_activity:
+                case.add_event(Event(name=FAKE_START))
 
             attributes = {}
             for attribute, index in self.indexes.items():
                 if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
                     attributes[attribute] = row[index]
 
-            event = Event(
-                activity_instance=activity_instance,
-                name=activity_instance.activity.name,
-                timestamp=timestamp,
-                resources=resource,
-                attributes=attributes)
+            if timestamp:
+                timestamp = DateTimeFromString(timestamp)
 
+            event = Event(name=activity_id,timestamp=timestamp, resources=resource, attributes=attributes)
             case.add_event(event)
-            activity_instance.add_event(event)
 
-    def parse_csv_file(self, input_filename):
+            if process:
+                _add_event_to_process(
+                    self._process,
+                    case,
+                    self._pending_activity_instances,
+                    event
+                    )
+
+
+            #
+            # activity = process.get_activity_by_name(activity_id)
+            # if activity is None:
+            #     activity = Activity(activity_id)
+            #     process.add_activity(activity)
+            #
+            # if activity_instance_id in self.activity_instances:
+            #     activity_instance = self.activity_instances[activity_instance_id]
+            # else:
+            #     if not activity_instance_id:
+            #         pending_activity_instances = self._pending_activity_instances[case_id]
+            #         if lifecycle == LifeCycle.START or not pending_activity_instances[activity.name]:
+            #             activity_instance = ActivityInstance()
+            #             pending_activity_instances[activity.name].append(activity_instance)
+            #         else:
+            #             if pending_activity_instances[activity.name]:
+            #                 activity_instance = pending_activity_instances[activity.name][0]
+            #
+            #             else:
+            #                 activity_instance = ActivityInstance()
+            #
+            #         if lifecycle == LifeCycle.END:
+            #             pending_activity_instances[activity.name].remove(activity_instance)
+            #
+            #     else:
+            #         activity_instance = ActivityInstance(_id=activity_instance_id)
+            #
+            #     self.activity_instances[activity_instance.id] = activity_instance
+            #     activity.add_activity_instance(activity_instance)
+            #     case.add_activity_instance(activity_instance)
+            #
+            # if timestamp:
+            #     timestamp = DateTimeFromString(timestamp)
+            #
+            # attributes = {}
+            # for attribute, index in self.indexes.items():
+            #     if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
+            #         attributes[attribute] = row[index]
+            #
+            # event = Event(
+            #     activity_instance=activity_instance,
+            #     name=activity_instance.activity.name,
+            #     timestamp=timestamp,
+            #     resources=resource,
+            #     attributes=attributes)
+            #
+            # case.add_event(event)
+            # activity_instance.add_event(event)
+
+    def parse_csv_file(self, input_filename, create_process):
+        
         with open(input_filename, 'rbU') as csvfile:
             # Check if first line has the parameters definition
             first_line = csvfile.readline()
@@ -175,57 +193,47 @@ class CsvLogFactory(LogFactory):
             for row in reader:
                 if row:
                     try:
-                        self.parse_row(row, self._process)
+                        self.parse_row(row, create_process)
                     except csv.Error as e:
                         logger.error(e)
 
-    def create_log_from_file(self, input_filename):
+    def create_log_from_file(self, input_filename, create_process=False):
         if input_filename:
-            self.parse_csv_file(input_filename)
+            self.parse_csv_file(input_filename, create_process)
         return self.create_log()
 
-    def create_loginfo_from_file(self, input_filename=None):
-        if input_filename:
-            self.parse_csv_file(input_filename)
-        return self.create_loginfo()
+
+def create_log_from_csv(file_path, add_start_activity=False, add_end_activity=False, create_process=True):
+    return CsvLogFactory(file_path, add_start_activity, add_end_activity, create_process).create_log()
 
 
-def create_log_from_csv(file_path, add_start_activity=False, add_end_activity=False):
-    return CsvLogFactory(file_path, add_start_activity, add_end_activity).create_log()
-
-
-def create_process_log_from_list(cases):
-    process = Process()
+def create_process_log_from_list(cases, create_process=True):
+    case_objs = []
     for case in cases:
         case_obj = Case()
-        process.add_case(case_obj)
         for event_name in case:
-            activity = Activity(event_name)
-            activity_instance = ActivityInstance()
-            activity = process.add_activity(activity)
-            activity.add_actity_instance(activity_instance)
-
-            case_obj.add_activity_instance(activity)
-            case_obj.add_activity_instance(activity_instance)
-
-            event = Event(activity_instance=activity_instance, name=event_name)
-
+            event = Event(name=event_name)
             case_obj.add_event(event)
-            activity_instance.add_event(event)
-    return ProcessLog(process, process.cases)  # FIXME ProcessLog == Process...
+        case_objs.append(case_obj)
+
+    log = Log(case_objs)
+    if create_process:
+        process = build_process(log)
+        log.process = process
+    return log
 
 
-def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=True):
+def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=True, create_process=True):
     import xml.etree.ElementTree as ET
     ns = {'xes': 'http://www.xes-standard.org/'}
-
+    cases = []
     tree = ET.parse(file_path)
     xml_log = tree.getroot()
-    process = Process()
     for trace in xml_log.findall('xes:trace', ns):
-        case = process.add_case()
+        case = Case()
+        cases.append(case)
         if add_start_activity:
-            case.add_event(Event(FAKE_START))
+            case.add_event(Event(name=FAKE_START))
 
         for event in trace.findall('xes:event', ns):
             timestamp = None
@@ -252,12 +260,16 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
                 logger.warning('child %s should have at least concept:name and time:timestamp defined')
 
         if add_end_activity:
-            case.add_event(Event(FAKE_END))
+            case.add_event(Event(name=FAKE_END))
 
-    return Log(process.cases)
+    log = Log(cases)
+    if create_process:
+        process = build_process(log)
+        log.process = process
+    return log
 
 
-def create_log_from_file(file_path, add_start_activity=True, add_end_activity=True):
+def create_log_from_file(file_path, add_start_activity=True, add_end_activity=True, create_process=True):
 
     ext = file_path.split('.')[-1].lower()
     valid_ext = ('csv', 'xes', 'avro')
@@ -269,12 +281,68 @@ def create_log_from_file(file_path, add_start_activity=True, add_end_activity=Tr
     if ext not in valid_ext and not is_dir:
         raise InvalidExtension('Unknown extension %s. Valid ones: %s' % (ext, valid_ext))
     if ext == 'csv':
-        return create_log_from_csv(file_path, add_start_activity, add_end_activity)
+        return create_log_from_csv(file_path, add_start_activity, add_end_activity, create_process)
     elif ext == 'xes':
-        return create_log_from_xes(file_path,  add_start_activity, add_end_activity)
+        return create_log_from_xes(file_path,  add_start_activity, add_end_activity, create_process)
     elif ext == 'avro' or is_dir:
         from pymine.mining.process.eventlog.serializers.avro_serializer import deserialize_log_from_case_collection
         return deserialize_log_from_case_collection(file_path)
 
+
+def build_process(log):
+    process = Process()
+    pending_activity_instances = defaultdict(lambda: defaultdict(list))
+    for case in log.cases:
+        for e in case.events:
+            _add_event_to_process(
+                process,
+                case,
+                pending_activity_instances,
+                e
+        )
+    return process
+
+
+def _add_event_to_process(
+        process,
+        case,
+        pending_activity_instances,
+        event
+):
+    activity = process.get_activity_by_name(event.name)
+    if activity is None:
+        activity = Activity(event.name)
+        process.add_activity(activity)
+
+    process.add_case(case)
+
+    if event.activity_instance_id:
+        activity_instance = case.get_activity_instance_by_id(event.activity_instance_id) or \
+                            ActivityInstance(event.activity_instance_id)
+
+    else:
+        if event.lifecycle:
+            lifecycle = event.lifecycle.lower()
+
+            _pending_activity_instances = pending_activity_instances[case.id]
+            if lifecycle == LifeCycle.START or not _pending_activity_instances[activity.name]:
+                activity_instance = ActivityInstance()
+                _pending_activity_instances[activity.name].append(activity_instance)
+            else:
+                if _pending_activity_instances[activity.name]:
+                    activity_instance = _pending_activity_instances[activity.name][0]
+
+                else:
+                    activity_instance = ActivityInstance()
+
+            if lifecycle == LifeCycle.END:
+                _pending_activity_instances[activity.name].remove(activity_instance)
+
+        else:
+            activity_instance = ActivityInstance()
+
+    activity.add_activity_instance(activity_instance)
+    case.add_activity_instance(activity_instance)
+    activity_instance.add_event(event)
 
 

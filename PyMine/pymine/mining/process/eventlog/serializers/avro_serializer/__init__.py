@@ -2,7 +2,7 @@ import avro.schema
 from avro.datafile import DataFileWriter, DataFileReader
 from avro.io import DatumWriter, DatumReader
 import pymine.mining.process.eventlog as el
-from pymine.mining.process.eventlog.log import ProcessLog, AvroProcessLog
+from pymine.mining.process.eventlog.log import Log, AvroLog
 from mx.DateTime.Parser import DateTimeFromString
 import os
 import collections
@@ -86,7 +86,7 @@ def convert_avro_dict_to_obj(avro_obj, schema):
         for case in avro_obj["cases"]:
             case_obj = convert_avro_dict_to_obj(case, "Case")
             process.add_case(case_obj)
-        obj = ProcessLog(process, process.cases)
+        obj = Log(process, process.cases)
 
     elif schema == 'Case':
         obj = el.Case(_id=avro_obj["id"])
@@ -107,7 +107,7 @@ def serialize_log_as_case_collection(log, dest_path):
 
 def deserialize_log_from_case_collection(path):
     process = el.Process()
-    return AvroProcessLog(process, filename=path)
+    return AvroLog(process, filename=path)
 
 class _AvroIterator(object):
 

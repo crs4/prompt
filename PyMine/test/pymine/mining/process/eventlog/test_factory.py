@@ -97,7 +97,7 @@ class TestFactory(unittest.TestCase):
     def test_create_log(self):
         # test_log = self.create_log_from_test_data()
         file_path = self.create_csv_test_file()
-        log_factory = CsvLogFactory(file_path)
+        log_factory = CsvLogFactory(file_path, create_process=True)
         log = log_factory.create_log()
         #self.assertEqual(len(log.processes), 1)
 
