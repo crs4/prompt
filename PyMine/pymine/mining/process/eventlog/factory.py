@@ -73,7 +73,7 @@ class CsvLogFactory(LogFactory):
     def create_log(self):
         log = Log(cases=self._cases.values(), filename=self.filename)
         log.process = self._process
-        return  log
+        return log
 
     def parse_indexes(self, input_line, dialect):
         try:
@@ -98,22 +98,23 @@ class CsvLogFactory(LogFactory):
         if case_id and activity_id:
             if case_id not in self._cases:
                 case = Case()
+                if self.add_start_activity:
+                    case.add_event(Event(name=FAKE_START))
+
+                if self.add_end_activity and self._cases.values():
+                    # self.cases[-1].add_event(Event(FAKE_END))
+                    self._cases.values()[-1].add_event(Event(name=FAKE_END))
                 self._cases[case_id] = case
+
             else:
                 case = self._cases.values()[-1]
 
-            if self.add_end_activity and self.cases:
-                # self.cases[-1].add_event(Event(FAKE_END))
-                self.cases[-1].add_event(Event(name=FAKE_END))
-
-            self.cases.append(case)
-            if self.add_start_activity:
-                case.add_event(Event(name=FAKE_START))
+            # self.cases.append(case)
 
             attributes = {}
             for attribute, index in self.indexes.items():
-                if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
-                    attributes[attribute] = row[index]
+                # if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
+                attributes[attribute] = row[index]
 
             if timestamp:
                 timestamp = DateTimeFromString(timestamp)
@@ -196,6 +197,10 @@ class CsvLogFactory(LogFactory):
                         self.parse_row(row, create_process)
                     except csv.Error as e:
                         logger.error(e)
+
+        if self.add_end_activity and self._cases.values():
+            # self.cases[-1].add_event(Event(FAKE_END))
+           self._cases.values()[-1].add_event(Event(name=FAKE_END))
 
     def create_log_from_file(self, input_filename, create_process=False):
         if input_filename:

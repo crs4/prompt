@@ -23,8 +23,9 @@ class BaseLog(object):
 
 
 class Classifier(object):
+    DEFAULT_SEP = '::'
 
-    def __init__(self, name=None, sep='::', keys=None):
+    def __init__(self, name=None, sep=DEFAULT_SEP, keys=None):
         self._name = name
         self._keys = keys or ['name']
         self.sep = sep
@@ -43,10 +44,16 @@ class Classifier(object):
     def get_event_name(self, event):
         name = []
         for k in self._keys:
-            if hasattr(event, k):
-                name.append(str(getattr(event, k)))
-            elif k in event.attributes:
+            if k in event.attributes:
                 name.append(event.attributes[k])
+            # if hasattr(event, k):
+            #     v = getattr(event, k)
+            #     if v:
+            #         name.append(str(v))
+            # elif k in event.attributes:
+            #     v = event.attributes[k]
+            #     if v:
+            #         name.append(v)
         if name:
             return self.sep.join(name)
         else:
