@@ -629,3 +629,28 @@ def get_cnet_from_json(json):
     except Exception, e:
         logger.error("An error occurred while trying to create a Network from a json")
         logger.error(e.message)
+
+
+def precision(cnet1, cnet2):
+    """
+    c1 & c2/c2
+    :param cnet1:
+    :param cnet2:
+    :return:
+    """
+    return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet2.arcs))
+
+
+def recall(cnet1, cnet2):
+    """
+    c1 union c2/c1
+    :param cnet1:
+    :param cnet2:
+    :return:
+    """
+
+    return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet1.arcs))
+
+
+def f1(cnet1, cnet2):
+    return 2.0*precision(cnet1, cnet2) * recall(cnet1, cnet2)/(precision(cnet1, cnet2) + recall(cnet1, cnet2))

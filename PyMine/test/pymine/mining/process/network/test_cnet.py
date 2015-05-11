@@ -1,5 +1,5 @@
 import unittest
-from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, OutputBinding
+from pymine.mining.process.network.cnet import CNet, CNode, InputBinding, OutputBinding, precision, recall, f1
 import pymine.mining.process.network
 from pymine.mining.process.network.graph import PathDoesNotExist
 import logging
@@ -27,6 +27,17 @@ def _create_cnet():
     cnet.add_input_binding(e, {d})
     return cnet, a, b, c, d, e
 
+
+def _create_linear_cnet():
+    cnet = CNet()
+    a, b, c = cnet.add_nodes('a', 'b', 'c',)
+    cnet.add_output_binding(a, {b})
+    cnet.add_input_binding(b, {a})
+
+    cnet.add_output_binding(b, {c})
+    cnet.add_input_binding(c, {b})
+
+    return cnet, a, b, c
 
 def _create_loop_cnet():
     loop_net = CNet()
@@ -599,6 +610,20 @@ class CNetTestCase(unittest.TestCase):
         logger.debug('replay %s', replay)
         self.assertTrue(replay[0])
 
+    def test_precision_recall_f1(self):
+        cnet, a, b, c = _create_linear_cnet()
+        self.assertEqual(precision(cnet, cnet), 1)
+        self.assertEqual(recall(cnet, cnet), 1)
+        self.assertEqual(f1(cnet, cnet), 1)
+
+    def test_precision_recall_f1_2(self):
+        cnet, a, b, c = _create_linear_cnet()
+        cnet2, a, b, c = _create_linear_cnet()
+        cnet2.add_output_binding(b, {b})
+        cnet2.add_input_binding(b, {b})
+        self.assertEqual(precision(cnet, cnet2), 2.0/3)
+        self.assertEqual(recall(cnet, cnet2), 1)
+        self.assertEqual(f1(cnet, cnet2), 2.0*2.0/3*1/(2.0/3 + 1))
 
 if __name__ == '__main__':
     unittest.main()
