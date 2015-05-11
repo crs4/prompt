@@ -1,8 +1,11 @@
 import unittest
 
 from pymine.mining.process.conformance import replay_case, simple_fitness
-from pymine.mining.process.eventlog.factory import create_process_log_from_list
+from pymine.mining.process.eventlog.factory import create_process_log_from_list, create_log_from_file
 from test.pymine.mining.process.network.test_cnet import _create_cnet
+from pymine.mining.process.network.cnet import CNet
+from pymine.mining.process.eventlog.log import Classifier
+import os
 
 
 class ConformanceTestCase(unittest.TestCase):
@@ -43,6 +46,26 @@ class ConformanceTestCase(unittest.TestCase):
         cnet, a, b, c, d, e = _create_cnet()
         fitness_result = simple_fitness(self.half_correct_log, cnet)
         self.assertEqual(fitness_result.fitness, 0.5)
+
+    def test_fitness_with_classfier(self):
+        cnet = CNet()
+        sep = Classifier.DEFAULT_SEP
+        a1_start = cnet.add_node('A1%sSTART' % sep)
+        a1_end = cnet.add_node('A1%sEND' % sep)
+        a2_end = cnet.add_node('A2%sEND' % sep)
+
+        cnet.add_output_binding(a1_start, {a1_end})
+
+        cnet.add_input_binding(a1_end, {a1_start})
+        cnet.add_output_binding(a1_end, {a2_end})
+
+        cnet.add_input_binding(a2_end, {a1_end})
+        log_path = os.path.join(os.path.dirname(__file__), '../../../../../dataset/lifecycle.csv')
+
+        log = create_log_from_file(log_path, False, False, False)
+        cl = Classifier(keys=['activity', 'lifecycle'])
+        fitness_result = simple_fitness(log, cnet, cl)
+        self.assertEqual(fitness_result.fitness, 1)
 
 
 

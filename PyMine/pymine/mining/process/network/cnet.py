@@ -638,8 +638,10 @@ def precision(cnet1, cnet2):
     :param cnet2:
     :return:
     """
-    return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet2.arcs))
-
+    # return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet2.arcs))
+    c1 = {(a.start_node.label, a.end_node.label) for a in cnet1.arcs}
+    c2 = {(a.start_node.label, a.end_node.label) for a in cnet2.arcs}
+    return float(len(set(c1) & set(c2)))/len(set(c2))
 
 def recall(cnet1, cnet2):
     """
@@ -648,8 +650,10 @@ def recall(cnet1, cnet2):
     :param cnet2:
     :return:
     """
-
-    return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet1.arcs))
+    # return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet1.arcs))
+    c1 = {(a.start_node.label, a.end_node.label) for a in cnet1.arcs}
+    c2 = {(a.start_node.label, a.end_node.label) for a in cnet2.arcs}
+    return float(len(set(c1) & set(c2)))/len(set(c1))
 
 
 def f1(cnet1, cnet2):

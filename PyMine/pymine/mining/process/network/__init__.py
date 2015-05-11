@@ -117,9 +117,9 @@ class Node(BaseElement):
     def __eq__(self, other):
         return self.label == other.label
 
-    def __hash__(self):
-        return hash(self.label)
-
+    # def __hash__(self):
+    #     return hash(self.label)
+    #
 
 class Network(LabeledObject):
     def __init__(self, label=None):
