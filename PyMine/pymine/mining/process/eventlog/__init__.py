@@ -4,7 +4,7 @@ import mx.DateTime as dt
 
 class IdObject(object):
     def __init__(self, _id=None):
-        self.id = _id or uuid.uuid4()
+        self.id = _id or str(uuid.uuid4())
 
 
 class Process(IdObject):
