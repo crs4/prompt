@@ -139,6 +139,8 @@ class CNet(DependencyGraph):
             node.frequency = 0
         for binding in self.bindings:
             binding.frequency = 0
+        for arc in self.arcs:
+            arc.frequency = 0
 
     def shortest_path(self, start_node=None, end_node=None, max_level=30):
         """
@@ -435,6 +437,9 @@ class CNet(DependencyGraph):
             input_binding_completed.frequency += 1
 
             for input_node in input_binding_completed.node_set:
+                arc = self.get_arc_by_nodes(input_node, event_cnode)
+                arc.frequency += 1
+
                 if input_node.has_shared_output_bindings(event_cnode):
                     if input_node not in self._pending_splits:
                         self._pending_splits.append(input_node)
