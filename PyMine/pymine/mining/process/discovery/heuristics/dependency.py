@@ -156,7 +156,7 @@ class DependencyMiner(object):
         for l, v in self.loop.items():
             if v >= self_loop_thr:
                 node = cnet.get_node_by_label(l)
-                cnet.add_arc(node, node, frequency=self.precede_matrix[l][l])
+                cnet.add_arc(node, node, frequency=self.precede_matrix[l][l], dependency=v)
                 self.self_loop.append(node)
 
         for event in self.events:
