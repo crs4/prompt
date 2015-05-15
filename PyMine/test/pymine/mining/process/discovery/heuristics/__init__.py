@@ -28,6 +28,8 @@ class BackendTests(object):
         self.assertEqual(get_binding_set(a.output_bindings), {frozenset({b, c}), frozenset({d})})
         self.assertEqual(get_binding_set(e.input_bindings), {frozenset({b, c}), frozenset({d})})
 
+        self.assertEqual(len(cnet.arcs), 6)
+
         self.assertEqual(a.frequency, 3)
         self.assertEqual(b.frequency, 2)
         self.assertEqual(c.frequency, 2)
