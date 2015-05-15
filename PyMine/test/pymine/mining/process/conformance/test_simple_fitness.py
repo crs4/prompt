@@ -27,6 +27,32 @@ class ConformanceTestCase(unittest.TestCase):
         result, obligations, unknown = replay_case(self.correct_log.cases[0], cnet)
         self.assertTrue(result)
         self.assertEqual(len(obligations), 0)
+        self.assertEqual(a.frequency, 1)
+        self.assertEqual(b.frequency, 1)
+        self.assertEqual(c.frequency, 1)
+        self.assertEqual(d.frequency, 0)
+        self.assertEqual(e.frequency, 1)
+
+        self.assertEqual(cnet.get_arc_by_nodes(a,b).frequency, 1)
+        self.assertEqual(cnet.get_arc_by_nodes(a,c).frequency, 1)
+        self.assertEqual(cnet.get_arc_by_nodes(a,d).frequency, 0)
+        self.assertEqual(cnet.get_arc_by_nodes(b,e).frequency, 1)
+        self.assertEqual(cnet.get_arc_by_nodes(c,e).frequency, 1)
+
+        result, obligations, unknown = replay_case(self.correct_log.cases[0], cnet)
+
+        self.assertEqual(a.frequency, 2)
+        self.assertEqual(b.frequency, 2)
+        self.assertEqual(c.frequency, 2)
+        self.assertEqual(d.frequency, 0)
+        self.assertEqual(e.frequency, 2)
+
+        self.assertEqual(cnet.get_arc_by_nodes(a,b).frequency, 2)
+        self.assertEqual(cnet.get_arc_by_nodes(a,c).frequency, 2)
+        self.assertEqual(cnet.get_arc_by_nodes(a,d).frequency, 0)
+        self.assertEqual(cnet.get_arc_by_nodes(b,e).frequency, 2)
+        self.assertEqual(cnet.get_arc_by_nodes(c,e).frequency, 2)
+
 
     def test_replay_wrong_case_on_cnet(self):
         cnet, a, b, c, d, e = _create_cnet()
