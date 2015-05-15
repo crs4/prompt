@@ -30,6 +30,9 @@ class DependencyGraph(Network):
         self.end_node = None
 
     def add_arc(self, node_a, node_b, label=None, frequency=None, dependency=None, attrs=None):
+        existing_arc = self.get_arc_by_nodes(node_a, node_b)
+        if existing_arc:
+            return existing_arc
         arc = DArc(node_a, node_b, label, frequency, dependency, attrs)
         return self._add_arc(arc, node_a, node_b)
 
