@@ -1,15 +1,15 @@
-import sys
 from collections import defaultdict
-import os
 import pydoop.mapreduce.api as api
 import pydoop.mapreduce.pipes as pp
 from pymine.mining.process.discovery.heuristics.dependency import DependencyMiner
 from pymine.mining.process.discovery.heuristics import Matrix
-from pydoop.avrolib import AvroContext
+from pymine.mining.process.discovery.heuristics.mapred import CLASSIFIER_FILENAME
+from pymine.mining.mapred import deserialize_obj
 from pymine.mining.process.eventlog.serializers.avro_serializer import convert_avro_dict_to_obj
-SEPARATOR = '->'
+from pydoop.avrolib import AvroContext
 import logging
 logger = logging.getLogger("mapred")
+SEPARATOR = '->'
 
 
 class Mapper(api.Mapper):
@@ -17,6 +17,8 @@ class Mapper(api.Mapper):
     def __init__(self, context):
         super(Mapper, self).__init__(context)
         context.setStatus("initializing mapper")
+        self.classifier = deserialize_obj(context.job_conf.get(CLASSIFIER_FILENAME))
+
 
     def map(self, context):
         case = convert_avro_dict_to_obj(context.value, 'Case')
@@ -30,7 +32,14 @@ class Mapper(api.Mapper):
         start_events = set()
         end_events = set()
         DependencyMiner.compute_precede_matrix_by_case(
-            case, events_freq, mtrx['precede'], mtrx['two_step_loop'], start_events, end_events, mtrx['long_distance'])
+            case,
+            self.classifier,
+            events_freq, mtrx['precede'],
+            mtrx['two_step_loop'],
+            start_events,
+            end_events,
+            mtrx['long_distance']
+        )
 
         events = [e.name for e in case.events]
         set_events = set(events)
