@@ -71,7 +71,7 @@ class CsvLogFactory(LogFactory):
             self.parse_csv_file(input_filename, create_process)
 
     def create_log(self):
-        log = Log(cases=self._cases.values(), filename=self.filename)
+        log = Log(cases=self.cases, filename=self.filename)
         log.process = self._process
         return log
 
@@ -85,41 +85,37 @@ class CsvLogFactory(LogFactory):
         except Exception, e:
             logger.error("An error occurred while parsing the field names: "+str(e))
 
-    def parse_row(self, row, process):
+    def parse_row(self, row, process, previous_case=None):
         logger.debug('row %s', row)
 
-        case_id = row[self.indexes['case_id']] if 'case_id' in self.indexes else None
-        timestamp = row[self.indexes['timestamp']] if 'timestamp' in self.indexes else None
-        activity_id = row[self.indexes['activity']] if 'activity' in self.indexes else None
-        activity_instance_id = row[self.indexes['activity_instance']] if 'activity_instance' in self.indexes else None
-        resource = row[self.indexes['resource']] if 'resource' in self.indexes else None
-        lifecycle = row[self.indexes['lifecycle']].lower() if 'lifecycle' in self.indexes else None
+        case_id = row.get('case_id')
+        timestamp = row.get('timestamp')
+        activity_id = row.get('activity')
+        activity_instance_id = row.get('activity_instance')
+        resource = row.get('resource')
+        lifecycle = row.get('lifecycle')
 
         if case_id and activity_id:
-            if case_id not in self._cases:
-                case = Case()
+            if previous_case is not None and case_id == previous_case.id:
+                case = previous_case
+            else:
+                case = Case(_id=case_id)
+                self.cases.append(case)
                 if self.add_start_activity:
                     case.add_event(Event(name=FAKE_START))
+                if previous_case is not None and self.add_end_activity:
+                    previous_case.add_event(Event(name=FAKE_END))
 
-                if self.add_end_activity and self._cases.values():
-                    # self.cases[-1].add_event(Event(FAKE_END))
-                    self._cases.values()[-1].add_event(Event(name=FAKE_END))
-                self._cases[case_id] = case
-
-            else:
-                case = self._cases.values()[-1]
-
-            # self.cases.append(case)
-
-            attributes = {}
-            for attribute, index in self.indexes.items():
-                # if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
-                attributes[attribute] = row[index]
+            # if len(case.events) > 0:
+            #     previous_event = case.events[-1]
+            #     if previous_event.attributes == row:
+            #         print 'skipping duplicate event', row
+            #         return
 
             if timestamp:
                 timestamp = DateTimeFromString(timestamp)
 
-            event = Event(name=activity_id,timestamp=timestamp, resources=resource, attributes=attributes)
+            event = Event(name=activity_id,timestamp=timestamp, resources=resource, attributes=row)
             case.add_event(event)
 
             if process:
@@ -129,56 +125,7 @@ class CsvLogFactory(LogFactory):
                     self._pending_activity_instances,
                     event
                     )
-
-
-            #
-            # activity = process.get_activity_by_name(activity_id)
-            # if activity is None:
-            #     activity = Activity(activity_id)
-            #     process.add_activity(activity)
-            #
-            # if activity_instance_id in self.activity_instances:
-            #     activity_instance = self.activity_instances[activity_instance_id]
-            # else:
-            #     if not activity_instance_id:
-            #         pending_activity_instances = self._pending_activity_instances[case_id]
-            #         if lifecycle == LifeCycle.START or not pending_activity_instances[activity.name]:
-            #             activity_instance = ActivityInstance()
-            #             pending_activity_instances[activity.name].append(activity_instance)
-            #         else:
-            #             if pending_activity_instances[activity.name]:
-            #                 activity_instance = pending_activity_instances[activity.name][0]
-            #
-            #             else:
-            #                 activity_instance = ActivityInstance()
-            #
-            #         if lifecycle == LifeCycle.END:
-            #             pending_activity_instances[activity.name].remove(activity_instance)
-            #
-            #     else:
-            #         activity_instance = ActivityInstance(_id=activity_instance_id)
-            #
-            #     self.activity_instances[activity_instance.id] = activity_instance
-            #     activity.add_activity_instance(activity_instance)
-            #     case.add_activity_instance(activity_instance)
-            #
-            # if timestamp:
-            #     timestamp = DateTimeFromString(timestamp)
-            #
-            # attributes = {}
-            # for attribute, index in self.indexes.items():
-            #     if attribute not in ('case_id', 'timestamp', 'activity', 'resource', 'activity_instance'):
-            #         attributes[attribute] = row[index]
-            #
-            # event = Event(
-            #     activity_instance=activity_instance,
-            #     name=activity_instance.activity.name,
-            #     timestamp=timestamp,
-            #     resources=resource,
-            #     attributes=attributes)
-            #
-            # case.add_event(event)
-            # activity_instance.add_event(event)
+            return case
 
     def parse_csv_file(self, input_filename, create_process):
         
@@ -186,21 +133,23 @@ class CsvLogFactory(LogFactory):
             # Check if first line has the parameters definition
             first_line = csvfile.readline()
             dialect = csv.Sniffer().sniff(first_line)
-            self.parse_indexes(first_line, dialect)
-            # read the events data
-            csvfile.seek(len(first_line))
-            reader = csv.reader(csvfile, dialect)
-
+            csvfile.seek(0)
+            # self.parse_indexes(first_line, dialect)
+            # # read the events data
+            # csvfile.seek(len(first_line))
+            # reader = csv.reader(csvfile, dialect)
+            reader = csv.DictReader(csvfile, dialect=dialect)
+            previous_case = None
             for row in reader:
                 if row:
                     try:
-                        self.parse_row(row, create_process)
+                        previous_case = self.parse_row(row, create_process, previous_case)
                     except csv.Error as e:
                         logger.error(e)
 
-        if self.add_end_activity and self._cases.values():
+        if self.add_end_activity and self.cases:
             # self.cases[-1].add_event(Event(FAKE_END))
-           self._cases.values()[-1].add_event(Event(name=FAKE_END))
+            self.cases[-1].add_event(Event(name=FAKE_END))
 
     def create_log_from_file(self, input_filename, create_process=False):
         if input_filename:
