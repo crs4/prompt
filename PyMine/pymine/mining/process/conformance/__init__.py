@@ -1,14 +1,18 @@
-def replay_case(case, net):
+from pymine.mining.process.eventlog.log import Classifier
+
+
+def replay_case(case, net, classifier=None):
     """
     :param case: a :class:`pymine.mining.process.eventlog.Case` instance
     :param net: a :class:`pymine.mining.process.network.Network` instance (or a subclass of it)
     :return: a tuple containing: a boolean telling if the replay has been completed successfully,
         a list of obligations and a list of unexpected events.
     """
-    return net.replay_sequence([event.name for event in case.events])
+    classifier = classifier or Classifier()
+    return net.replay_sequence([classifier.get_event_name(event) for event in case.events])
 
 
-def simple_fitness(process_log, net):
+def simple_fitness(process_log, net, classifier=None, aggregate=True):
     """
     Compute the fitness on the given log and net as the fraction of case replayed successfully to the cardinality of log
 
@@ -18,7 +22,7 @@ def simple_fitness(process_log, net):
     """
     result = FitnessResult(process_log, net)
     for case in process_log.cases:
-        result_case = replay_case(case, net)
+        result_case = replay_case(case, net, classifier)
         result.add_replay_result(case, result_case)
 
     return result

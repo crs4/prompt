@@ -65,6 +65,12 @@ class Arc(BaseElement):
     def __str__(self):
         return self.label or "%s->%s" % (self.start_node.label, self.end_node.label)
 
+    def __eq__(self, other):
+        return self.start_node == other.start_node and self.end_node == other.end_node
+
+    def __hash__(self):
+        return hash((self.start_node, self.end_node))
+
 
 class Node(BaseElement):
     def __init__(self, label, net, frequency=None, attrs=None):
@@ -108,6 +114,12 @@ class Node(BaseElement):
     def is_join(self):
         return len(self.input_nodes) > 1
 
+    def __eq__(self, other):
+        return self.label == other.label
+
+    # def __hash__(self):
+    #     return hash(self.label)
+    #
 
 class Network(LabeledObject):
     def __init__(self, label=None):

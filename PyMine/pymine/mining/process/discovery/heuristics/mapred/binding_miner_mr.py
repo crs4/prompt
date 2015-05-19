@@ -1,12 +1,15 @@
 from pymine.mining.process.discovery.heuristics import Matrix
 import pymine.mining.process.discovery.heuristics.binding_miner as bm
-from pymine.mining.mapred import MRLauncher, create_unique_filename, serialize_obj
-import pickle
-import pydoop.hdfs as hdfs
+from pymine.mining.mapred import MRLauncher, serialize_obj
+from pymine.mining.process.discovery.heuristics.mapred import CLASSIFIER_FILENAME
 import os
 
 
 class BindingMiner(bm.BindingMiner, MRLauncher):
+    def __init__(self, log, classifier=None):
+        bm.BindingMiner.__init__(self, log, classifier)
+        MRLauncher.__init__(self)
+
     CNET_FILENAME = 'cnet_file'
 
     def mine(self, cnet, thr):
@@ -14,6 +17,7 @@ class BindingMiner(bm.BindingMiner, MRLauncher):
         input_bindings = Matrix()
 
         cnet_filename = serialize_obj(cnet, 'cnet')
+        classifier_filename = serialize_obj(self.classifier, 'classifier')
 
         cwd = os.path.dirname(__file__)
         output_dir_prefix = "bm_output"
@@ -23,7 +27,11 @@ class BindingMiner(bm.BindingMiner, MRLauncher):
                             os.path.join(cwd, 'bindings_mr.py'),
                             "bindings_mr",
                             output_dir_prefix,
-                            d_kwargs={BindingMiner.CNET_FILENAME: cnet_filename})
+                            d_kwargs={
+                                BindingMiner.CNET_FILENAME: cnet_filename,
+                                CLASSIFIER_FILENAME: classifier_filename
+
+                            })
 
         for avro_obj in self.avro_outputs:
             if avro_obj["type"] == 'input':

@@ -139,6 +139,8 @@ class CNet(DependencyGraph):
             node.frequency = 0
         for binding in self.bindings:
             binding.frequency = 0
+        for arc in self.arcs:
+            arc.frequency = 0
 
     def shortest_path(self, start_node=None, end_node=None, max_level=30):
         """
@@ -435,6 +437,9 @@ class CNet(DependencyGraph):
             input_binding_completed.frequency += 1
 
             for input_node in input_binding_completed.node_set:
+                arc = self.get_arc_by_nodes(input_node, event_cnode)
+                arc.frequency += 1
+
                 if input_node.has_shared_output_bindings(event_cnode):
                     if input_node not in self._pending_splits:
                         self._pending_splits.append(input_node)
@@ -629,3 +634,32 @@ def get_cnet_from_json(json):
     except Exception, e:
         logger.error("An error occurred while trying to create a Network from a json")
         logger.error(e.message)
+
+
+def precision(cnet1, cnet2):
+    """
+    c1 & c2/c2
+    :param cnet1:
+    :param cnet2:
+    :return:
+    """
+    # return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet2.arcs))
+    c1 = {(a.start_node.label, a.end_node.label) for a in cnet1.arcs}
+    c2 = {(a.start_node.label, a.end_node.label) for a in cnet2.arcs}
+    return float(len(set(c1) & set(c2)))/len(set(c2))
+
+def recall(cnet1, cnet2):
+    """
+    c1 union c2/c1
+    :param cnet1:
+    :param cnet2:
+    :return:
+    """
+    # return float(len(set(cnet1.arcs) & set(cnet2.arcs)))/len(set(cnet1.arcs))
+    c1 = {(a.start_node.label, a.end_node.label) for a in cnet1.arcs}
+    c2 = {(a.start_node.label, a.end_node.label) for a in cnet2.arcs}
+    return float(len(set(c1) & set(c2)))/len(set(c1))
+
+
+def f1(cnet1, cnet2):
+    return 2.0*precision(cnet1, cnet2) * recall(cnet1, cnet2)/(precision(cnet1, cnet2) + recall(cnet1, cnet2))

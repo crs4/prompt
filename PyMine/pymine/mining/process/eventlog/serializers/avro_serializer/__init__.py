@@ -2,7 +2,7 @@ import avro.schema
 from avro.datafile import DataFileWriter, DataFileReader
 from avro.io import DatumWriter, DatumReader
 import pymine.mining.process.eventlog as el
-from pymine.mining.process.eventlog.log import ProcessLog, AvroProcessLog
+from pymine.mining.process.eventlog.log import Log, AvroLog
 from mx.DateTime.Parser import DateTimeFromString
 import os
 import collections
@@ -60,7 +60,7 @@ def convert_obj_to_avro_dict(obj):
     if cls_name == el.Case:
         return {"id": str(obj.id), "events": [convert_obj_to_avro_dict(e) for e in obj.events]}
     elif cls_name == el.Event:
-        return {"id": str(obj.id), "activity_name": obj.activity_name, "timestamp": str(obj.timestamp)}
+        return {"id": str(obj.id), "activity_name": obj.name, "timestamp": str(obj.timestamp)}
 
 
 def serialize(objs, dest_path):
@@ -86,7 +86,7 @@ def convert_avro_dict_to_obj(avro_obj, schema):
         for case in avro_obj["cases"]:
             case_obj = convert_avro_dict_to_obj(case, "Case")
             process.add_case(case_obj)
-        obj = ProcessLog(process, process.cases)
+        obj = Log(process, process.cases)
 
     elif schema == 'Case':
         obj = el.Case(_id=avro_obj["id"])
@@ -94,7 +94,10 @@ def convert_avro_dict_to_obj(avro_obj, schema):
             obj.add_event(convert_avro_dict_to_obj(event, "Event"))
 
     elif schema == 'Event':
-        obj = el.Event(avro_obj["activity_name"], DateTimeFromString(avro_obj['timestamp']), _id=str(avro_obj["id"]))
+        obj = el.Event(
+            name=avro_obj["activity_name"],
+            timestamp=DateTimeFromString(avro_obj['timestamp']),
+            _id=str(avro_obj["id"]))
     else:
         raise InvalidSchema("invalid schema %s" % schema)
 
@@ -107,7 +110,7 @@ def serialize_log_as_case_collection(log, dest_path):
 
 def deserialize_log_from_case_collection(path):
     process = el.Process()
-    return AvroProcessLog(process, filename=path)
+    return AvroLog(process, filename=path)
 
 class _AvroIterator(object):
 

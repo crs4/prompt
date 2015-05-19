@@ -11,14 +11,19 @@ import pickle
 
 def check_log_serilization(log):
     log_filename = log.filename
-    serialized = False
-    if log.filename is None or not log.filename.startswith('hdfs://'):
+    moved_on_hdfs = False
+    # if log.filename is None or not log.filename.startswith('hdfs://'):
+
+    if log.filename is None or not log.filename.split('.')[-1] == 'avro':
         # input_filename = 'hdfs:///user/%s/log.avro' % os.environ['USER']
         log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'], create_unique_filename(ext='avro'))
         serialize_log_as_case_collection(log, log_filename)
-        serialized = True
-
-    return log_filename, serialized
+        moved_on_hdfs = True
+    elif not log.filename.startswith('hdfs://'):
+        log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  os.path.basename(log.filename))
+        hdfs.put(log.filename, log_filename)
+        moved_on_hdfs = True
+    return log_filename, moved_on_hdfs
 
 
 def create_unique_filename(prefix=None, ext=None):

@@ -1,19 +1,26 @@
 import pymine.mining.process.discovery.heuristics.dependency as dp
-from pymine.mining.mapred import MRLauncher
+from pymine.mining.process.discovery.heuristics.mapred import CLASSIFIER_FILENAME
+from pymine.mining.mapred import MRLauncher, serialize_obj
 import os
 
 
 class DependencyMiner(dp.DependencyMiner, MRLauncher):
+    def __init__(self, log, classifier=None):
+        dp.DependencyMiner.__init__(self, log, classifier)
+        MRLauncher.__init__(self)
 
     def _compute_precede_matrix(self):
         cwd = os.path.dirname(__file__)
         output_dir_prefix = "dm_output"
+        classifier_filename = serialize_obj(self.classifier, 'classifier')
 
         self.run_mapred_job(self.log,
                             os.path.join(cwd, 'arc_info.avsc'),
                             os.path.join(cwd, 'arc_dep_mr.py'),
                             "arc_dep_mr",
-                            output_dir_prefix)
+                            output_dir_prefix,
+                            d_kwargs={CLASSIFIER_FILENAME: classifier_filename}
+                            )
 
         matrices = {
             'precede': self.precede_matrix,

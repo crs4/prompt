@@ -4,17 +4,18 @@ and http://is.ieis.tue.nl/staff/aweijters/CIDM2010FHM.pdf
 """
 from pymine.mining.process.discovery.heuristics.dependency import DependencyMiner
 from pymine.mining.process.discovery.heuristics.binding_miner import BindingMiner
-
+from pymine.mining.process.eventlog.log import Classifier
 
 import logging
 logger = logging.getLogger('all_connected')
 
 
 class HeuristicMiner(object):
-    def __init__(self, log, dep_miner_cls=None, b_miner_cls=None):
+    def __init__(self, log, classifier=None, dep_miner_cls=None, b_miner_cls=None):
+        self.classifier = classifier if classifier else Classifier()
         self.log = log
-        self.dep_miner = dep_miner_cls(log) if dep_miner_cls else DependencyMiner(log)
-        self.binding_miner = b_miner_cls(log )if b_miner_cls else BindingMiner(log)
+        self.dep_miner = dep_miner_cls(log, classifier) if dep_miner_cls else DependencyMiner(log, classifier)
+        self.binding_miner = b_miner_cls(log, classifier)if b_miner_cls else BindingMiner(log, classifier)
 
     def mine(self, dependency_thr=0.5, bindings_thr=0.2, relative_to_best=0.1, self_loop_thr=None,
              two_step_loop_thr=None, long_distance_thr=None):
