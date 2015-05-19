@@ -8,8 +8,6 @@ from pymine.mining.mapred import deserialize_obj, CaseContext
 import numpy as np
 import logging
 logger = logging.getLogger("mapred")
-logger.addHandler(logging.FileHandler(filename='/tmp/mapred.log'))
-logger.setLevel(logging.DEBUG)
 
 
 class CustomCaseContext(CaseContext):
@@ -22,7 +20,7 @@ class CustomCaseContext(CaseContext):
                 'values': list(value)
 
             }
-        super(CaseContext, self).emit(key, value)
+        super(CustomCaseContext, self).emit(key, value)
 
 
 class Mapper(api.Mapper):

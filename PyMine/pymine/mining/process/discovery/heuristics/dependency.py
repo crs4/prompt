@@ -8,8 +8,6 @@ from pymine.mining.process.eventlog.log import Classifier
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('depedency')
-logger.addHandler(logging.FileHandler(filename='/tmp/dependency.log'))
-logger.setLevel(logging.DEBUG)
 
 
 class DependencyMiner(object):
