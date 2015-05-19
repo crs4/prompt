@@ -1,6 +1,6 @@
 from pymine.mining.process.discovery.heuristics import Matrix
 import pymine.mining.process.discovery.heuristics.binding_miner as bm
-from pymine.mining.mapred import MRLauncher, serialize_obj
+from pymine.mining.mapred import MRLauncher, serialize_obj, CaseContext
 from pymine.mining.process.discovery.heuristics.mapred import CLASSIFIER_FILENAME
 import os
 

@@ -4,9 +4,12 @@ import subprocess
 import uuid
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
-import pydoop.hdfs as hdfs
 from pymine.mining.process.eventlog.serializers.avro_serializer import serialize_log_as_case_collection
+from pymine.mining.process.eventlog.serializers.avro_serializer import convert_avro_dict_to_obj
+import pydoop.hdfs as hdfs
+import pydoop.avrolib as avrolib
 import pickle
+
 
 
 def check_log_serilization(log):
@@ -21,8 +24,10 @@ def check_log_serilization(log):
         moved_on_hdfs = True
     elif not log.filename.startswith('hdfs://'):
         log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  os.path.basename(log.filename))
-        hdfs.put(log.filename, log_filename)
-        moved_on_hdfs = True
+        if not hdfs.path.exists(log_filename):
+            hdfs.put(log.filename, log_filename)
+            moved_on_hdfs = True
+
     return log_filename, moved_on_hdfs
 
 
@@ -95,7 +100,8 @@ class MRLauncher(object):
             "--avro-input", "v",
             "--avro-output", "v",
             "--log-level", "DEBUG",
-            "--num-reducers", str(n_reducer),
+            # "--num-reducers", str(n_reducer),
+            "--num-reducers", "1",
             "--mrv2",
             mr_script_name,
             input_filename,
@@ -126,4 +132,12 @@ class MRLauncher(object):
                         yield e
 
 
+class CaseContext(avrolib.AvroContext):
 
+    def deserializing(self, meth, datum_reader):
+        def deserialize_and_wrap(*args, **kwargs):
+            deserialize = super(CaseContext, self).deserializing(
+                meth, datum_reader
+            )
+            return convert_avro_dict_to_obj(deserialize(*args, **kwargs), 'Case')
+        return deserialize_and_wrap
