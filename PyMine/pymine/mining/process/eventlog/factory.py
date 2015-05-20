@@ -2,7 +2,7 @@ import csv
 import logging
 from collections import defaultdict, OrderedDict
 from mx.DateTime.Parser import DateTimeFromString
-
+from pymine.mining.process.eventlog.serializers.avro_serializer import serialize_log_as_case_collection
 from pymine.mining.process.eventlog.log import Log, LogInfo
 from pymine.mining.process.eventlog import *
 from pymine.mining.process.eventlog.exceptions import InvalidExtension
@@ -300,3 +300,13 @@ def _add_event_to_process(
     activity_instance.add_event(event)
 
 
+def export_log(log, dest_filename):
+    ext = dest_filename.split('.')[-1]
+    if ext != 'avro':
+        raise InvalidExtension('exporting in file .%s is not supported yet' % ext)
+    serialize_log_as_case_collection(log, dest_filename)
+
+
+def convert_log(source_filename, dest_filename):
+    log = create_log_from_file(source_filename, False, False, False)
+    export_log(log, dest_filename)

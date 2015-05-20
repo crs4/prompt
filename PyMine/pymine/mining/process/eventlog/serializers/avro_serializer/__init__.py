@@ -17,11 +17,12 @@ def is_hdfs(path):
 
 
 class Serializer(object):
-    def __init__(self, path):
+    def __init__(self, path, cls=None):
         self.path = path
         self.writer = None
         self.f_out = None
         self.schema_path = None
+        self.cls_name = cls.__name__
 
     def _create_writer(self, schema_path):
         if is_hdfs(self.path):
@@ -42,7 +43,7 @@ class Serializer(object):
 
         if self.writer is None:
 
-            schema_name = objs[0].__class__.__name__
+            schema_name = self.cls_name or objs[0].__class__.__name__
             schema_path = os.path.join(os.path.dirname(__file__), 'schemas/%s.avsc' % schema_name)
             self._create_writer(schema_path)
         for obj in objs:
@@ -60,11 +61,11 @@ def convert_obj_to_avro_dict(obj):
     if cls_name == el.Case:
         return {"id": str(obj.id), "events": [convert_obj_to_avro_dict(e) for e in obj.events]}
     elif cls_name == el.Event:
-        return {"id": str(obj.id), "activity_name": obj.name, "timestamp": str(obj.timestamp)}
+        return {"id": str(obj.id), "activity_name": obj.name, "timestamp": str(obj.timestamp), "attributes": obj.attributes}
 
 
-def serialize(objs, dest_path):
-    serializer = Serializer(dest_path)
+def serialize(objs, dest_path, cls=None):
+    serializer = Serializer(dest_path, cls)
     serializer.serialize(objs)
     serializer.close()
 
@@ -97,7 +98,9 @@ def convert_avro_dict_to_obj(avro_obj, schema):
         obj = el.Event(
             name=avro_obj["activity_name"],
             timestamp=DateTimeFromString(avro_obj['timestamp']),
-            _id=str(avro_obj["id"]))
+            _id=str(avro_obj["id"]),
+            attributes=avro_obj.get('attributes') or {}
+        )
     else:
         raise InvalidSchema("invalid schema %s" % schema)
 
@@ -105,7 +108,7 @@ def convert_avro_dict_to_obj(avro_obj, schema):
 
 
 def serialize_log_as_case_collection(log, dest_path):
-    serialize(log.cases, dest_path)
+    serialize(log.cases, dest_path, el.Case)
 
 
 def deserialize_log_from_case_collection(path):

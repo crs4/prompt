@@ -29,8 +29,6 @@ class DependencyMiner(object):
         self.long_distance_freq = Matrix()
         self.long_distance_matrix = Matrix()
 
-
-
     @property
     def events(self):
         return self.events_freq.keys()
