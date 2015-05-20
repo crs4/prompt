@@ -47,7 +47,6 @@ class InputBinding(Binding):
     def __str__(self):
         return str([n.label for n in self.node_set]) + "->" + self.node.label + ' freq: %s' % self.frequency
 
-
 class OutputBinding(Binding):
     def __str__(self):
         return self.node.label + "->" + str([n.label for n in self.node_set]) + ' freq: %s' % self.frequency
@@ -591,6 +590,18 @@ class CNet(DependencyGraph):
                  'input_bindings': [binding.get_json() for binding in self.input_bindings],
                  'output_bindings': [binding.get_json() for binding in self.output_bindings]}]
         return json
+
+    def __eq__(self, other):
+        parent_eq = super(CNet, self).__eq__(other)
+        if parent_eq:
+            self_input_bindings = set([(b.node.label, frozenset([n.label for n in b.node_set])) for b in self.input_bindings])
+            other_input_bindings = set([(b.node.label, frozenset([n.label for n in b.node_set])) for b in other.input_bindings])
+
+            self_output_bindings = set([(b.node.label, frozenset([n.label for n in b.node_set])) for b in self.output_bindings])
+            other_output_bindings = set([(b.node.label, frozenset([n.label for n in b.node_set])) for b in other.output_bindings])
+            return self_input_bindings == other_input_bindings and self_output_bindings == other_output_bindings
+        else:
+            return parent_eq
 
 
 def get_cnet_from_json(json):

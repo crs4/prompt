@@ -17,9 +17,8 @@ class UnexpectedEvent(Exception):
 
 
 class LabeledObject(object):
-    def __init__(self, label=None):
-        self.label = label or str(uuid.uuid4())
-        #self.label = label
+    def __init__(self, label=''):
+        self.label = label
 
     def get_json(self):
         return [{'label': str(self.label)}]
@@ -52,8 +51,6 @@ class Arc(BaseElement):
         self.start_node = start_node
         self.end_node = end_node
 
-        #self.net = self.input_node.net
-
     def get_json(self):
         json = [{'label': str(self.label),
                  'start_node': self.start_node.label,
@@ -66,10 +63,10 @@ class Arc(BaseElement):
         return self.label or "%s->%s" % (self.start_node.label, self.end_node.label)
 
     def __eq__(self, other):
-        return self.start_node == other.start_node and self.end_node == other.end_node
+        return self.start_node == other.start_node and self.end_node == other.end_node and self.label == other.label
 
-    def __hash__(self):
-        return hash((self.start_node, self.end_node))
+    # def __hash__(self):
+    #     return hash((self.start_node, self.end_node))
 
 
 class Node(BaseElement):
@@ -116,7 +113,7 @@ class Node(BaseElement):
 
     def __eq__(self, other):
         return self.label == other.label
-
+    #
     # def __hash__(self):
     #     return hash(self.label)
     #
@@ -147,7 +144,6 @@ class Network(LabeledObject):
 
     def add_nodes(self, *labels):
         return [self.add_node(label) for label in labels]
-
 
     def get_initial_nodes(self):
         nodes = []
@@ -204,6 +200,12 @@ class Network(LabeledObject):
                  'nodes': [node.get_json() for node in self.nodes],
                  'arcs': [arc.get_json() for arc in self.arcs]}]
         return json
+
+    def __eq__(self, other):
+        node_eq = set([n.label for n in self.nodes]) == set([n.label for n in other.nodes])
+        arc_eq = set([(a.start_node.label, a.end_node.label, a.label) for a in self.arcs]) == \
+                 set([(a.start_node.label, a.end_node.label, a.label) for a in other.arcs])
+        return node_eq and arc_eq
 
 
 def get_network_from_json(json):
