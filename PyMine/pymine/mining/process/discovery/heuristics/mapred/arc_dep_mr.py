@@ -51,7 +51,7 @@ class Mapper(api.Mapper):
             long_distance
         )
 
-        events = [e.name for e in case.events]
+        events = [self.classifier.get_event_name(e) for e in case.events]
         set_events = set(events)
 
         for e1 in set_events:
