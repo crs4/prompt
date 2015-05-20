@@ -30,7 +30,6 @@ def main(
 ):
 
     log = create_log_from_file(log_path) if isinstance(log_path, str) else log_path
-
     base_path = 'cnet_%s_%s' % (mode, str(uuid.uuid4()))
     classifier_keys = classifier.split()
     classifier = Classifier(keys=classifier_keys, sep=sep) if classifier_keys else Classifier(sep=sep)
@@ -52,7 +51,7 @@ def main(
             long_dist_thr)
         end_time = dt.datetime.now()
         delta_t = end_time - start_time
-        base_path_run = "%s_run_%s" % (base_path, i)
+        base_path_run = "%s_run_%s" % (base_path, i + 1)
         pkl_filepath = base_path_run + ".pkl"
         # pkl_filepath = "cnet_%s_%s__%s.pkl" % (mode, start_time, end_time, dependency_thr, bindings_thr, rel_to_best, self_loop_thr,two_step_loop_thr,long_dist_thr)
         with open(pkl_filepath, 'wb') as fitness_result:
@@ -97,7 +96,7 @@ def main(
         for i in xrange(run):
             fout.write('\n'.join([
                 '\n',
-                'run %s' % i,
+                'run %s' % str(i + 1),
                 'cnet file %s' % os.path.join(cwd, run_results[i]['cnet_file']),
                 '\tstart_time %s' % run_results[i]['start_time'],
                 '\tend_time %s' % run_results[i]['end_time'],
