@@ -101,7 +101,7 @@ class MRLauncher(object):
             "--avro-output", "v",
             "--log-level", "DEBUG",
             # "--num-reducers", str(n_reducer),
-            "--num-reducers", "1",
+            # "--num-reducers", "1",
             "--mrv2",
             mr_script_name,
             input_filename,
