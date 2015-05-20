@@ -70,5 +70,8 @@ class Matrix(object):
             cells.append(Matrix.Cell(e, self._matrix[e][item]))
         return cells
 
+    def __repr__(self):
+        return repr(self._matrix)
+
 
 

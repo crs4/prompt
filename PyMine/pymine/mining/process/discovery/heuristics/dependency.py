@@ -42,6 +42,8 @@ class DependencyMiner(object):
         events = [classifier.get_event_name(e)for e in case.events]
         len_events = len(events)
         for i, event in enumerate(events):
+            logger.debug('i %s, event %s, events[i] %s', i, event, events[i])
+            logger.debug('precede_matrix %s', precede_matrix)
             events_freq[event] += 1
             if i == 0:
                 start_events.add(event)

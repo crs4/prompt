@@ -22,22 +22,25 @@ class DependencyMiner(dp.DependencyMiner, MRLauncher):
                             d_kwargs={CLASSIFIER_FILENAME: classifier_filename}
                             )
 
-        matrices = {
-            'precede': self.precede_matrix,
-            'two_step_loop': self.two_step_loop_freq,
-            'long_distance': self.long_distance_freq
-        }
+        matrices = [
+            self.precede_matrix,
+            self.two_step_loop_freq,
+            self.long_distance_freq
+        ]
 
         events = set()
 
         for avro_obj in self.avro_outputs:
             events.add(avro_obj['start_node'])
             events.add(avro_obj['end_node'])
-            for n, m in matrices.items():
-                m[avro_obj['start_node']][avro_obj['end_node']] += avro_obj[n]
-            if avro_obj['is_start']:
+            for n, m in enumerate(matrices):
+                m[avro_obj['start_node']][avro_obj['end_node']] += avro_obj['values'][n]
+
+            is_start = avro_obj['values'][3]
+            is_end = avro_obj['values'][4]
+            if is_start:
                 self.start_events.add(avro_obj['start_node'])
-            if avro_obj['is_end']:
+            if is_end:
                 self.end_events.add(avro_obj['end_node'])
 
         for e in events:

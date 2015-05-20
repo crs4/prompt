@@ -12,7 +12,7 @@ def replay_case(case, net, classifier=None):
     return net.replay_sequence([classifier.get_event_name(event) for event in case.events])
 
 
-def simple_fitness(process_log, net, classifier=None, aggregate=True):
+def simple_fitness(process_log, net, classifier=None):
     """
     Compute the fitness on the given log and net as the fraction of case replayed successfully to the cardinality of log
 
