@@ -20,6 +20,12 @@
         }, {
           "name" : "timestamp",
           "type" : "string"
+        }, {
+          "name" : "attributes",
+          "type" : [ "null", {
+            "type" : "map",
+            "values" : "string"
+          } ]
         } ]
       }
     }

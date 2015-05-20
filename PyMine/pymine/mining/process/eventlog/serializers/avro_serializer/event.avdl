@@ -4,5 +4,6 @@ protocol EventProtocol{
       union { null, string } id;
       string activity_name;
       string timestamp;
+      union {null, map<string>} attributes;
     }
 }
