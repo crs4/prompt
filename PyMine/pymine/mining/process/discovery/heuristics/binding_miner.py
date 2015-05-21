@@ -1,7 +1,6 @@
 from pymine.mining.process.discovery.heuristics import Matrix
 import logging
 from pymine.mining.process.eventlog.log import Classifier
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('binding')
 
 
@@ -96,6 +95,7 @@ class BindingMiner(object):
             self._create_bindings('output', n, output_bindings, cnet, thr)
 
     def mine(self, cnet, thr):
+        logger.info('mining started')
         output_bindings = Matrix()
         input_bindings = Matrix()
 

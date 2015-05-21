@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s", level=logging.INFO)
+
 from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMiner
 from pymine.mining.process.eventlog.factory import create_log_from_file
 from pymine.mining.process.eventlog.log import Classifier
@@ -8,7 +11,6 @@ import datetime as dt
 import uuid
 import os
 from abc import ABCMeta
-
 
 MAPRED = 'mapred'
 SEQ = 'seq'

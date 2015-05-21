@@ -6,7 +6,6 @@ from pymine.mining.process.discovery.heuristics import Matrix
 from pymine.mining.process.network.cnet import CNet
 from pymine.mining.process.eventlog.log import Classifier
 import logging
-logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s")
 logger = logging.getLogger('depedency')
 
 
@@ -143,6 +142,7 @@ class DependencyMiner(object):
             return False
 
     def mine(self, dep_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr):
+        logger.info('mining started')
         if not self.precede_matrix:
             self._compute_precede_matrix()
         if not self.dependency_matrix:
