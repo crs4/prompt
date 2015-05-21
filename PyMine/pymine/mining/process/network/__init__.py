@@ -34,7 +34,7 @@ class LabeledObject(object):
             return False
 
 class BaseElement(LabeledObject):
-    def __init__(self, label=None, frequency=None, attrs=None):
+    def __init__(self, label='', frequency=None, attrs=None):
         super(BaseElement, self).__init__(label)
         self.frequency = frequency
         self.attrs = attrs or {}
@@ -46,7 +46,7 @@ class BaseElement(LabeledObject):
         return json
 
 class Arc(BaseElement):
-    def __init__(self, start_node, end_node, label=None, frequency=None, attrs=None):
+    def __init__(self, start_node, end_node, label='', frequency=None, attrs=None):
         super(Arc, self).__init__(label, frequency, attrs)
         self.start_node = start_node
         self.end_node = end_node
@@ -63,7 +63,8 @@ class Arc(BaseElement):
         return self.label or "%s->%s" % (self.start_node.label, self.end_node.label)
 
     def __eq__(self, other):
-        return self.start_node == other.start_node and self.end_node == other.end_node and self.label == other.label
+        # return self.start_node == other.start_node and self.end_node == other.end_node and self.label == other.label
+        return self.start_node == other.start_node and self.end_node == other.end_node
 
     # def __hash__(self):
     #     return hash((self.start_node, self.end_node))
@@ -174,7 +175,7 @@ class Network(LabeledObject):
             if arc.start_node == input and arc.end_node == output:
                 return arc
             
-    def _create_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
+    def _create_arc(self, node_a, node_b, label='', frequency=None, attrs=None):
         return Arc(node_a, node_b, label, frequency, attrs)
 
     def _add_arc(self, arc, node_a, node_b):
@@ -188,7 +189,7 @@ class Network(LabeledObject):
         arc.end_node.input_arcs.remove(arc)
         arc.start_node.output_arcs.remove(arc)
 
-    def add_arc(self, node_a, node_b, label=None, frequency=None, attrs=None):
+    def add_arc(self, node_a, node_b, label='', frequency=None, attrs=None):
         existing_arc = self.get_arc_by_nodes(node_a, node_b)
         if existing_arc:
             return existing_arc

@@ -22,7 +22,7 @@ class Obligation(object):
 
 
 class Binding(LabeledObject):
-    def __init__(self, node, node_set, frequency=None, label=None):
+    def __init__(self, node, node_set, frequency=None, label=''):
         super(Binding, self).__init__(label=label)
         self.node = node
         self.node_set = node_set
@@ -97,7 +97,7 @@ class CNet(DependencyGraph):
     fake_start_label = '_start'
     fake_end_label = '_end'
 
-    def __init__(self, label=None):
+    def __init__(self, label=''):
         super(CNet,  self).__init__(label)
         self._input_bindings = []
         self._output_bindings = []
@@ -252,7 +252,7 @@ class CNet(DependencyGraph):
         self.rewind()
         return super(CNet, self).add_node(label, frequency, attrs)
 
-    def add_input_binding(self, node, node_set, label=None, frequency=None):
+    def add_input_binding(self, node, node_set, label='', frequency=None):
         """
         Add an input binding with the nodes in `node_set` to the given node
 
@@ -270,7 +270,7 @@ class CNet(DependencyGraph):
         node.input_bindings.append(binding)
         return binding
 
-    def add_output_binding(self, node, node_set, label=None, frequency=None):
+    def add_output_binding(self, node, node_set, label='', frequency=None):
         """
         Add an output binding with the nodes in `node_set` to the given node
 
