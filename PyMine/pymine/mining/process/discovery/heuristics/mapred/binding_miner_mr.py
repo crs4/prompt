@@ -6,9 +6,9 @@ import os
 
 
 class BindingMiner(bm.BindingMiner, MRLauncher):
-    def __init__(self, log, classifier=None):
+    def __init__(self, log, classifier=None, n_reducers=None, d_kwargs=None):
         bm.BindingMiner.__init__(self, log, classifier)
-        MRLauncher.__init__(self)
+        MRLauncher.__init__(self, n_reducers, d_kwargs)
 
     CNET_FILENAME = 'cnet_file'
 
@@ -18,7 +18,8 @@ class BindingMiner(bm.BindingMiner, MRLauncher):
 
         cnet_filename = serialize_obj(cnet, 'cnet')
         classifier_filename = serialize_obj(self.classifier, 'classifier')
-
+        self.d_kwargs[BindingMiner.CNET_FILENAME] = cnet_filename
+        self.d_kwargs[CLASSIFIER_FILENAME] = classifier_filename
         cwd = os.path.dirname(__file__)
         output_dir_prefix = "bm_output"
 
@@ -26,12 +27,8 @@ class BindingMiner(bm.BindingMiner, MRLauncher):
                             os.path.join(cwd, 'binding.avsc'),
                             os.path.join(cwd, 'bindings_mr.py'),
                             "bindings_mr",
-                            output_dir_prefix,
-                            d_kwargs={
-                                BindingMiner.CNET_FILENAME: cnet_filename,
-                                CLASSIFIER_FILENAME: classifier_filename
-
-                            })
+                            output_dir_prefix
+                            )
 
         for avro_obj in self.avro_outputs:
             if avro_obj["type"] == 'input':

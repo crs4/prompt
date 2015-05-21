@@ -64,8 +64,10 @@ def deserialize_obj(path):
     return obj
 
 class MRLauncher(object):
-    def __init__(self):
+    def __init__(self, n_reducers=None, d_kwargs=None):
         self.output_dir = None
+        self.n_reducers = n_reducers
+        self.d_kwargs = d_kwargs or {}
 
     def run_mapred_job(self,
                        log,
@@ -73,13 +75,10 @@ class MRLauncher(object):
                        mr_script_path,
                        mr_script_name,
                        output_dir_prefix,
-                       n_reducer=2,  # FIXME
-                       archive_path=None,
-                       d_kwargs=None
+                       archive_path=None
                        ):
 
         input_filename, del_input_filename = check_log_serilization(log)
-        d_kwargs = d_kwargs or {}
 
         with open(output_schema_path, 'r') as sf:
             schema_str = sf.read()
@@ -88,8 +87,10 @@ class MRLauncher(object):
 
         archive_path = create_code_archive(archive_path)
 
-        args = ["pydoop", "submit",]
-        for k, v in d_kwargs.items():
+        args = ["pydoop", "submit"]
+        if self.n_reducers is not None:
+            args += ['--num-reducers', str(self.n_reducers)]
+        for k, v in self.d_kwargs.items():
             args += ["-D", "%s=%s" % (k, v)]
 
         args += [
@@ -100,14 +101,13 @@ class MRLauncher(object):
             "--avro-input", "v",
             "--avro-output", "v",
             "--log-level", "DEBUG",
-            # "--num-reducers", str(n_reducer),
             # "--num-reducers", "1",
             "--mrv2",
             mr_script_name,
             input_filename,
             self.output_dir
         ]
-
+        print 'args', args
         retcode = subprocess.call(args)
         # if retcode:
         #     raise Exception('mapred failed')  # FIXME on bruja succeeded jobs return retcode > 0 because of job status

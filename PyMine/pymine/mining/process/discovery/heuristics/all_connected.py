@@ -11,11 +11,16 @@ logger = logging.getLogger('all_connected')
 
 
 class HeuristicMiner(object):
-    def __init__(self, log, classifier=None, dep_miner_cls=None, b_miner_cls=None):
+    def __init__(self, log, classifier=None, dep_miner=None, b_miner=None):
         self.classifier = classifier if classifier else Classifier()
         self.log = log
-        self.dep_miner = dep_miner_cls(log, classifier) if dep_miner_cls else DependencyMiner(log, classifier)
-        self.binding_miner = b_miner_cls(log, classifier)if b_miner_cls else BindingMiner(log, classifier)
+        self.dep_miner = dep_miner if dep_miner else DependencyMiner(log, classifier)
+        self.binding_miner = b_miner if b_miner else BindingMiner(log, classifier)
+
+        self.dep_miner.log = log
+        self.binding_miner.log = log
+        self.dep_miner.classifier = self.classifier
+        self.binding_miner.classifier = self.classifier
 
     def mine(self, dependency_thr=0.5, bindings_thr=0.2, relative_to_best=0.1, self_loop_thr=None,
              two_step_loop_thr=None, long_distance_thr=None):

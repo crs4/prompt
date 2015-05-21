@@ -5,21 +5,21 @@ import os
 
 
 class DependencyMiner(dp.DependencyMiner, MRLauncher):
-    def __init__(self, log, classifier=None):
+    def __init__(self, log, classifier=None, n_reducers=None, d_kwargs=None):
         dp.DependencyMiner.__init__(self, log, classifier)
-        MRLauncher.__init__(self)
+        MRLauncher.__init__(self, n_reducers, d_kwargs)
 
     def _compute_precede_matrix(self):
         cwd = os.path.dirname(__file__)
         output_dir_prefix = "dm_output"
         classifier_filename = serialize_obj(self.classifier, 'classifier')
+        self.d_kwargs[CLASSIFIER_FILENAME] = classifier_filename
 
         self.run_mapred_job(self.log,
                             os.path.join(cwd, 'arc_info.avsc'),
                             os.path.join(cwd, 'arc_dep_mr.py'),
                             "arc_dep_mr",
-                            output_dir_prefix,
-                            d_kwargs={CLASSIFIER_FILENAME: classifier_filename}
+                            output_dir_prefix
                             )
 
         matrices = [

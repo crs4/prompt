@@ -17,8 +17,9 @@ class TestAllConnectedMR(BackendTests, unittest.TestCase):
     def create_miner(self, log):
         from pymine.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
         from pymine.mining.process.discovery.heuristics.mapred.binding_miner_mr import BindingMiner
-
-        return HeuristicMiner(log, dep_miner_cls=DependencyMiner, b_miner_cls=BindingMiner)
+        dep_miner = DependencyMiner(log)
+        b_miner = BindingMiner(log)
+        return HeuristicMiner(log, dep_miner=dep_miner, b_miner=b_miner)
 
 
 if __name__ == '__main__':
