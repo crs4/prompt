@@ -1,6 +1,5 @@
 from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMiner
 from pymine.mining.process.eventlog.factory import create_log_from_file
-from pymine.mining.process.tools.drawing.draw_cnet import draw
 from pymine.mining.process.eventlog.log import Classifier
 from pymine.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
 from pymine.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
@@ -28,7 +27,7 @@ def _create_seq_miner(log, classifier):
 class BaseRunner(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1):
+    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False):
         self.mode = ''
         self.base_path = 'cnet_%s_%s' % (self.mode, str(uuid.uuid4()))
         self.log = log
@@ -36,6 +35,7 @@ class BaseRunner(object):
         self.run_results = {}
         self.n_run = run
         self.miner = None
+        self.draw = draw
 
     def run(self, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
         cwd = os.getcwd()
@@ -106,21 +106,22 @@ class BaseRunner(object):
                 ]))
 
         print 'report saved in', os.path.join(cwd, report_filename)
-        if self.n_run:
+        if self.n_run and self.draw:
+            from pymine.mining.process.tools.drawing.draw_cnet import draw
             draw(cnet)
         # return cnet, fitness_result
 
 
 class SeqRunner(BaseRunner):
-    def __init__(self, log, classifier, run=1):
-        super(SeqRunner, self).__init__(log, classifier, run=run)
+    def __init__(self, log, classifier, run=1, draw=False):
+        super(SeqRunner, self).__init__(log, classifier, run=run, draw=draw)
         self.mode = 'seq'
         self.miner = HeuristicMiner(self.log, self.classifier)
 
 
 class MapRedRunner(BaseRunner):
-    def __init__(self, log, classifier, run=1, n_reducers=None, d_kwargs=None):
-        super(MapRedRunner, self).__init__(log, classifier, run=run)
+    def __init__(self, log, classifier, run=1, draw=False, n_reducers=None, d_kwargs=None):
+        super(MapRedRunner, self).__init__(log, classifier, run=run, draw=draw)
         self.mode = 'mapred'
         dp_miner = DependencyMiner(self.log, self.classifier, n_reducers, d_kwargs)
         b_miner = BindingMiner(self.log, self.classifier, n_reducers, d_kwargs)
@@ -141,6 +142,7 @@ def _add_basic_parser_argument(parser_):
     parser_.add_argument('-c', type=str, default="", help="classifier, string of attributes space separated", dest='classifier_keys')
     parser_.add_argument('--cs', type=str, default=Classifier.DEFAULT_SEP, help="classifier separator", dest='classifier_separator')
     parser_.add_argument('-r', type=int, default=1, help="how many run", dest='run')
+    parser_.add_argument('-d', type=bool, default=False, help="draw last cnet", dest='draw')
     # parser.add_argument('-f', type=str, help="compute fitness", choices=['simple', 'aln'], dest='fitness')
 
 
@@ -166,7 +168,7 @@ if __name__ == '__main__':
     classifier_keys = args.classifier_keys.split()
     sep = args.classifier_separator
     classifier = Classifier(keys=classifier_keys, sep=sep) if classifier_keys else Classifier(sep=sep)
-    kwargs = dict(log=log, classifier=classifier, run=args.run)
+    kwargs = dict(log=log, classifier=classifier, run=args.run, draw=args.draw)
     if args.mode == 'seq':
         runner = SeqRunner(**kwargs)
 
