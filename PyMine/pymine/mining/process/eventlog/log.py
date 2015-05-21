@@ -92,11 +92,13 @@ class AvroLog(BaseLog):
         if self.filename.startswith('hdfs://'):
             import pydoop.hdfs as hdfs
             fs = hdfs
+            listdir = hdfs.ls
         else:
             import os
             fs = os
+            listdir = os.listdir
 
-        files = [fs.path.join(self.filename, f) for f in fs.listdir(self.filename)] \
+        files = [fs.path.join(self.filename, f) for f in listdir(self.filename)] \
             if fs.path.isdir(self.filename) else [self.filename]
 
         for fn in files:
