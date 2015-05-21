@@ -45,13 +45,14 @@ class Classifier(object):
         name = []
         for k in self._keys:
 
-            if hasattr(event, k):
+            if k in event.attributes:
+                name.append(event.attributes[k])
+            elif hasattr(event, k):
                 v = getattr(event, k)
                 if v:
                     name.append(str(v))
 
-            elif k in event.attributes:
-                name.append(event.attributes[k])
+
             # elif k in event.attributes:
             #     v = event.attributes[k]
             #     if v:
