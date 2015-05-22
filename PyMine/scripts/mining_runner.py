@@ -31,13 +31,16 @@ class BaseRunner(object):
 
     def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False):
         self.mode = ''
-        self.base_path = 'cnet_%s_%s' % (self.mode, str(uuid.uuid4()))
         self.log = log
         self.classifier = classifier
         self.run_results = {}
         self.n_run = run
         self.miner = None
         self.draw = draw
+
+    @property
+    def base_path(self):
+        return 'cnet_%s_%s' % (self.mode, str(uuid.uuid4()))
 
     def run(self, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
         cwd = os.getcwd()
