@@ -15,18 +15,25 @@ import pickle
 def check_log_serilization(log):
     log_filename = log.filename
     moved_on_hdfs = False
-    # if log.filename is None or not log.filename.startswith('hdfs://'):
-
-    if log.filename is None or not log.filename.split('.')[-1] == 'avro':
-        # input_filename = 'hdfs:///user/%s/log.avro' % os.environ['USER']
-        log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'], create_unique_filename(ext='avro'))
-        serialize_log_as_case_collection(log, log_filename)
+    if log.filename is None or not log.filename.startswith('hdfs://'):
+        log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  create_unique_filename(ext='avro'))
+        # if not hdfs.path.exists(log_filename):
+        hdfs.put(log.filename, log_filename)
         moved_on_hdfs = True
-    elif not log.filename.startswith('hdfs://'):
-        log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  os.path.basename(log.filename))
-        if not hdfs.path.exists(log_filename):
-            hdfs.put(log.filename, log_filename)
-            moved_on_hdfs = True
+
+
+
+    # if log.filename is None:
+    #     ext = log.filename.split('.')[-1] == 'avro':
+    #     # input_filename = 'hdfs:///user/%s/log.avro' % os.environ['USER']
+    #     log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'], create_unique_filename(ext='avro'))
+    #     serialize_log_as_case_collection(log, log_filename)
+    #     moved_on_hdfs = True
+    # elif not log.filename.startswith('hdfs://'):
+    #     log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  os.path.basename(log.filename))
+    #     if not hdfs.path.exists(log_filename):
+    #         hdfs.put(log.filename, log_filename)
+    #         moved_on_hdfs = True
 
     return log_filename, moved_on_hdfs
 
