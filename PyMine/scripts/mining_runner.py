@@ -40,7 +40,7 @@ class BaseRunner(object):
 
     @property
     def base_path(self):
-        return 'cnet_%s_%s' % (self.mode, str(uuid.uuid4()))
+        return 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
 
     def run(self, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
         cwd = os.getcwd()
