@@ -10,6 +10,8 @@ import pickle
 import datetime as dt
 import uuid
 import os
+import subprocess
+import re
 from abc import ABCMeta
 
 MAPRED = 'mapred'
@@ -38,12 +40,26 @@ class BaseRunner(object):
         self.miner = None
         self.draw = draw
 
-    @property
-    def base_path(self):
-        return 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
+    # @property
+    # def base_path(self):
+    #     return 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
 
     def run(self, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
+
         cwd = os.getcwd()
+        node_info = ''
+        if self.mode == 'mapred':
+            hadoop_prefix = os.environ.get('HADOOP_PREFIX', os.environ.get('HADOOP_HOME'))
+            if hadoop_prefix:
+                yarn_cmd = os.path.join(hadoop_prefix, 'bin/yarn')
+                node_info = subprocess.check_output([yarn_cmd, 'node','-list'])
+        if node_info:
+            nodes = re.findall('Total Nodes:(\d+)', node_info)
+            if nodes:
+                nodes = nodes[0]
+                base_path = 'cnet_%s_%s_nodes_%s_%s' % (self.mode, os.path.basename(log.filename), nodes, str(uuid.uuid4()))
+        else:
+            base_path = 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
         for i in xrange(self.n_run):
             print 'run', i + 1
             start_time = dt.datetime.now()
@@ -56,7 +72,7 @@ class BaseRunner(object):
                 long_dist_thr)
             end_time = dt.datetime.now()
             delta_t = end_time - start_time
-            base_path_run = "%s_run_%s" % (self.base_path, i + 1)
+            base_path_run = "%s_run_%s" % (base_path, i + 1)
             pkl_filepath = base_path_run + ".pkl"
             # pkl_filepath = "cnet_%s_%s__%s.pkl" % (mode, start_time, end_time, dependency_thr, bindings_thr, rel_to_best, self_loop_thr,two_step_loop_thr,long_dist_thr)
             with open(pkl_filepath, 'wb') as fitness_result:
@@ -66,6 +82,7 @@ class BaseRunner(object):
             print "mining finished at", end_time
             print 'time:', delta_t
             print 'cnet saved in', os.path.join(cwd, pkl_filepath)
+            print node_info
             self.run_results[i] = {'start_time': start_time, 'end_time': end_time, 'delta_t': delta_t, 'cnet_file': pkl_filepath}
 
             # if fitness:
@@ -80,7 +97,7 @@ class BaseRunner(object):
         avg_time = sum([(r['end_time'] - r['start_time']).seconds for r in self.run_results.values()])/self.n_run
         print 'avg time', avg_time
 
-        report_filename = self.base_path + '_report.txt'
+        report_filename = base_path + '_report.txt'
         with open(report_filename, 'w') as fout:
             fout.write('\n'.join([
                 'log_path %s' % self.log.filename,
@@ -98,6 +115,8 @@ class BaseRunner(object):
                 # 'delta_t %s' % delta_t,
                 # 'fitness %s' % fitness_result.fitness if fitness_result else ''
             ]))
+            if node_info:
+                fout.write('\n' + node_info + '\n')
             for i in xrange(self.n_run):
                 fout.write('\n'.join([
                     '\n',
