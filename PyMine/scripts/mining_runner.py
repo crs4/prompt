@@ -31,7 +31,7 @@ def _create_seq_miner(log, classifier):
 class BaseRunner(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False):
+    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False, fitness_log=None):
         self.mode = ''
         self.log = log
         self.classifier = classifier
@@ -39,6 +39,7 @@ class BaseRunner(object):
         self.n_run = run
         self.miner = None
         self.draw = draw
+        self.fitness_log = fitness_log
 
     # @property
     # def base_path(self):
@@ -53,13 +54,17 @@ class BaseRunner(object):
             if hadoop_prefix:
                 yarn_cmd = os.path.join(hadoop_prefix, 'bin/yarn')
                 node_info = subprocess.check_output([yarn_cmd, 'node','-list'])
+
+        base_path = ''
         if node_info:
             nodes = re.findall('Total Nodes:(\d+)', node_info)
             if nodes:
                 nodes = nodes[0]
                 base_path = 'cnet_%s_%s_nodes_%s_%s' % (self.mode, os.path.basename(log.filename), nodes, str(uuid.uuid4()))
-        else:
+
+        if not base_path:
             base_path = 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
+
         for i in xrange(self.n_run):
             print 'run', i + 1
             start_time = dt.datetime.now()
@@ -85,16 +90,16 @@ class BaseRunner(object):
             print node_info
             self.run_results[i] = {'start_time': start_time, 'end_time': end_time, 'delta_t': delta_t, 'cnet_file': pkl_filepath}
 
-            # if fitness:
-            #     from pymine.mining.process.conformance import simple_fitness
-            #     fitness_result = simple_fitness(log, cnet, classifier)
-            #     print 'fitness', fitness_result.fitness
-            #     run_results[i]['fitness'] = fitness_result.fitness
-            # else:
-            #     run_results[i]['fitness'] = None
-            #
+            fitness_result = None
+            if self.fitness_log:
+                from pymine.mining.process.conformance import simple_fitness
+                fitness_result = simple_fitness(self.fitness_log, cnet, self.classifier)
+                print 'fitness on %s: %s' % (self.fitness_log.filename, fitness_result.fitness)
+                self.run_results[i]['fitness'] = fitness_result.fitness
+            else:
+                self.run_results[i]['fitness'] = None
 
-        avg_time = sum([(r['end_time'] - r['start_time']).seconds for r in self.run_results.values()])/self.n_run
+        avg_time = sum([(r['end_time'] - r['start_time']).seconds for r in self.run_results.values()])/float(self.n_run)
         print 'avg time', avg_time
 
         report_filename = base_path + '_report.txt'
@@ -115,6 +120,7 @@ class BaseRunner(object):
                 # 'delta_t %s' % delta_t,
                 # 'fitness %s' % fitness_result.fitness if fitness_result else ''
             ]))
+
             if node_info:
                 fout.write('\n' + node_info + '\n')
             for i in xrange(self.n_run):
@@ -128,6 +134,8 @@ class BaseRunner(object):
                     # '\tfitness %s' % self.run_results[i]['fitness'],
                     ''
                 ]))
+                if  self.run_results[i]['fitness']:
+                    fout.write('\n\t' + 'fitness on %s: %s' % (self.fitness_log.filename, self.run_results[i]['fitness']) + '\n')
 
         print 'report saved in', os.path.join(cwd, report_filename)
         if self.n_run and self.draw:
@@ -137,15 +145,15 @@ class BaseRunner(object):
 
 
 class SeqRunner(BaseRunner):
-    def __init__(self, log, classifier, run=1, draw=False):
-        super(SeqRunner, self).__init__(log, classifier, run=run, draw=draw)
+    def __init__(self, log, classifier, run=1, draw=False, fitness_log=None):
+        super(SeqRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log)
         self.mode = 'seq'
         self.miner = HeuristicMiner(self.log, self.classifier)
 
 
 class MapRedRunner(BaseRunner):
-    def __init__(self, log, classifier, run=1, draw=False, n_reducers=None, d_kwargs=None):
-        super(MapRedRunner, self).__init__(log, classifier, run=run, draw=draw)
+    def __init__(self, log, classifier, run=1, draw=False, n_reducers=None, d_kwargs=None, fitness_log=None):
+        super(MapRedRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log)
         self.mode = 'mapred'
         dp_miner = DependencyMiner(self.log, self.classifier, n_reducers, d_kwargs)
         b_miner = BindingMiner(self.log, self.classifier, n_reducers, d_kwargs)
@@ -156,7 +164,7 @@ def _add_basic_parser_argument(parser_):
     parser_.add_argument('log_path', type=str, help='the path of the log')
     # parser.add_argument('mode', type=str, help='mining mode', choices=[MAPRED, SEQ])
 
-    parser_.add_argument('--bt', type=float, default=0.1, help="bindings threshold", dest='binding_th')
+    parser_.add_argument('--bt', type=float, default=1, help="bindings threshold", dest='binding_th')
     parser_.add_argument('--dt', type=float, default=0.5, help="dependency threshold", dest='dep_th')
 
     parser_.add_argument('--slt', type=float, default=None, help="self loop threshold", dest='self_loop_th')
@@ -167,7 +175,8 @@ def _add_basic_parser_argument(parser_):
     parser_.add_argument('--cs', type=str, default=Classifier.DEFAULT_SEP, help="classifier separator", dest='classifier_separator')
     parser_.add_argument('-r', type=int, default=1, help="how many run", dest='run')
     parser_.add_argument('-d', type=bool, default=False, help="draw last cnet", dest='draw')
-    # parser.add_argument('-f', type=str, help="compute fitness", choices=['simple', 'aln'], dest='fitness')
+    parser_.add_argument('-f', type=str, default=False, help="fitness log", dest='f_log')
+    # parser.add_argument('-f', type=str, help="fitness log", dest='f_log', default="")
 
 
 if __name__ == '__main__':
@@ -193,6 +202,10 @@ if __name__ == '__main__':
     sep = args.classifier_separator
     classifier = Classifier(keys=classifier_keys, sep=sep) if classifier_keys else Classifier(sep=sep)
     kwargs = dict(log=log, classifier=classifier, run=args.run, draw=args.draw)
+    if args.f_log:
+        fitness_log = create_log_from_file(args.f_log)
+        kwargs['fitness_log'] = fitness_log
+
     if args.mode == 'seq':
         runner = SeqRunner(**kwargs)
 
