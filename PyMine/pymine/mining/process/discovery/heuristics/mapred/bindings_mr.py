@@ -14,6 +14,11 @@ class CustomCaseContext(CaseContext):
         if self.is_reducer():
             node, b_type, binding_nodes = key
             value = {'node': node, 'type': b_type, 'binding': list(binding_nodes), 'freq': value}
+            import pyavroc
+            from pydoop.avrolib import AVRO_VALUE_OUTPUT_SCHEMA
+            jc = self.get_job_conf()
+            avtypes = pyavroc.create_types(jc.get(AVRO_VALUE_OUTPUT_SCHEMA))
+            value = avtypes.Binding(**value)
 
         super(CustomCaseContext, self).emit(key, value)
 

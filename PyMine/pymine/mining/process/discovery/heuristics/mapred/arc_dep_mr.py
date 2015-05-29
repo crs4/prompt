@@ -14,12 +14,18 @@ class CustomCaseContext(CaseContext):
 
     def emit(self, key, value):
         if self.is_reducer():
+            import pyavroc
+            from pydoop.avrolib import AVRO_VALUE_OUTPUT_SCHEMA
             value = {
                 'start_node': key[0],
                 'end_node': key[1],
                 'values': list(value)
 
             }
+            jc = self.get_job_conf()
+            avtypes = pyavroc.create_types(jc.get(AVRO_VALUE_OUTPUT_SCHEMA))
+            value = avtypes.ArcInfo(**value)
+
         super(CustomCaseContext, self).emit(key, value)
 
 
