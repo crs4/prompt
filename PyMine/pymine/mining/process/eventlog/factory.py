@@ -216,7 +216,7 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
         if add_end_activity:
             case.add_event(Event(name=FAKE_END))
 
-    log = Log(cases)
+    log = Log(cases, file_path)
     if create_process:
         process = build_process(log)
         log.process = process
