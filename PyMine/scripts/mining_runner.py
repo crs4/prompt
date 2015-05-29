@@ -12,11 +12,25 @@ import uuid
 import os
 import subprocess
 import re
-from abc import ABCMeta
+import time
+from abc import ABCMeta, abstractmethod
+import threading
+
 
 MAPRED = 'mapred'
 SEQ = 'seq'
 
+
+def get_mapred_job(result_info):
+    time.sleep(5)
+    try:
+        hadoop_prefix = os.environ.get('HADOOP_PREFIX', os.environ.get('HADOOP_HOME'))
+
+        mapred_cmd = os.path.join(hadoop_prefix, 'bin/mapred')
+        result_info['job'] = subprocess.check_output([mapred_cmd, 'job', '-list'])
+    except Exception as ex:
+        log.error('impossible to retrieve mapred job')
+        raise ex
 
 def _create_mapred_miner(log, classifier, n_reducers=None, d_kwargs=None):
 
@@ -37,9 +51,12 @@ class BaseRunner(object):
         self.classifier = classifier
         self.run_results = {}
         self.n_run = run
-        self.miner = None
         self.draw = draw
         self.fitness_log = fitness_log
+
+    @abstractmethod
+    def _create_miner(self):
+        pass
 
     # @property
     # def base_path(self):
@@ -67,14 +84,20 @@ class BaseRunner(object):
 
         for i in xrange(self.n_run):
             print 'run', i + 1
+            miner = self._create_miner()
             start_time = dt.datetime.now()
-            cnet = self.miner.mine(
+            cnet = miner.mine(
                 dependency_thr,
                 bindings_thr,
                 rel_to_best,
                 self_loop_thr,
                 two_step_loop_thr,
                 long_dist_thr)
+
+            self.run_results[i] = {}
+            thread = threading.Thread(target=get_mapred_job, args=[self.run_results[i]])
+            thread.run()
+
             end_time = dt.datetime.now()
             delta_t = end_time - start_time
             base_path_run = "%s_run_%s" % (base_path, i + 1)
@@ -88,7 +111,7 @@ class BaseRunner(object):
             print 'time:', delta_t
             print 'cnet saved in', os.path.join(cwd, pkl_filepath)
             print node_info
-            self.run_results[i] = {'start_time': start_time, 'end_time': end_time, 'delta_t': delta_t, 'cnet_file': pkl_filepath}
+            self.run_results[i].update({'start_time': start_time, 'end_time': end_time, 'delta_t': delta_t, 'cnet_file': pkl_filepath})
 
             fitness_result = None
             if self.fitness_log:
@@ -131,6 +154,7 @@ class BaseRunner(object):
                     '\tstart_time %s' % self.run_results[i]['start_time'],
                     '\tend_time %s' % self.run_results[i]['end_time'],
                     '\tdelta_t %s' % self.run_results[i]['delta_t'],
+                    '\tjob %s' % self.run_results[i].get('job', 'no info'),
                     # '\tfitness %s' % self.run_results[i]['fitness'],
                     ''
                 ]))
@@ -148,16 +172,23 @@ class SeqRunner(BaseRunner):
     def __init__(self, log, classifier, run=1, draw=False, fitness_log=None):
         super(SeqRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log)
         self.mode = 'seq'
-        self.miner = HeuristicMiner(self.log, self.classifier)
+
+    def _create_miner(self):
+        return HeuristicMiner(self.log, self.classifier)
+
 
 
 class MapRedRunner(BaseRunner):
     def __init__(self, log, classifier, run=1, draw=False, n_reducers=None, d_kwargs=None, fitness_log=None):
         super(MapRedRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log)
         self.mode = 'mapred'
-        dp_miner = DependencyMiner(self.log, self.classifier, n_reducers, d_kwargs)
-        b_miner = BindingMiner(self.log, self.classifier, n_reducers, d_kwargs)
-        self.miner = HeuristicMiner(self.log, self.classifier, dp_miner, b_miner)
+        self.n_reducers = n_reducers
+        self.d_kwargs = d_kwargs
+
+    def _create_miner(self):
+        dp_miner = DependencyMiner(self.log, self.classifier, self.n_reducers, self.d_kwargs)
+        b_miner = BindingMiner(self.log, self.classifier, self.n_reducers, self.d_kwargs)
+        return HeuristicMiner(self.log, self.classifier, dp_miner, b_miner)
 
 
 def _add_basic_parser_argument(parser_):
@@ -197,7 +228,10 @@ if __name__ == '__main__':
     parser_mapred.add_argument('-D', type=str, default=[], help="D kwargs", dest='d_kwargs', action='append')
 
     args = parser.parse_args()
-    log = create_log_from_file(args.log_path)
+    start_time = dt.datetime.now()
+    log = create_log_from_file(args.log_path, create_process=False)
+    end_time = dt.datetime.now()
+    print 'time creating log %s' % (end_time - start_time).seconds
     classifier_keys = args.classifier_keys.split()
     sep = args.classifier_separator
     classifier = Classifier(keys=classifier_keys, sep=sep) if classifier_keys else Classifier(sep=sep)
