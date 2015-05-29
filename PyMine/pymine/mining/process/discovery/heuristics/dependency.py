@@ -108,7 +108,7 @@ class DependencyMiner(object):
 
         logger.debug('cells of %s = %s', event, cells)
         max_dep = max(cells, key=lambda x: x.value)
-        candidate_dep = [c for c in cells if c.value >= dep_thr and max_dep.value - c.value <= relative_to_best]
+        candidate_dep = [c for c in cells if c.value > dep_thr and max_dep.value - c.value <= relative_to_best]
         logger.debug('candidate_dep %s of %s = %s', dep_type, event, candidate_dep)
 
         if not candidate_dep:
