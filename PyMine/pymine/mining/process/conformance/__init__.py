@@ -21,10 +21,16 @@ def simple_fitness(process_log, net, classifier=None):
     :return: integer between 0 and 1
     """
     result = FitnessResult(process_log, net)
+    total_cases = 0
+    success = 0.0
     for case in process_log.cases:
+        total_cases += 1
         result_case = replay_case(case, net, classifier)
-        result.add_replay_result(case, result_case)
-
+        if result_case[0]:
+            success += 1
+        # result.add_replay_result(case, result_case)
+    # return result
+    result._fitness = success/total_cases
     return result
 
 
@@ -35,6 +41,7 @@ class FitnessResult(object):
         self.results = {}
         self.failed_cases = []
         self.correct_cases = []
+        self._fitness = None
 
     def add_replay_result(self, case, replay_results):
         self.results[case] = replay_results
@@ -47,7 +54,10 @@ class FitnessResult(object):
 
     @property
     def fitness(self):
-        if self.results:
-            n_correct_cases = float(len(self.correct_cases))
-            n_failed_cases = float(len(self.failed_cases))
-            return n_correct_cases/(n_correct_cases + n_failed_cases)
+        if not self._fitness:
+
+            if self.results:
+                n_correct_cases = float(len(self.correct_cases))
+                n_failed_cases = float(len(self.failed_cases))
+                self._fitness = n_correct_cases/(n_correct_cases + n_failed_cases)
+        return self._fitness
