@@ -61,4 +61,4 @@ class Reducer(api.Reducer):
         context.emit(context.key, total)
 
 def __main__():
-    pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Reducer), private_encoding=True, context_class=CustomCaseContext)
+    pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Reducer), private_encoding=True, context_class=CustomCaseContext, fast_combiner=True)
