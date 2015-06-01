@@ -9,7 +9,7 @@ from pymine.mining.mapred import deserialize_obj, CaseContext
 import itertools as it
 import numpy as np
 import logging
-import simplejson
+import cPickle as pickle
 logger = logging.getLogger("mapred")
 
 
@@ -85,7 +85,7 @@ class Combiner(api.Reducer):
                     else:
                         matrix[k] = v[k]
         # value = np.sum(list(context.values), axis=0)
-        self._emit(context, "", matrix)
+            self._emit(context, "", matrix)
 
 
 class Reducer(Combiner):
@@ -97,12 +97,8 @@ class Reducer(Combiner):
         self.timer = Timer(context, 'DEPMINER')
 
     def _emit(self, context, k, value):
-        value_to_dump = [(key,v.tolist()) for key,v in value.iteritems()]
-        with open('/tmp/output', 'w') as f:
-            f.write('%s' % value_to_dump)
-
-        for v in value_to_dump:
-            super(Reducer, self)._emit(context, '', simplejson.dumps(v))
+        value = pickle.dumps(value)
+        super(Reducer, self)._emit(context, '', value)
 
 def __main__():
     pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Combiner), private_encoding=True, context_class=CaseContext, fast_combiner=True)

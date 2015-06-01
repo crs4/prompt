@@ -2,7 +2,7 @@ import pymine.mining.process.discovery.heuristics.dependency as dp
 from pymine.mining.process.discovery.heuristics.mapred import CLASSIFIER_FILENAME
 from pymine.mining.mapred import MRLauncher, serialize_obj
 import os
-import simplejson
+import cPickle as pickle
 import pydoop.hdfs as hdfs
 import logging
 logger = logging.getLogger('dependency_mr')
@@ -35,18 +35,10 @@ class DependencyMiner(dp.DependencyMiner, MRLauncher):
         ]
 
         events = set()
-
-        print '-----self.output_dir', self.output_dir
         output_file = os.path.join(self.output_dir, 'part-r-00000')
-
-        print 'OUTPUT FILE', output_file
-        matrix = {}
-        for output_file in hdfs.ls(self.output_dir):
-            if os.path.basename(output_file).startswith('part'):
-                with hdfs.open(output_file, 'r') as f:
-                    for line in f:
-                        json_obj = simplejson.loads(line)
-                        matrix.update({tuple(json_obj[0]): json_obj[1]})
+        with hdfs.open(output_file, 'r') as f:
+            pickled_string = f.read().split('\t')[1]
+            matrix = pickle.loads(pickled_string)
 
         logger.debug('matrix %s', matrix)
         for k, v in matrix.iteritems():
@@ -61,7 +53,6 @@ class DependencyMiner(dp.DependencyMiner, MRLauncher):
                 self.start_events.add(e1)
             if is_end:
                 self.end_events.add(e2)
-
 
         for e in events:
             freq = sum(self.precede_matrix[e].values())
