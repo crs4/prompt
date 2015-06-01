@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(format="[%(levelname)s] %(asctime)s %(filename)s %(lineno)s: %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="[%(levelname)s] %(asctime)s %(filename)s %(lineno)s: %(message)s", level=logging.INFO)
 
 from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMiner
 from pymine.mining.process.eventlog.factory import create_log_from_file
@@ -22,7 +22,7 @@ SEQ = 'seq'
 
 
 def get_mapred_job(result_info):
-    time.sleep(5)
+    time.sleep(20)
     try:
         hadoop_prefix = os.environ.get('HADOOP_PREFIX', os.environ.get('HADOOP_HOME'))
 
@@ -45,7 +45,7 @@ def _create_seq_miner(log, classifier):
 class BaseRunner(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False, fitness_log=None):
+    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False, fitness_log=None, output_dir=''):
         self.mode = ''
         self.log = log
         self.classifier = classifier
@@ -53,6 +53,7 @@ class BaseRunner(object):
         self.n_run = run
         self.draw = draw
         self.fitness_log = fitness_log
+        self.output_dir = output_dir
 
     @abstractmethod
     def _create_miner(self):
@@ -82,9 +83,15 @@ class BaseRunner(object):
         if not base_path:
             base_path = 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
 
+        base_path = os.path.join(self.output_dir, base_path)
         for i in xrange(self.n_run):
             print 'run', i + 1
             miner = self._create_miner()
+            self.run_results[i] = {}
+
+            # thread = threading.Thread(target=get_mapred_job, args=[self.run_results[i]])
+            # thread.run()
+
             start_time = dt.datetime.now()
             cnet = miner.mine(
                 dependency_thr,
@@ -93,10 +100,6 @@ class BaseRunner(object):
                 self_loop_thr,
                 two_step_loop_thr,
                 long_dist_thr)
-
-            self.run_results[i] = {}
-            thread = threading.Thread(target=get_mapred_job, args=[self.run_results[i]])
-            thread.run()
 
             end_time = dt.datetime.now()
             delta_t = end_time - start_time
@@ -169,8 +172,8 @@ class BaseRunner(object):
 
 
 class SeqRunner(BaseRunner):
-    def __init__(self, log, classifier, run=1, draw=False, fitness_log=None):
-        super(SeqRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log)
+    def __init__(self, log, classifier, run=1, draw=False, fitness_log=None, output_dir=''):
+        super(SeqRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log, output_dir=output_dir)
         self.mode = 'seq'
 
     def _create_miner(self):
@@ -179,8 +182,8 @@ class SeqRunner(BaseRunner):
 
 
 class MapRedRunner(BaseRunner):
-    def __init__(self, log, classifier, run=1, draw=False, n_reducers=None, d_kwargs=None, fitness_log=None):
-        super(MapRedRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log)
+    def __init__(self, log, classifier, run=1, draw=False, n_reducers=None, d_kwargs=None, fitness_log=None, output_dir=''):
+        super(MapRedRunner, self).__init__(log, classifier, run=run, draw=draw, fitness_log=fitness_log, output_dir=output_dir)
         self.mode = 'mapred'
         self.n_reducers = n_reducers
         self.d_kwargs = d_kwargs
@@ -207,6 +210,7 @@ def _add_basic_parser_argument(parser_):
     parser_.add_argument('-r', type=int, default=1, help="how many run", dest='run')
     parser_.add_argument('-d', type=bool, default=False, help="draw last cnet", dest='draw')
     parser_.add_argument('-f', type=str, default=False, help="fitness log", dest='f_log')
+    parser_.add_argument('-o', type=str, default='', help="output_dir", dest='output_dir')
     # parser.add_argument('-f', type=str, help="fitness log", dest='f_log', default="")
 
 
@@ -235,7 +239,7 @@ if __name__ == '__main__':
     classifier_keys = args.classifier_keys.split()
     sep = args.classifier_separator
     classifier = Classifier(keys=classifier_keys, sep=sep) if classifier_keys else Classifier(sep=sep)
-    kwargs = dict(log=log, classifier=classifier, run=args.run, draw=args.draw)
+    kwargs = dict(log=log, classifier=classifier, run=args.run, draw=args.draw, output_dir=args.output_dir)
     if args.f_log:
         fitness_log = create_log_from_file(args.f_log)
         kwargs['fitness_log'] = fitness_log
