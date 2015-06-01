@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(format="[%(levelname)s] %(asctime)s %(filename)s %(lineno)s: %(message)s", level=logging.INFO)
+logging.basicConfig(format="[%(levelname)s] %(asctime)s %(filename)s %(lineno)s: %(message)s", level=logging.DEBUG)
 
 from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMiner
 from pymine.mining.process.eventlog.factory import create_log_from_file

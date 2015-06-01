@@ -18,7 +18,10 @@ def check_log_serilization(log):
     if log.filename is None or not log.filename.startswith('hdfs://'):
         log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  create_unique_filename(ext='avro'))
         # if not hdfs.path.exists(log_filename):
-        hdfs.put(log.filename, log_filename)
+        if not log.filename or log.filename.split('.')[-1] != 'avro':
+            serialize_log_as_case_collection(log, log_filename)
+        else:
+            hdfs.put(log.filename, log_filename)
         moved_on_hdfs = True
 
 
@@ -87,8 +90,11 @@ class MRLauncher(object):
 
         input_filename, del_input_filename = check_log_serilization(log)
 
-        with open(output_schema_path, 'r') as sf:
-            schema_str = sf.read()
+        if output_schema_path:
+            with open(output_schema_path, 'r') as sf:
+                schema_str = sf.read()
+        else:
+            schema_str = None
 
         self.output_dir = create_unique_filename(output_dir_prefix)
 
@@ -100,15 +106,18 @@ class MRLauncher(object):
         for k, v in self.d_kwargs.items():
             args += ["-D", "%s=%s" % (k, v)]
 
+        if schema_str:
+            args += [
+                "-D", "pydoop.mapreduce.avro.value.output.schema=%s" % schema_str,
+                "--avro-output", "v"
+            ]
+
         args += [
-            "-D", "pydoop.mapreduce.avro.value.output.schema=%s" % schema_str,
             "--upload-file-to-cache", mr_script_path,
             "--upload-archive-to-cache",
             archive_path,
             "--avro-input", "v",
-            "--avro-output", "v",
             "--log-level", "DEBUG",
-            # "--num-reducers", "1",
             "--mrv2",
             mr_script_name,
             input_filename,
