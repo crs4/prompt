@@ -103,7 +103,7 @@ class BaseRunner(object):
 
             end_time = dt.datetime.now()
             delta_t = end_time - start_time
-            base_path_run = "%s_run_%s" % (base_path, i + 1)
+            base_path_run = "%s_run_%s___delta_t=%s" % (base_path, i + 1, delta_t)
             pkl_filepath = base_path_run + ".pkl"
             # pkl_filepath = "cnet_%s_%s__%s.pkl" % (mode, start_time, end_time, dependency_thr, bindings_thr, rel_to_best, self_loop_thr,two_step_loop_thr,long_dist_thr)
             with open(pkl_filepath, 'wb') as fitness_result:
