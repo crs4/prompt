@@ -1,11 +1,13 @@
 import avro.schema
 from avro.datafile import DataFileWriter, DataFileReader
+from pyavroc import AvroFileReader
 from avro.io import DatumWriter, DatumReader
 import pymine.mining.process.eventlog as el
 from pymine.mining.process.eventlog.log import Log, AvroLog
 from mx.DateTime.Parser import DateTimeFromString
 import os
 import collections
+import simplejson
 
 
 class InvalidSchema(Exception):
@@ -77,7 +79,8 @@ def deserialize(path):
     else:
         openfile = open
 
-    reader = DataFileReader(openfile(path, "r"), DatumReader())
+    # reader = DataFileReader(openfile(path, "r"), DatumReader())
+    reader = AvroFileReader(openfile(path, "r"))
     return _AvroIterator(reader)
 
 
@@ -119,10 +122,11 @@ class _AvroIterator(object):
 
     def __init__(self, reader):
         self._reader = reader
-        self.schema = reader.datum_reader.writers_schema
+        # self.schema_name = reader.datum_reader.writers_schema.name
+        self.schema_name = simplejson.loads(reader.schema_json)['name']
 
     def __iter__(self):
         for c in self._reader:
-            yield convert_avro_dict_to_obj(c, self.schema.name)
+            yield convert_avro_dict_to_obj(c, self.schema_name)
 
 
