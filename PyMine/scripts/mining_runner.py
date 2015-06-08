@@ -15,7 +15,7 @@ import re
 import time
 from abc import ABCMeta, abstractmethod
 import threading
-
+import sys
 
 MAPRED = 'mapred'
 SEQ = 'seq'
@@ -141,6 +141,7 @@ class BaseRunner(object):
                 'long_dist_th %s' % long_dist_thr,
                 'classifier %s' % self.classifier.keys,
                 'avg_time (sec)%s' % avg_time,
+                'argv %s' % sys.argv
                 # 'start_time %s' % start_time,
                 # 'end_time %s' % end_time,
                 # 'delta_t %s' % delta_t,
