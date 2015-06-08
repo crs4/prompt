@@ -2,6 +2,7 @@
 import xml.dom.minidom as minidom
 import xml.etree.cElementTree as ET
 import csv
+from datetime import datetime
 
 def createXesSkeleton():
     """
@@ -95,11 +96,11 @@ def appendTrace(xesTree, traceName, events):
         keyname.attrib["key"] = "concept:name"
         keyname.attrib["value"] = event["name"]
         keylifecicle = ET.SubElement(eventElement, "string")
-        keylifecicle.attrib["key"] = "lifecycle:dependency"
-        keylifecicle.attrib["value"] = "complete"
+        keylifecicle.attrib["key"] = "lifecycle:transition"
+        keylifecicle.attrib["value"] = event['lifecycle']
         keyres = ET.SubElement(eventElement, "string")
-        keyres.attrib["key"] = "org:resource"
-        keyres.attrib["value"] = event["resource"]
+        #keyres.attrib["key"] = "org:resource"
+        #keyres.attrib["value"] = event["resource"]
         time = ET.SubElement(eventElement, "date")
         time.attrib["key"] = "time:timestamp"
         time.attrib["value"] = event["timestamp"]
@@ -107,8 +108,8 @@ def appendTrace(xesTree, traceName, events):
         keyactivity.attrib["key"] = "activity"
         keyactivity.attrib["value"] = event["activity"]
         keyresource = ET.SubElement(eventElement, "string")
-        keyresource.attrib["key"] = "resource"
-        keyresource.attrib["value"] = event["resource"]
+        #keyresource.attrib["key"] = "resource"
+        #keyresource.attrib["value"] = event["resource"]
 
 def writeXesFile(xesTree, filename):
     """
@@ -138,14 +139,14 @@ def appendCaseRow(row):
     :param row:
     :return:
     """
-    timestamp = row['timestamp']
-    timestamp = timestamp.replace(" ","T")
+    timestamp = datetime.strftime(datetime.strptime(row['timestamp'],'%d-%m-%Y %H:%M:%S.%f' ),'%Y-%m-%dT%H:%M:%S.%f' )
+    #timestamp = timestamp.replace(" ","T")
     return {'name' : row['activity'],
-            'lifecycle:dependency' : "complete",
-            'org:resource' : row['resource'],
+            'lifecycle' : row['lifecycle'],
+            #'org:resource' : row['resource'],
             'timestamp' : timestamp,
             'activity' : row['activity'],
-            'resource' : row['resource'],
+            #'resource' : row['resource'],
             }
 
 def loadCSVFile(filename):
@@ -169,15 +170,15 @@ def main():
 
     :return:
     """
-    print('PyXES: creating a xes file')
+    #print('PyXES: creating a xes file')
     xesDoc = createXesSkeleton()
-    cases = loadCSVFile('/Users/paolo/Desktop/Analytics/Paolo/t2ls_system_collectors.csv')
-    print "CASES: "
-    print cases
+    cases = loadCSVFile('/Users/ale/Desktop/protube_traces_100000.csv')
+    #print "CASES: "
+    #print cases
     for case in cases:
         appendTrace(xesDoc, case, cases[case])
     skeleton = ET.ElementTree(xesDoc)
-    writeXesFile(skeleton, '/Users/paolo/Desktop/Analytics/Paolo/test.xes')
+    writeXesFile(skeleton, '/Users/ale/Desktop/protube_traces_100000.xes')
     #writePrettyXesFile(skeleton, '/Users/paolo/Desktop/Analytics/Paolo/testPretty.xes')
 
 if __name__ == '__main__':
