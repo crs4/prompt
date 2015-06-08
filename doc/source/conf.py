@@ -50,7 +50,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pymine'
+project = u'prompt'
 copyright = u'2015, Paolo Anedda, Mauro Del Rio, Alessandro Sulis'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -203,7 +203,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'pymine.tex', u'Pymine Documentation',
+  ('index', 'prompt.tex', u'Pymine Documentation',
    u'Paolo Anedda', 'manual'),
 ]
 
@@ -233,7 +233,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'pymine', u'PyMine Documentation',
+    ('index', 'prompt', u'PyMine Documentation',
      [u'Paolo Anedda'], 1)
 ]
 

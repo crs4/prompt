@@ -1,11 +1,11 @@
 import logging
 logging.basicConfig(format="[%(levelname)s] %(asctime)s %(filename)s %(lineno)s: %(message)s", level=logging.INFO)
 
-from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMiner
-from pymine.mining.process.eventlog.factory import create_log_from_file
-from pymine.mining.process.eventlog.log import Classifier
-from pymine.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
-from pymine.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
+from prompt.mining.process.discovery.heuristics.all_connected import HeuristicMiner
+from prompt.mining.process.eventlog.factory import create_log_from_file
+from prompt.mining.process.eventlog.log import Classifier
+from prompt.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
+from prompt.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
 import pickle
 import datetime as dt
 import uuid
@@ -118,7 +118,7 @@ class BaseRunner(object):
 
             fitness_result = None
             if self.fitness_log:
-                from pymine.mining.process.conformance import simple_fitness
+                from prompt.mining.process.conformance import simple_fitness
                 fitness_result = simple_fitness(self.fitness_log, cnet, self.classifier)
                 print 'fitness on %s: %s' % (self.fitness_log.filename, fitness_result.fitness)
                 self.run_results[i]['fitness'] = fitness_result.fitness
@@ -167,7 +167,7 @@ class BaseRunner(object):
 
         print 'report saved in', os.path.join(cwd, report_filename)
         if self.n_run and self.draw:
-            from pymine.mining.process.tools.drawing.draw_cnet import draw
+            from prompt.mining.process.tools.drawing.draw_cnet import draw
             draw(cnet)
         # return cnet, fitness_result
 

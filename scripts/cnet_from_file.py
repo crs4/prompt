@@ -1,6 +1,6 @@
-from pymine.mining.process.eventlog.factory import create_log_from_file
-from pymine.mining.process.conformance import simple_fitness
-from pymine.mining.process.tools.drawing.draw_cnet import draw
+from prompt.mining.process.eventlog.factory import create_log_from_file
+from prompt.mining.process.conformance import simple_fitness
+from prompt.mining.process.tools.drawing.draw_cnet import draw
 
 import logging
 logging.basicConfig(format="%(filename)s %(lineno)s %(levelname)s: %(message)s",)
@@ -17,8 +17,8 @@ def generic_computations(cnet, log):
     print 'f.failed_cases', f.failed_cases
     print 'results', f.results
 
-    from pymine.mining.process.network.converters.cnet_bpmn_converter import CNetBPMNConverter
-    from pymine.mining.process.network.bpmn.serializer.bpmn2 import BPMN2Serializer
+    from prompt.mining.process.network.converters.cnet_bpmn_converter import CNetBPMNConverter
+    from prompt.mining.process.network.bpmn.serializer.bpmn2 import BPMN2Serializer
 
     converter = CNetBPMNConverter(cnet)
     bpmn = converter.convert_to_BPMN()
@@ -29,7 +29,7 @@ def generic_computations(cnet, log):
 
 
 def all_connected(args):
-    from pymine.mining.process.discovery.heuristics.all_connected import HeuristicMiner
+    from prompt.mining.process.discovery.heuristics.all_connected import HeuristicMiner
 
     file_path = args.file_path
     dependency_thr = args.dt
@@ -49,7 +49,7 @@ def all_connected(args):
 
 
 def window(args):
-    from pymine.mining.process.discovery.heuristics.window import HeuristicMiner
+    from prompt.mining.process.discovery.heuristics.window import HeuristicMiner
     file_path = args.file_path
     arc_freq_thr = args.aft
     dep_thr = args.dt

@@ -1,8 +1,8 @@
-from pymine.mining.process.eventlog.factory import create_log_from_file
+from prompt.mining.process.eventlog.factory import create_log_from_file
 import pickle
 import datetime as dt
-from pymine.mining.process.eventlog.log import Classifier
-from pymine.mining.process.eventlog import ProcessInfo
+from prompt.mining.process.eventlog.log import Classifier
+from prompt.mining.process.eventlog import ProcessInfo
 
 
 def main(log_path):

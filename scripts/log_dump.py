@@ -1,9 +1,9 @@
-from pymine.mining.process.eventlog.factory import create_log_from_file
-from pymine.mining.process.eventlog.serializers.avro_serializer import Serializer
+from prompt.mining.process.eventlog.factory import create_log_from_file
+from prompt.mining.process.eventlog.serializers.avro_serializer import Serializer
 import os
 
 
-log_path = "/home/mauro/work/pymine/PyMine/dataset/pg_4.csv"
+log_path = "/home/mauro/work/prompt/PyMine/dataset/pg_4.csv"
 log = create_log_from_file(log_path)[0]
 dest_path = "/home/mauro/avro_log_6mega"
 if not os.path.exists(dest_path):

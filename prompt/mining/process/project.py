@@ -4,6 +4,7 @@ from prompt.mining.process.discovery import hm
 class Project():
 
     miner = hm.PromHeuristicMiner()
+    #miner = promHeuristicMiner.PromHeuristicMiner()
 
     def main(self, argv):
         self.miner.mine()
