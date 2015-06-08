@@ -59,17 +59,14 @@ class TestCnet2Flex(unittest.TestCase):
             for b in input_bindings_cnet:
                 bind = set()
                 for s in b.node_set:
-                    print s.label
                     bind.add(s.label)
-                    print bind
                 input_cnet.append(bind)
             for b in input_bindings_flex:
                 bind = set()
                 for s in b.node_set:
                     bind.add(s.label)
                 input_flex.append(bind)
-            print input_cnet
-            self.assertEqual(set(input_cnet), set(input_flex))
+            self.assertEqual(input_cnet, input_flex)
             for b in output_bindings_cnet:
                 bind = set()
                 for s in b.node_set:
@@ -80,11 +77,7 @@ class TestCnet2Flex(unittest.TestCase):
                 for s in b.node_set:
                     bind.add(s.label)
                 output_flex.append(bind)
-            print 'Flex:'
-            print output_flex
-            print 'CNet:'
-            print output_cnet
-            self.assertItemsEqual(output_cnet, output_flex)
+            self.assertEqual(output_cnet, output_flex)
 
 if __name__ == '__main__':
     unittest.main()
