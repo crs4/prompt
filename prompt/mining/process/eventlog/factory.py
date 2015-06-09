@@ -184,7 +184,6 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
     tree = ET.parse(file_path)
     xml_log = tree.getroot()
     for trace in xml_log.findall('xes:trace', ns):
-        print trace
         case = Case()
         cases.append(case)
         if add_start_activity:

@@ -1,6 +1,7 @@
 from prompt.mining.process.eventlog.exceptions import InvalidProcess
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import OrderedDict
+import sys
 
 
 class BaseLog(object):
