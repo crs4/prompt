@@ -11,7 +11,7 @@ def get_binding_set(binding):
     return {frozenset(bi.node_set) for bi in binding}
 
 
-@unittest.skipUnless("HADOOP_HOME" in os.environ, "HADOOP_HOME not set")
+@unittest.skipUnless("HADOOP_HOME" in os.environ or "HADOOP_PREFIX" in os.environ, "HADOOP_HOME/PREFIX not set")
 class TestAllConnectedMR(BackendTests, unittest.TestCase):
 
     def create_miner(self, log):
