@@ -6,12 +6,10 @@ from prompt.mining.process.discovery.heuristics.dependency import DependencyMine
 from prompt.mining.process.discovery.heuristics import Matrix
 from prompt.mining.process.discovery.heuristics.mapred import CLASSIFIER_FILENAME
 from prompt.mining.mapred import deserialize_obj, CaseContext
-import itertools as it
 import numpy as np
 import logging
 import cPickle as pickle
 logger = logging.getLogger("mapred")
-
 
 
 def iterate_matrix(matrix):
@@ -29,10 +27,9 @@ class Mapper(api.Mapper):
         self.timer = Timer(context, 'DEPMINER')
 
     def map(self, context):
-        with self.timer.time_block('extract_case_from_context') as b:
+        with self.timer.time_block('extract_case_from_context'):
             case = context.value
-        
-        with self.timer.time_block('init') as b:        
+        with self.timer.time_block('init'):
             events_freq = defaultdict(int)
             precede = Matrix()
             two_step_loop = Matrix()
@@ -40,7 +37,7 @@ class Mapper(api.Mapper):
             start_events = set()
             end_events = set()
 
-        with self.timer.time_block('compute') as b:
+        with self.timer.time_block('compute'):
             DependencyMiner.compute_precede_matrix_by_case(
                 case,
                 self.classifier,
@@ -59,7 +56,6 @@ class Mapper(api.Mapper):
             for i, matrix in enumerate([precede, two_step_loop, long_distance]):
                 for k1, k2, v in iterate_matrix(matrix):
                     key = (k1, k2)
-                    # if not counts[key].all():
                     counts[key][3] = k1 == start_ev
                     counts[key][4] = k2 == end_ev
                     counts[key][i] = v
@@ -88,7 +84,6 @@ class Combiner(api.Reducer):
                         matrix[k] += v[k]
                     else:
                         matrix[k] = v[k]
-        # value = np.sum(list(context.values), axis=0)
             self._emit(context, "", matrix)
 
 
@@ -104,6 +99,7 @@ class Reducer(Combiner):
         value = pickle.dumps(value)
         super(Reducer, self)._emit(context, '', value)
 
+
 def __main__():
-    pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Combiner), private_encoding=True, context_class=CaseContext, fast_combiner=True)
-#    pp.run_task(pp.Factory(Mapper, Reducer), private_encoding=True, context_class=CustomCaseContext)
+    pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Combiner), private_encoding=True, context_class=CaseContext,
+                fast_combiner=True)

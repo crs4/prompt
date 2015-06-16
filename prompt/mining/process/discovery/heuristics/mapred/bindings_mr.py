@@ -38,7 +38,6 @@ class Mapper(api.Mapper):
 
 
 class Combiner(api.Reducer):
-
     def __init__(self, context):
         super(Combiner, self).__init__(context)
         context.set_status("initializing reducer")
@@ -47,17 +46,18 @@ class Combiner(api.Reducer):
         context.emit(k, v)
 
     def reduce(self, context):
-        # node, b_type, binding_nodes = context.key
         matrix = defaultdict(int)
         for m in context.values:
             for k, v in m.iteritems():
-                matrix[k] +=v
-        # context.emit(context.key, {'node': node, 'type': b_type, 'binding': binding_nodes, 'freq': total})
+                matrix[k] += v
         self._emit(context, '', matrix)
+
 
 class Reducer(Combiner):
     def _emit(self, context, k, v):
         context.emit(k, pickle.dumps(v))
 
+
 def __main__():
-    pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Combiner), private_encoding=True, context_class=CaseContext, fast_combiner=True)
+    pp.run_task(pp.Factory(Mapper, Reducer, combiner_class=Combiner), private_encoding=True, context_class=CaseContext,
+                fast_combiner=True)
