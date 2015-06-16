@@ -11,7 +11,6 @@ import pydoop.avrolib as avrolib
 import pickle
 
 
-
 def check_log_serilization(log):
     log_filename = log.filename
     moved_on_hdfs = False
@@ -23,21 +22,6 @@ def check_log_serilization(log):
         else:
             hdfs.put(log.filename, log_filename)
         moved_on_hdfs = True
-
-
-
-    # if log.filename is None:
-    #     ext = log.filename.split('.')[-1] == 'avro':
-    #     # input_filename = 'hdfs:///user/%s/log.avro' % os.environ['USER']
-    #     log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'], create_unique_filename(ext='avro'))
-    #     serialize_log_as_case_collection(log, log_filename)
-    #     moved_on_hdfs = True
-    # elif not log.filename.startswith('hdfs://'):
-    #     log_filename = 'hdfs:///user/%s/%s' % (os.environ['USER'],  os.path.basename(log.filename))
-    #     if not hdfs.path.exists(log_filename):
-    #         hdfs.put(log.filename, log_filename)
-    #         moved_on_hdfs = True
-
     return log_filename, moved_on_hdfs
 
 
@@ -62,7 +46,7 @@ def create_code_archive(dest_path=None):
 
 def serialize_obj(obj, prefix):
     str_obj = pickle.dumps(obj)
-    cnet_filename = create_unique_filename(prefix="cnet", ext="pkl")
+    cnet_filename = create_unique_filename(prefix=prefix, ext="pkl")
     with hdfs.open(cnet_filename, 'w') as f:
         f.write(str_obj)
     return cnet_filename
@@ -72,6 +56,7 @@ def deserialize_obj(path):
     with hdfs.open(path, 'r') as f:
         obj = pickle.loads(f.read())
     return obj
+
 
 class MRLauncher(object):
     def __init__(self, n_reducers=None, d_kwargs=None):
@@ -85,7 +70,8 @@ class MRLauncher(object):
                        mr_script_path,
                        mr_script_name,
                        output_dir_prefix,
-                       archive_path=None
+                       archive_path=None,
+                       log_level=None
                        ):
 
         input_filename, del_input_filename = check_log_serilization(log)
@@ -97,8 +83,6 @@ class MRLauncher(object):
             schema_str = None
 
         self.output_dir = create_unique_filename(output_dir_prefix)
-
-        archive_path = create_code_archive(archive_path)
 
         args = ["pydoop", "submit"]
         if self.n_reducers is not None:
@@ -112,31 +96,29 @@ class MRLauncher(object):
                 "--avro-output", "v"
             ]
 
+        if archive_path:
+            archive_path = create_code_archive(archive_path)
+            args += ["--upload-archive-to-cache", archive_path]
+
+        if log_level:
+            args += ["--log-level", log_level]
+
         args += [
             "--upload-file-to-cache", mr_script_path,
-            "--upload-archive-to-cache",
-            archive_path,
             "--avro-input", "v",
-            "--log-level", "DEBUG",
             "--mrv2",
             mr_script_name,
             input_filename,
             self.output_dir
         ]
-        print 'args', args
-        retcode = subprocess.call(args)
-        # if retcode:
-        #     raise Exception('mapred failed')  # FIXME on bruja succeeded jobs return retcode > 0 because of job status
+        ret_code = subprocess.call(args)
+        if ret_code:
+            raise RuntimeError('mapred failed')
         if del_input_filename:
             try:
                 hdfs.rmr(input_filename)
             except IOError:
                 pass
-
-        # try:
-        #     hdfs.rmr(self.output_dir)
-        # except IOError:
-        #     pass
 
     @property
     def avro_outputs(self):
