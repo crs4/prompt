@@ -14,6 +14,12 @@ logger = logging.getLogger("mapred")
 
 
 
+def iterate_matrix(matrix):
+    for k1, d1 in matrix.iteritems():
+        for k2, v in d1.iteritems():
+            yield k1, k2, v
+
+
 class Mapper(api.Mapper):
 
     def __init__(self, context):
@@ -47,20 +53,18 @@ class Mapper(api.Mapper):
             )
 
         events = [self.classifier.get_event_name(e) for e in case.events]
-        set_events = set(events)
         start_ev, end_ev = events[0], events[-1]
-        counts = {}
+        counts = defaultdict(lambda: np.zeros(5))
+        with self.timer.time_block('computing_dependencies'):
+            for i, matrix in enumerate([precede, two_step_loop, long_distance]):
+                for k1, k2, v in iterate_matrix(matrix):
+                    key = (k1, k2)
+                    # if not counts[key].all():
+                    counts[key][3] = k1 == start_ev
+                    counts[key][4] = k2 == end_ev
+                    counts[key][i] = v
+
         with self.timer.time_block('global_emit'):
-            for (e1, e2) in it.product(set_events, set_events):
-                value = np.array(
-                           [
-                            precede[e1][e2],
-                            two_step_loop[e1][e2],
-                            long_distance[e1][e2],
-                            e1 == start_ev,  # is_start
-                            e2 == end_ev # is_end
-                       ], dtype=np.int32)
-                counts[(e1, e2)] = value
             context.emit("", counts)
 
 
