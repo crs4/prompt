@@ -4,8 +4,6 @@ logging.basicConfig(format="[%(levelname)s] %(asctime)s %(filename)s %(lineno)s:
 from prompt.mining.process.discovery.heuristics.all_connected import HeuristicMiner
 from prompt.mining.process.eventlog.factory import create_log_from_file
 from prompt.mining.process.eventlog.log import Classifier
-from prompt.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
-from prompt.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
 import pickle
 import datetime as dt
 import uuid
@@ -14,7 +12,7 @@ import subprocess
 import re
 import time
 from abc import ABCMeta, abstractmethod
-import threading
+# import threading
 import sys
 
 MAPRED = 'mapred'
@@ -33,6 +31,8 @@ def get_mapred_job(result_info):
         raise ex
 
 def _create_mapred_miner(log, classifier, n_reducers=None, d_kwargs=None):
+    from prompt.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
+    from prompt.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
 
     dp_miner = DependencyMiner(log, classifier, n_reducers, d_kwargs)
     b_miner = BindingMiner(log, classifier, n_reducers, d_kwargs)
@@ -45,7 +45,7 @@ def _create_seq_miner(log, classifier):
 class BaseRunner(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, log, classifier, sep=Classifier.DEFAULT_SEP, run=1, draw=False, fitness_log=None, output_dir=''):
+    def __init__(self, log, classifier, run=1, draw=False, fitness_log=None, output_dir=''):
         self.mode = ''
         self.log = log
         self.classifier = classifier
@@ -58,10 +58,6 @@ class BaseRunner(object):
     @abstractmethod
     def _create_miner(self):
         pass
-
-    # @property
-    # def base_path(self):
-    #     return 'cnet_%s_%s_%s' % (self.mode, os.path.basename(log.filename), str(uuid.uuid4()))
 
     def run(self, dependency_thr, bindings_thr, rel_to_best, self_loop_thr, two_step_loop_thr, long_dist_thr):
 
@@ -106,8 +102,8 @@ class BaseRunner(object):
             base_path_run = "%s_run_%s___delta_t=%s" % (base_path, i + 1, delta_t)
             pkl_filepath = base_path_run + ".pkl"
             # pkl_filepath = "cnet_%s_%s__%s.pkl" % (mode, start_time, end_time, dependency_thr, bindings_thr, rel_to_best, self_loop_thr,two_step_loop_thr,long_dist_thr)
-            with open(pkl_filepath, 'wb') as fitness_result:
-                pickle.dump(cnet, fitness_result)
+            with open(pkl_filepath, 'wb') as cnet_file:
+                pickle.dump(cnet, cnet_file)
 
             print "mining started at", start_time
             print "mining finished at", end_time
@@ -142,10 +138,6 @@ class BaseRunner(object):
                 'classifier %s' % self.classifier.keys,
                 'avg_time (sec)%s' % avg_time,
                 'argv %s' % sys.argv
-                # 'start_time %s' % start_time,
-                # 'end_time %s' % end_time,
-                # 'delta_t %s' % delta_t,
-                # 'fitness %s' % fitness_result.fitness if fitness_result else ''
             ]))
 
             if node_info:
@@ -197,9 +189,8 @@ class MapRedRunner(BaseRunner):
 
 def _add_basic_parser_argument(parser_):
     parser_.add_argument('log_path', type=str, help='the path of the log')
-    # parser.add_argument('mode', type=str, help='mining mode', choices=[MAPRED, SEQ])
 
-    parser_.add_argument('--bt', type=float, default=1, help="bindings threshold", dest='binding_th')
+    parser_.add_argument('--bt', type=float, default=0.5, help="bindings threshold", dest='binding_th')
     parser_.add_argument('--dt', type=float, default=0.5, help="dependency threshold", dest='dep_th')
 
     parser_.add_argument('--slt', type=float, default=None, help="self loop threshold", dest='self_loop_th')
@@ -209,10 +200,9 @@ def _add_basic_parser_argument(parser_):
     parser_.add_argument('-c', type=str, default="", help="classifier, string of attributes space separated", dest='classifier_keys')
     parser_.add_argument('--cs', type=str, default=Classifier.DEFAULT_SEP, help="classifier separator", dest='classifier_separator')
     parser_.add_argument('-r', type=int, default=1, help="how many run", dest='run')
-    parser_.add_argument('-d', type=bool, default=False, help="draw last cnet", dest='draw')
+    parser_.add_argument('-d',  default=False, help="draw last cnet", dest='draw', action='store_true')
     parser_.add_argument('-f', type=str, default=False, help="fitness log", dest='f_log')
     parser_.add_argument('-o', type=str, default='', help="output_dir", dest='output_dir')
-    # parser.add_argument('-f', type=str, help="fitness log", dest='f_log', default="")
 
 
 if __name__ == '__main__':
