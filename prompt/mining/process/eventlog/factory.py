@@ -191,7 +191,7 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
 
         for event in trace.findall('xes:event', ns):
             timestamp = None
-            attributes = []
+            attributes = {}
             resources = []
             activity_name = None
             for child in list(event):
@@ -207,9 +207,9 @@ def create_log_from_xes(file_path, add_start_activity=True, add_end_activity=Tru
                 elif child.tag == '{%s}org:resource' % ns['xes']:
                     resources.append(child.attrib['value'])
                 else:
-                    attributes.append(Attribute(name=child.attrib['key'], value=child.attrib['value']))
+                    attributes[child.attrib['key']] = child.attrib['value']
             if activity_name:
-                case.add_event(Event(activity_name, timestamp, resources, attributes))
+                case.add_event(Event(name=activity_name, timestamp=timestamp, resources=resources, attributes=attributes))
             else:
                 logger.warning('child %s should have at least concept:name and time:timestamp defined')
 
