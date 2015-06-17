@@ -30,13 +30,6 @@ def get_mapred_job(result_info):
         log.error('impossible to retrieve mapred job')
         raise ex
 
-def _create_mapred_miner(log, classifier, n_reducers=None, d_kwargs=None):
-    from prompt.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
-    from prompt.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
-
-    dp_miner = DependencyMiner(log, classifier, n_reducers, d_kwargs)
-    b_miner = BindingMiner(log, classifier, n_reducers, d_kwargs)
-    return HeuristicMiner(log, classifier, dp_miner, b_miner)
 
 def _create_seq_miner(log, classifier):
     return HeuristicMiner(log, classifier)
@@ -182,6 +175,9 @@ class MapRedRunner(BaseRunner):
         self.d_kwargs = d_kwargs
 
     def _create_miner(self):
+        from prompt.mining.process.discovery.heuristics.mapred.dependency_mr import DependencyMiner
+        from prompt.mining.process.discovery.heuristics.mapred.bindings_mr import BindingMiner
+
         dp_miner = DependencyMiner(self.log, self.classifier, self.n_reducers, self.d_kwargs)
         b_miner = BindingMiner(self.log, self.classifier, self.n_reducers, self.d_kwargs)
         return HeuristicMiner(self.log, self.classifier, dp_miner, b_miner)
