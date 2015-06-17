@@ -14,6 +14,8 @@ class DependencyMiner(object):
     def __init__(self, log, classifier=None):
         self.log = log
         self.classifier = classifier or Classifier()
+
+    def __reset(self):
         self.precede_matrix = Matrix()
         self.dependency_matrix = Matrix()
         self.two_step_loop_matrix = Matrix()
@@ -143,6 +145,7 @@ class DependencyMiner(object):
 
     def mine(self, dep_thr, relative_to_best, self_loop_thr, two_step_loop_thr, long_distance_thr):
         logger.info('mining started')
+        self.__reset()
         if not self.precede_matrix:
             self._compute_precede_matrix()
         if not self.dependency_matrix:
