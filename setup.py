@@ -1,7 +1,6 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='prompt',
-    packages=['prompt'],
-    include_package_data=True,
+    packages=find_packages(exclude=['test', 'test*' 'scripts', 'scripts*'], include=['prompt.*']),
     version=0.1)
